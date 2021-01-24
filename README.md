@@ -2,18 +2,18 @@
 Tetris with a twist.
 
 ## Gameplay
-Tetron features the same seven blocks in Tetris and includes more advanced blocks and special effects.
+Tetron features the same seven blocks in Tetris but includes more advanced blocks and special effects. Reach 100 points to win the game.
 
 ### Controls
-* Move left/right: A/D
+* Move left, right: A, D
 * Hard drop: W
 * Soft drop: S
-* Rotate: Left/right arrow
+* Rotate: Left arrow (counterclockwise), right arrow (clockwise)
 * Start game: Space
 * Stop game: Escape
 
 ### Advanced Blocks
-Advanced blocks are more likely to appear the longer the game lasts.
+Advanced blocks appear more often as the game progresses.
 * Variations of the I block: I+, I-
 * Variations of the J block: J+, J-
 * Variations of the L block: L+, L-
@@ -29,9 +29,9 @@ Advanced blocks are more likely to appear the longer the game lasts.
 * Quotation block
 
 ### Special Effects
-Special effects are more likely to appear the longer the game lasts.
+Special effects happen more often as the game progresses.
 * Ghost block: The current block becomes a ghost block and passes through already dropped blocks and moves through the walls. If hard dropped, ghost blocks are placed in-place instead of dropping down.
-* Blind: The colors of all blocks blends in with the background, making them harder to see.
+* Blind: The colors of all blocks look like the background, making them harder to see.
 * Rotated: The entire matrix is rotated.
 
 ### Other Game Modes
