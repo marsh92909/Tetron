@@ -108,11 +108,11 @@ class Tetron:
         # Define the number of blocks neeeded to begin increasing the chance of getting a special effect.
         self.count_increase_chance_special = 30
         # Define the score needed to win the game.
-        self.score_win = 100
+        self.score_win = 1000
 
         # Define the maximum probability (between 0 and 1) of getting an advanced tetrimino and the increment by which the probability is increased.
-        self.weight_max_advanced = 1/3
-        self.weight_increment_advanced = 0.02
+        self.weight_max_advanced = 2/5
+        self.weight_increment_advanced = 0.025
         # Define the maximum probability (between 0 and 1) of getting a special effect and the increment by which the probability is increased.
         self.weight_max_special = 1/20
         self.weight_increment_special = 0.005
@@ -152,6 +152,8 @@ class Tetron:
         self.array_dropped = np.zeros([self.row_count, self.column_count])
         self.array_display = np.zeros([self.row_count, self.column_count])
         self.array_highlight = np.zeros([self.row_count, self.column_count])
+
+        self.array_dropped[-10:, :-1] = 100
 
         # Initialize lists with Booleans indicating which tetriminos or special effects have been used to prevent duplicates.
         self.used_classic = [False] * len(self.id_classic)
@@ -482,18 +484,14 @@ class Tetron:
         else:
             self.combos = 0
         # Calculate points to add to score.
-        score_increment = cleared_increment * 1
-        if cleared_increment == 2:
-            score_increment = 3
-        elif cleared_increment == 3:
-            score_increment = 5
-        elif cleared_increment >= 4:
-            score_increment = 8
+        score_increment = 10 * cleared_increment
+        if cleared_increment >= 4:
+            score_increment = 40
         multipliers = []
         if self.combos > 1:
-            multipliers.append(self.combos)
-            print('combo multiplier')
-        self.score += score_increment * int(np.prod(multipliers))
+            multipliers.append((self.combos+1)/2)
+            print('combo multiplier: ', multipliers[-1])
+        self.score += int(score_increment * np.prod(multipliers))
         # Stop the game if the score exceeds the threshold.
         if self.score >= self.score_win:
             self.win_game()
