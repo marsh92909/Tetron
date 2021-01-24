@@ -153,8 +153,6 @@ class Tetron:
         self.array_display = np.zeros([self.row_count, self.column_count])
         self.array_highlight = np.zeros([self.row_count, self.column_count])
 
-        self.array_dropped[-10:, :-1] = 100
-
         # Initialize lists with Booleans indicating which tetriminos or special effects have been used to prevent duplicates.
         self.used_classic = [False] * len(self.id_classic)
         self.used_advanced = [False] * len(self.id_advanced)
@@ -470,6 +468,18 @@ class Tetron:
         self.sound_game_harddrop.play()
         self.update()
 
+        # Increment the placed blocks counter and increase the game difficulty if needed.
+        self.count += 1
+        if (self.count % self.count_increase_difficulty) == 0:
+            self.increase_chance_advanced()
+            if self.count >= self.count_increase_chance_special:
+                self.increase_chance_special()
+        # Reset the ghost flag if needed.
+        if self.flag_ghost:
+            self.flag_ghost = False
+        # Update the values of previously placed ghost blocks.
+        self.array_dropped[self.array_dropped == 901] = 902
+
         # Check for cleared lines and empty them.
         cleared_rows = np.argwhere(np.all(self.array_dropped > 0, axis=1))
         cleared_increment = len(cleared_rows)
@@ -492,25 +502,13 @@ class Tetron:
             multipliers.append((self.combos+1)/2)
             print('combo multiplier: ', multipliers[-1])
         self.score += int(score_increment * np.prod(multipliers))
-        # Stop the game if the score exceeds the threshold.
-        if self.score >= self.score_win:
-            self.win_game()
-
-        # Increment the placed blocks counter and increase the game difficulty if needed.
-        self.count += 1
-        if (self.count % self.count_increase_difficulty) == 0:
-            self.increase_chance_advanced()
-            if self.count >= self.count_increase_chance_special:
-                self.increase_chance_special()
-        # Reset the ghost flag if needed.
-        if self.flag_ghost:
-            self.flag_ghost = False
-        # Update the values of previously placed ghost blocks.
-        self.array_dropped[self.array_dropped == 901] = 902
         
         # Stop the game if the top row is occupied.
         if np.any(self.array_dropped[0, :] > 0):
             self.stop_game()
+        # Stop the game if the score exceeds the threshold.
+        elif self.score >= self.score_win:
+            self.win_game()
         # Create a new tetrimino otherwise.
         else:
             self.create_new()
