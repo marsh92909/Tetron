@@ -15,9 +15,9 @@ import pygame
 name_program = 'Tetron'
 version_program = 'a.0.0'
 # Get the path to the folder containing the program.
-folder_program = os.path.dirname(os.path.realpath(sys.argv[0]))
-folder_sounds = os.path.join(folder_program, 'Sounds')
-folder_images = os.path.join(folder_program, 'Images')
+folder_program = os.path.dirname(os.path.realpath(sys.argv[0]))  #getattr(sys, '_MEIPASS', os.path.abspath(os.path.dirname(__file__)))
+folder_sounds = os.path.abspath(os.path.join(folder_program, 'Sounds'))
+folder_images = os.path.abspath(os.path.join(folder_program, 'Images'))
 # Initialize all pygame modules.
 pygame.init()
 
@@ -176,6 +176,7 @@ class Tetron:
 
         # Initialize flags indicating statuses of the game.
         self.flag_playing = False
+        self.flag_advancing = True
         self.flag_dropping_soft = False
         self.flag_ghost = False
         self.flag_heavy = False
@@ -188,8 +189,7 @@ class Tetron:
         self.initialize()
         # Save the start time.
         self.time_start = pygame.time.get_ticks()
-        # Reset the timers.
-        pygame.time.set_timer(pygame.USEREVENT+1, self.speed_fall)
+        self.reset_time_advance()
         # Set flags.
         self.flag_playing = True
         # Create a new tetrimino.
@@ -199,7 +199,6 @@ class Tetron:
     
     # Stop the game.
     def stop_game(self):
-        pygame.time.set_timer(pygame.USEREVENT+1, 0)
         self.flag_playing = False
         self.flag_ghost = False
         self.flag_heavy = False
@@ -463,10 +462,9 @@ class Tetron:
 
     # Hard drop.
     def drop_hard(self):
-        # Reset the timer only if not soft dropping. This prevents double advancing caused by both this timer and the soft drop timer.
-        if not self.flag_dropping_soft:
-            pygame.time.set_timer(pygame.USEREVENT+1, game.speed_fall)
-            # self.set_timer_advance(True)
+        # # Reset the previous advance time only if not soft dropping. This prevents double advancing.
+        # if not self.flag_dropping_soft:
+        #     self.reset_time_advance()
 
         # If a heavy tetrimino, delete placed blocks below the current tetrimino and shift tetrimino to bottom row.
         if self.flag_heavy:
@@ -600,13 +598,9 @@ class Tetron:
         pygame.mixer.music.stop()
         # self.sound_game_lose.play()
 
-    # # Reset or stop the timer that advances the current tetrimino. If True, reset and start the timer; if False, stop the timer.
-    # def set_timer_advance(self, state):
-    #     # Stop the timer.
-    #     pygame.time.set_timer(pygame.USEREVENT+1, 0)
-    #     # Start the timer if input is True.
-    #     if state is True:
-    #         pygame.time.set_timer(pygame.USEREVENT+1, game.speed_fall)
+    # Reset the value of the previous advance time to the current time.
+    def reset_time_advance(self):
+        self.time_start_advance = self.time_current + 0
 
 
 # =============================================================================
@@ -684,17 +678,16 @@ while not done:
                 # Start soft dropping.
                 elif event.key == pygame.K_s:
                     game.advance()
+                    game.reset_time_advance()
                     # Play sound effect.
                     game.sound_game_softdrop.play()
                     # Set flags.
                     game.flag_dropping_soft = True
+                    game.flag_advancing = False
                     # Record the current time used later to calculate how long this key is held.
                     game.time_start_drop_soft = game.time_current + 0
                     # Initialize the time at which the previous repeat occured.
                     game.time_previous_drop_soft = 0
-                    # Stop the advance timer.
-                    pygame.time.set_timer(pygame.USEREVENT+1, 0)
-                    # game.set_timer_advance(False)
         # Key releases.
         elif event.type == pygame.KEYUP:
             if game.flag_playing:
@@ -702,12 +695,9 @@ while not done:
                 if event.key == pygame.K_s:
                     # Set flags.
                     game.flag_dropping_soft = False
-                    # Start the advance timer.
-                    pygame.time.set_timer(pygame.USEREVENT+1, game.speed_fall)
-                    # game.set_timer_advance(True)
-        # Custom event for advancing one line.
-        elif event.type == pygame.USEREVENT+1 and game.flag_playing:
-            game.advance()
+                    game.flag_advancing = True
+                    # Reset the previous advance time.
+                    game.reset_time_advance()
     
     # =============================================================================
     # Keys Held Continuously.
@@ -740,6 +730,18 @@ while not done:
             if (game.time_current - game.time_previous_move_right) > game.speed_move:
                 game.move_right()
                 game.time_previous_move_right = game.time_current + 0
+    
+    # =============================================================================
+    # Time-Based Actions.
+    # =============================================================================
+    if game.flag_playing:
+        # Advance current tetrimino.
+        if game.flag_advancing:
+            if (game.time_current - game.time_start_advance) >= game.speed_fall:
+                game.advance()
+                game.reset_time_advance()
+        else:
+            game.reset_time_advance()
     
     # =============================================================================
     # Draw Screen.
