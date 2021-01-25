@@ -48,10 +48,12 @@ def rgb(color, tint=0):
             color = [255,64,64]
         elif 800 <= color < 900:  # Pink
             color = [255,77,136]
+        elif color == 900:  # Gray
+            color = [158,158,158]
         elif color == 901:  # White
             color = [255,255,255]
-        elif color == 902:  # Gray
-            color = [158,158,158]
+        elif color == 902:  # Black
+            color = [0,0,0]
     if tint != 0:
         if tint > 0:
             color = np.array([255,255,255])*abs(tint) + np.array(color)*(1-abs(tint))
@@ -101,7 +103,7 @@ class Tetron:
         # Define the IDs for classic tetriminos, advanced tetriminos, special effects.
         self.id_classic = [100, 200, 300, 400, 500, 600, 700]
         self.id_advanced = [101, 102, 199, 201, 202, 301, 302, 401, 402, 403, 501, 601, 602, 701, 801, 811, 812, 813, 814]
-        self.id_special = ['ghost', 'rotate', 'blind']
+        self.id_special = ['ghost', 'heavy', 'rotate', 'blind']
 
         # Define the number of blocks needed to incrementally increase the difficulty.
         self.count_increase_difficulty = 10
@@ -168,7 +170,7 @@ class Tetron:
         self.score = 0
 
         # Initialize the probability (between 0 and 1) of getting an advanced tetrimino.
-        self.weight_advanced = 0
+        self.weight_advanced = 0.0
         # Initialize the probability (between 0 and 1) of getting a special effect.
         self.weight_special = 0.0
 
@@ -176,6 +178,7 @@ class Tetron:
         self.flag_playing = False
         self.flag_dropping_soft = False
         self.flag_ghost = False
+        self.flag_heavy = False
         self.flag_rotate = False
         self.flag_blind = False
 
@@ -187,18 +190,19 @@ class Tetron:
         self.time_start = pygame.time.get_ticks()
         # Reset the timers.
         pygame.time.set_timer(pygame.USEREVENT+1, self.speed_fall)
-        # Start playing music and loop indefinitely.
-        pygame.mixer.music.play(loops=-1)
         # Set flags.
         self.flag_playing = True
         # Create a new tetrimino.
         self.create_new()
+        # Start playing music and loop indefinitely.
+        pygame.mixer.music.play(loops=-1)
     
     # Stop the game.
     def stop_game(self):
         pygame.time.set_timer(pygame.USEREVENT+1, 0)
         self.flag_playing = False
         self.flag_ghost = False
+        self.flag_heavy = False
         self.flag_blind = False
         self.flag_rotate = False
         self.update()
@@ -235,12 +239,15 @@ class Tetron:
                 self.flag_ghost = True
                 self.sound_special_ghost.play()
             elif effect_special == self.id_special[1]:
+                self.flag_heavy = True
+                # self.sound_special_heavy.play()
+            elif effect_special == self.id_special[2]:
                 # Apply the effect only if it is not currently active.
                 if not self.flag_rotate:
                     self.flag_rotate = True
                     self.duration_rotate = 0
                     self.sound_special_rotate.play()
-            elif effect_special == self.id_special[2]:
+            elif effect_special == self.id_special[3]:
                 # Apply the effect only if it is not currently active.
                 if not self.flag_blind:
                     self.flag_blind = True
@@ -360,6 +367,8 @@ class Tetron:
         # Change the tetrimino to a ghost.
         if self.flag_ghost:
             tetrimino[tetrimino > 0] = 901
+        elif self.flag_heavy:
+            tetrimino[tetrimino > 0] = 902
         self.tetrimino = tetrimino
 
         # Clear the current tetrimino array.
@@ -459,9 +468,14 @@ class Tetron:
             pygame.time.set_timer(pygame.USEREVENT+1, game.speed_fall)
             # self.set_timer_advance(True)
 
-        # Shift the tetrimino down only if not a ghost tetrimino.
-        if not self.flag_ghost:
-            self.array_current = -1 * self.array_highlight
+        # If a heavy tetrimino, delete placed blocks below the current tetrimino and shift tetrimino to bottom row.
+        if self.flag_heavy:
+            self.array_dropped[self.array_highlight < 0] = 0
+            self.array_current = np.roll(self.array_current, np.argmax(np.any(np.flipud(self.array_current) > 0, axis=1)), axis=0)
+        # If not a ghost tetrimino, shift the tetrimino down.
+        else:
+            if not self.flag_ghost:
+                self.array_current = -1 * self.array_highlight
         # Drop the tetrimino.
         self.array_dropped[self.array_current > 0] = self.array_current[self.array_current > 0]
         # Play sound effect.
@@ -474,11 +488,13 @@ class Tetron:
             self.increase_chance_advanced()
             if self.count >= self.count_increase_chance_special:
                 self.increase_chance_special()
-        # Reset the ghost flag if needed.
+        # Reset flags for special effects if needed.
         if self.flag_ghost:
             self.flag_ghost = False
+        if self.flag_heavy:
+            self.flag_heavy = False
         # Update the values of previously placed ghost blocks.
-        self.array_dropped[self.array_dropped == 901] = 902
+        self.array_dropped[self.array_dropped == 901] = 900
 
         # Check for cleared lines and empty them.
         cleared_rows = np.argwhere(np.all(self.array_dropped > 0, axis=1))
@@ -522,7 +538,7 @@ class Tetron:
         if self.flag_playing:
             # List of Booleans indicating which columns of the matrix contain blocks from the current tetrimino.
             columns = np.any(self.array_current > 0, axis=0)
-            # List of row indices, counting from bottom (0 = bottom row), of the bottommost blocks in each column of the current tetrimino.
+            # List of row indices of the bottommost blocks in each column of the current tetrimino.
             indices_current = (self.array_current.shape[0]-1) - np.argmax(np.flipud(self.array_current > 0), axis=0)[columns]
             # Get the current columns of the placed blocks array.
             array_dropped_current = self.array_dropped[:, columns]
@@ -530,18 +546,27 @@ class Tetron:
             for i in range(len(indices_current)):
                 array_dropped_current[indices_current[i]::-1, i] = 0
             # List of row indices of highest available positions in current tetrimino's columns.
-            indices_available = np.where(
-                np.any(array_dropped_current > 0, axis=0),
-                np.argmax(array_dropped_current > 0, axis=0)-1,
-                (self.row_count-1) * np.ones(array_dropped_current.shape[1])
-                )
+            if self.flag_heavy:
+                indices_available = (self.row_count-1) * np.ones(array_dropped_current.shape[1])
+            else:
+                indices_available = np.where(
+                    np.any(array_dropped_current > 0, axis=0),
+                    np.argmax(array_dropped_current > 0, axis=0)-1,
+                    (self.row_count-1) * np.ones(array_dropped_current.shape[1])
+                    )
             # Mark the blocks where the current tetrimino will fall if hard dropped with negative numbers.
-            shift = np.min(indices_available - indices_current)
-            self.array_highlight = -1 * np.roll(self.array_current, shift=int(shift), axis=0)
+            shift = int(min(indices_available - indices_current))
+            if self.flag_heavy:
+                for i in range(len(indices_current)):
+                    if (indices_current[i]+1) <= self.row_count-1:
+                        array_dropped_current[indices_current[i]+1:indices_current[i]+1+shift, i] = -1
+                self.array_highlight[:, columns] = array_dropped_current
+            else:
+                self.array_highlight = -1 * np.roll(self.array_current, shift=shift, axis=0)
         # Remove the current tetrimino if not playing.
         else:
             self.array_current[:] = 0
-        # Add the current tetrimino and highlighted blocks to the displayed array.
+        # Add the highlighted blocks, dropped blocks, and current tetrimino to the displayed array.
         if not self.flag_ghost and not self.flag_blind:
             self.array_display[self.array_highlight < 0] = self.array_highlight[self.array_highlight < 0]
         self.array_display[self.array_dropped > 0] = self.array_dropped[self.array_dropped > 0]
