@@ -5,12 +5,16 @@ Tetris with a twist.
 Tetron features the same seven blocks in Tetris but includes more advanced blocks and special effects. Reach a score of 1,000 to win the game.
 
 ### Controls
-* Move left, right: A, D
-* Hard drop: W
-* Soft drop: S
-* Rotate: Left arrow (counterclockwise), right arrow (clockwise)
-* Start game: Space
-* Stop game: Escape
+| Action | Key |
+| ----------- | ----------- |
+| Move Left | A |
+| Move Right | D |
+| Hard Drop | W |
+| Soft Drop | S |
+| Rotate Counterclockwise | Left Arrow |
+| Rotate Clockwise | Right Arrow |
+| Start Game | Space |
+| Stop Game | Escape |
 
 ### Advanced blocks
 * Variations of the I block: I+, I-
