@@ -12,8 +12,7 @@ Tetron features the same seven blocks in Tetris but includes more advanced block
 * Start game: Space
 * Stop game: Escape
 
-### Advanced Blocks
-Advanced blocks appear more often as the game progresses.
+### Advanced blocks
 * Variations of the I block: I+, I-
 * Variations of the J block: J+, J-
 * Variations of the L block: L+, L-
@@ -28,18 +27,39 @@ Advanced blocks appear more often as the game progresses.
 * Colon block
 * Quotation block
 
-### Special Effects
-Special effects happen more often as the game progresses.
+### Special effects
 * Ghost block: A block that passes through other blocks and through the walls. If hard dropped, a ghost block is locked in-place instead of dropping down.
 * Heavy block: A block that drops to the very bottom instead of stacking on top of other blocks.
-* Blind: The colors of all blocks look like the background, making them harder to see.
+* Blind: The colors of all blocks become almost identical to the background, making them harder to see.
 * Rotated: The entire matrix is rotated.
 
-### Other Game Modes
+### Other game modes
 * Classic Mode (Ctrl + Space): Only the origin seven blocks from Tetris appear.
 * Double Mode (Shift + Space): Play two instances of the game at once.
 
 ## Installation
+1. Click on the most recent release found [here](https://github.com/marsh92909/Tetron/releases).
+2. Click on the `Tetron.zip` file to download it.
+3. Unzip the file and place the Tetron folder anywhere. Do not move, modify, or delete any file in this folder, including the `.exe` file, or the program may not open.
+4. Open the Tetron folder and create a shortcut of the `.exe` file. Move the shortcut to the desktop for convenience.
+
+## Compilation
+Using PyInstaller 4.2 and Python 3.9.1 on Windows 10.
+
+### Compile a folder with existing `.spec` file
+If a `.spec` file already exists and has the correct information:
+1. Open Command Prompt and set the current directory to the folder where the `.py` file is: `cd Desktop\Tetron`.
+2. Enter `pyinstaller tetron.spec` to compile the folder.
+3. Open the `dist` folder to find the compiled folder containing the `.exe` file and other files.
+4. Zip the folder and distribute.
+
+### Create a `.spec` file
+If a `.spec` file does not exist, create it first:
+1. Open Command Prompt and set the current directory to the folder where the `.py` file is: `cd Desktop\Tetron`.
+2. Create a `.spec` file by entering `pyi-makespec --windowed --name Tetron tetron.py`. The file will appear in the current directory.
+3. Open the `.spec` file to add additional information:
+   1. The `datas` argument to `Analysis` contains the files to be included in the compiled folder. It is a list of tuples in which each tuple represents a file and contains two strings. The first string is the path to the file to be included. To include all of a type of file, use an asterisk in place of the file name: `'C:\\Users\\...\\Tetron\\*.mp3'`. The second string is the path to the folder, relative to the compiled folder, in which the file will be placed during compilation. To place a file directly in the compiled folder, use `'.'`. To place a file in a folder within the compiled folder, use `'.\\<folder name>'`.
+   2. The `icon` argument to `EXE` is a string of the file name of the icon file: `'icon.ico'`.
 
 ## Credits
 ### Programming
