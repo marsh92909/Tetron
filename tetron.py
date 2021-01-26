@@ -203,9 +203,23 @@ class Tetron:
         # Start playing music and loop indefinitely.
         pygame.mixer.music.play(loops=-1)
     
+    # Pause or resume the game.
+    def pause_game(self):
+        # Resume game.
+        if self.flag_paused:
+            game.flag_playing = True
+            game.flag_paused = False
+            pygame.mixer.music.unpause()
+        # Pause game.
+        else:
+            game.flag_playing = False
+            game.flag_paused = True
+            pygame.mixer.music.pause()
+    
     # Stop the game.
     def stop_game(self):
         self.flag_playing = False
+        self.flag_paused = False
         self.flag_ghost = False
         self.flag_heavy = False
         self.flag_blind = False
@@ -368,10 +382,6 @@ class Tetron:
                     array_dropped_top[rows_highest[column]:, column] = 1
             # Create the tetrimino by inverting the dropped blocks.
             tetrimino = self.id_current * (1 - array_dropped_top)
-            # tetrimino = self.id_current * np.concatenate((
-            #     np.ones([1, self.column_count]),
-            #     1 - array_dropped_top
-            #     ), axis=0)
 
         # Apply special effects to tetrimino, if any.
         if self.flag_ghost:
@@ -720,15 +730,13 @@ while not done:
                 if not game.flag_playing:
                     # Resume game.
                     if game.flag_paused:
-                        game.flag_playing = True
-                        game.flag_paused = False
+                        game.pause_game()
                     # Start game.
                     else:
                         game.start_game()
                 # Pause game.
                 else:
-                    game.flag_playing = False
-                    game.flag_paused = True
+                    game.pause_game()
             # Stop game.
             elif event.key == pygame.K_ESCAPE:
                 if game.flag_playing or game.flag_paused:
