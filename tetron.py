@@ -659,6 +659,9 @@ pygame.display.set_icon(icon)
 # Set the window size [width, height] in pixels.
 size_window = [game.column_count*game.width+(game.column_count+1)*game.margin, height_panel + game.row_count*game.height+(game.row_count+1)*game.margin]
 screen = pygame.display.set_mode(size_window, pygame.RESIZABLE)
+# Define a rect object representing the playing area.
+rect_grid = game.grid.get_rect()
+rect_grid.top = height_panel
 
 # Load the logo.
 logo = pygame.image.load('logo.png')
@@ -682,6 +685,12 @@ while not done:
         # Window is exited.
         if event.type == pygame.QUIT:
             done = True
+        # Window is resized.
+        elif event.type == pygame.VIDEORESIZE:
+            # Redefine the size of the window.
+            size_window = pygame.display.get_window_size()  # screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
+            # Adjust the rect object of the playing area.
+            rect_grid.centerx = size_window[0]//2
         # Key presses.
         elif event.type == pygame.KEYDOWN:
             if game.flag_playing:
@@ -803,8 +812,8 @@ while not done:
     # Display the logo if not playing.
     if not game.flag_playing:
         rect_logo = logo.get_rect()
-        rect_logo.top = 0
-        rect_logo.centerx = size_window[0]//2
+        rect_logo.bottom = height_panel
+        rect_logo.centerx = rect_grid.centerx + 0
         screen.blit(logo, rect_logo)
     # Draw each block inside the grid.
     for row in range(game.row_count):
@@ -825,13 +834,13 @@ while not done:
     # Add elapsed time text to the screen.
     text_time_elapsed = font.render('{:02d}:{:02d}'.format(game.time_elapsed//60000, int((game.time_elapsed/1000)%60)), True, rgb(1))
     rect_text_time_elapsed = text_time_elapsed.get_rect()
-    rect_text_time_elapsed.right = size_window[0]
+    rect_text_time_elapsed.right = rect_grid.right
     rect_text_time_elapsed.bottom = height_panel
     screen.blit(text_time_elapsed, rect_text_time_elapsed)
     # Add cleared lines text to the screen.
     text_cleared = font.render('{}'.format(game.score), True, rgb(1))
     rect_text_cleared = text_cleared.get_rect()
-    rect_text_cleared.left = 0
+    rect_text_cleared.left = rect_grid.left
     rect_text_cleared.bottom = height_panel
     screen.blit(text_cleared, rect_text_cleared)
     # Stop the rotation effect if it has lasted longer than the maximum duration.
@@ -851,7 +860,7 @@ while not done:
         else:
             game.duration_blind += 1000/game.fps
     # Display the grid inside the window.
-    screen.blit(game.grid, [0, height_panel])
+    screen.blit(game.grid, rect_grid)
     
     # Update the screen.
     pygame.display.flip()
