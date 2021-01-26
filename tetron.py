@@ -239,7 +239,7 @@ class Tetron:
             # Reset all values in the list to False.
             if all(self.used_special):
                 self.used_special = [False] * len(self.used_special)
-            
+
             if effect_special == self.id_special[0]:
                 self.flag_ghost = True
                 self.flag_fast_fall = True
@@ -367,10 +367,11 @@ class Tetron:
                 if rows_highest[column] >= 0:
                     array_dropped_top[rows_highest[column]:, column] = 1
             # Create the tetrimino by inverting the dropped blocks.
-            tetrimino = self.id_current * np.concatenate((
-                np.ones([1, self.column_count]),
-                1 - array_dropped_top
-                ), axis=0)
+            tetrimino = self.id_current * (1 - array_dropped_top)
+            # tetrimino = self.id_current * np.concatenate((
+            #     np.ones([1, self.column_count]),
+            #     1 - array_dropped_top
+            #     ), axis=0)
 
         # Apply special effects to tetrimino, if any.
         if self.flag_ghost:
@@ -439,12 +440,12 @@ class Tetron:
 
     # Rotate counterclockwise or clockwise by inputting 1 (default) or -1.
     def rotate(self, direction=1):
-        # Calculate the indices of the rows and columns currently occupied.
+        # Calculate how many rows and columns the current tetrimino has.
         rows_occupied_before = np.sum(np.any(self.tetrimino > 0, axis=1))
         columns_occupied_before = np.sum(np.any(self.tetrimino > 0, axis=0))
         # Rotate tetrimino.
         self.tetrimino = np.rot90(self.tetrimino, k=direction)
-        # Calculate the indices of the rows and columns occupied after rotation.
+        # Calculate how many rows and columns the current tetrimino has after rotation.
         rows_occupied_after = np.sum(np.any(self.tetrimino > 0, axis=1))
         columns_occupied_after = np.sum(np.any(self.tetrimino > 0, axis=0))
         # Determine if the rotated tetrimino intersects already placed blocks.
@@ -694,7 +695,9 @@ while not done:
                         direction = 1
                     elif event.key == pygame.K_RIGHT:
                         direction = -1
-                    game.rotate(direction)
+                    # Only rotate if not freebie.
+                    if not game.id_current == 899:
+                        game.rotate(direction)
                 # Hard drop.
                 elif event.key == pygame.K_w:
                     game.drop_hard()
