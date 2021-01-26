@@ -106,7 +106,7 @@ class Tetron:
 
         # Define the IDs for classic tetriminos, advanced tetriminos, special effects.
         self.id_classic = [100, 200, 300, 400, 500, 600, 700]
-        self.id_advanced = [101, 102, 199, 201, 202, 301, 302, 401, 402, 403, 501, 601, 602, 701, 801, 811, 812, 813, 814]
+        self.id_advanced = [101, 102, 201, 202, 301, 302, 401, 402, 403, 501, 601, 602, 701, 801, 811, 812, 813, 814, 899]
         self.id_special = ['ghost', 'heavy', 'rotate', 'blind']
 
         # Define the number of blocks needed to incrementally increase the difficulty.
@@ -335,7 +335,23 @@ class Tetron:
             tetrimino = self.id_current * np.ones([3, 3])
             tetrimino[1:3, 0] = -1
             tetrimino[0:2, 2] = -1
-        elif self.id_current == 199:  # Freebie
+        elif self.id_current == 801:  # Random 3x3
+            shape = [3, 3]
+            tetrimino = -1 * np.ones(shape)
+            random_indices = random.sample(range(tetrimino.size), 5)
+            tetrimino[np.unravel_index(random_indices, shape)] = self.id_current
+        elif self.id_current == 811:  # Period (.)
+            tetrimino = self.id_current * np.ones([1, 1])
+        elif self.id_current == 812:  # Comma (,)
+            tetrimino = self.id_current * np.ones([2, 2])
+            tetrimino[[0,1],[0,1]] = -1
+        elif self.id_current == 813:  # Colon (:)
+            tetrimino = -1 * np.ones([3, 3])
+            tetrimino[[0,2], 1] = self.id_current
+        elif self.id_current == 814:  # Quotation (")
+            tetrimino = -1 * np.ones([3, 3])
+            tetrimino[0:2, [0,2]] = self.id_current
+        elif self.id_current == 899:  # Freebie
             # Index of highest row containing dropped blocks.
             index_highest = np.argmax(np.any(self.array_dropped > 0, axis=1))
             # Index of lowest row that can fit this tetrimino.
@@ -355,29 +371,15 @@ class Tetron:
                 np.ones([1, self.column_count]),
                 1 - array_dropped_top
                 ), axis=0)
-        elif self.id_current == 801:  # Random 3x3
-            shape = [3, 3]
-            tetrimino = -1 * np.ones(shape)
-            random_indices = random.sample(range(tetrimino.size), 5)
-            tetrimino[np.unravel_index(random_indices, shape)] = self.id_current
-        elif self.id_current == 811:  # Period (.)
-            tetrimino = self.id_current * np.ones([1, 1])
-        elif self.id_current == 812:  # Comma (,)
-            tetrimino = self.id_current * np.ones([2, 2])
-            tetrimino[[0,1],[0,1]] = -1
-        elif self.id_current == 813:  # Colon (:)
-            tetrimino = -1 * np.ones([3, 3])
-            tetrimino[[0,2], 1] = self.id_current
-        elif self.id_current == 814:  # Quotation (")
-            tetrimino = -1 * np.ones([3, 3])
-            tetrimino[0:2, [0,2]] = self.id_current
-        # Change the tetrimino to a ghost.
+
+        # Apply special effects to tetrimino, if any.
         if self.flag_ghost:
             tetrimino[tetrimino > 0] = 901
         elif self.flag_heavy:
             tetrimino[tetrimino > 0] = 902
+        
+        # Set the current tetrimino.
         self.tetrimino = tetrimino
-
         # Clear the current tetrimino array.
         self.array_current[:] = 0
         # Update the array of the current tetrimino.
