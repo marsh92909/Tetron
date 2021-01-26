@@ -176,6 +176,7 @@ class Tetron:
 
         # Initialize flags indicating statuses of the game.
         self.flag_playing = False
+        self.flag_paused = False
         self.flag_advancing = True
         self.flag_dropping_soft = False
         self.flag_ghost = False
@@ -643,13 +644,6 @@ while not done:
             done = True
         # Key presses.
         elif event.type == pygame.KEYDOWN:
-            # Start the game.
-            if event.key == pygame.K_SPACE and game.flag_playing is False:
-                game.start_game()
-            # Stop the game.
-            elif event.key == pygame.K_ESCAPE and game.flag_playing is True:
-                game.stop_game()
-            
             if game.flag_playing:
                 # Move left one column.
                 if event.key == pygame.K_a:
@@ -690,6 +684,24 @@ while not done:
                     game.time_previous_drop_soft = 0
         # Key releases.
         elif event.type == pygame.KEYUP:
+            if event.key == pygame.K_SPACE:
+                if not game.flag_playing:
+                    # Resume game.
+                    if game.flag_paused:
+                        game.flag_playing = True
+                        game.flag_paused = False
+                    # Start game.
+                    else:
+                        game.start_game()
+                # Pause game.
+                else:
+                    game.flag_playing = False
+                    game.flag_paused = True
+            # Stop game.
+            elif event.key == pygame.K_ESCAPE:
+                if game.flag_playing or game.flag_paused:
+                    game.stop_game()
+
             if game.flag_playing:
                 # Stop soft dropping.
                 if event.key == pygame.K_s:
