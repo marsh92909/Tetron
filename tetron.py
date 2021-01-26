@@ -87,8 +87,12 @@ class Tetron:
         self.time_start = 0
         self.time_elapsed = 0
 
-        # Initialize the block fall speed (ms).
-        self.speed_fall = 1000
+        # Define the scores needed to move to the next stage. The last value is the score needed to win the game.
+        self.score_thresholds = [500, 900, 1000]
+        # Define the block fall speeds (ms) for each stage of the game.
+        self.speeds_fall = [1000, 750, 500]
+        # Define the block fall speed multiplier for some special effects (values below 1 result in faster speeds).
+        self.speed_fall_multiplier = 0.5
         # Define the maximum block fall speed (lines/second).
         # self.speed_limit_fall = self.fps + 0
         # Define the increment by which the block fall speed is increased (lines/second).
@@ -109,9 +113,6 @@ class Tetron:
         self.count_increase_difficulty = 10
         # Define the number of blocks neeeded to begin increasing the chance of getting a special effect.
         self.count_increase_chance_special = 30
-        # Define the score needed to win the game.
-        self.score_win = 1000
-
         # Define the maximum probability (between 0 and 1) of getting an advanced tetrimino and the increment by which the probability is increased.
         self.weight_max_advanced = 2/5
         self.weight_increment_advanced = 0.025
@@ -154,6 +155,9 @@ class Tetron:
         self.array_dropped = np.zeros([self.row_count, self.column_count])
         self.array_display = np.zeros([self.row_count, self.column_count])
         self.array_highlight = np.zeros([self.row_count, self.column_count])
+        
+        # Initialize the stage of the game as a number.
+        self.stage = 0
 
         # Initialize lists with Booleans indicating which tetriminos or special effects have been used to prevent duplicates.
         self.used_classic = [False] * len(self.id_classic)
@@ -178,6 +182,7 @@ class Tetron:
         self.flag_playing = False
         self.flag_paused = False
         self.flag_advancing = True
+        self.flag_fast_fall = False
         self.flag_dropping_soft = False
         self.flag_ghost = False
         self.flag_heavy = False
@@ -237,9 +242,11 @@ class Tetron:
             
             if effect_special == self.id_special[0]:
                 self.flag_ghost = True
+                self.flag_fast_fall = True
                 self.sound_special_ghost.play()
             elif effect_special == self.id_special[1]:
                 self.flag_heavy = True
+                self.flag_fast_fall = True
                 # self.sound_special_heavy.play()
             elif effect_special == self.id_special[2]:
                 # Apply the effect only if it is not currently active.
@@ -492,6 +499,8 @@ class Tetron:
             self.flag_ghost = False
         if self.flag_heavy:
             self.flag_heavy = False
+        if self.flag_fast_fall:
+            self.flag_fast_fall = False
         # Update the values of previously placed ghost blocks.
         self.array_dropped[self.array_dropped == 901] = 900
 
@@ -516,17 +525,19 @@ class Tetron:
         if self.combos > 1:
             multipliers.append((self.combos+1)/2)
             print('combo multiplier: ', multipliers[-1])
+        score_previous = self.score + 0
         self.score += int(score_increment * np.prod(multipliers))
+        # Advance to the next stage of the game.
+        if score_previous < self.score_thresholds[self.stage] <= self.score:
+            self.stage_advance()
         
-        # Stop the game if the top row is occupied.
-        if np.any(self.array_dropped[0, :] > 0):
-            self.stop_game()
-        # Stop the game if the score exceeds the threshold.
-        elif self.score >= self.score_win:
-            self.win_game()
-        # Create a new tetrimino otherwise.
-        else:
-            self.create_new()
+        if self.flag_playing:
+            # Stop the game if the top row is occupied.
+            if np.any(self.array_dropped[0, :] > 0):
+                self.stop_game()
+            # Create a new tetrimino otherwise.
+            else:
+                self.create_new()
 
     # Update the displayed array.
     def update(self):
@@ -586,6 +597,22 @@ class Tetron:
             # Prevent the probability from exceeding the maximum value caused by rounding errors.
             self.weight_special = min([self.weight_special, self.weight_max_special])
         print('Probability special: ', self.weight_special)
+    
+    # Advance to the next stage of the game.
+    def stage_advance(self):
+        # Advance to the second stage.
+        if self.stage == 0:
+            pass
+        # Advance to the third stage.
+        elif self.stage == 1:
+            pass
+        # Win the game.
+        elif self.stage == len(self.score_thresholds)-1:
+            self.win_game()
+        # Increment the stage value.
+        if self.stage < len(self.score_thresholds)-1:
+            self.stage += 1
+            print('Stage: ', self.stage)
     
     # Stop the game when the player wins.
     def win_game(self):
@@ -749,7 +776,7 @@ while not done:
     if game.flag_playing:
         # Advance current tetrimino.
         if game.flag_advancing:
-            if (game.time_current - game.time_start_advance) >= game.speed_fall:
+            if (game.time_current - game.time_start_advance) >= (game.speeds_fall[game.stage] * (game.speed_fall_multiplier ** game.flag_fast_fall)):
                 game.advance()
                 game.reset_time_advance()
         else:
