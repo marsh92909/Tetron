@@ -92,7 +92,7 @@ class Tetron:
         # Define the block fall speeds (ms) for each stage of the game.
         self.speeds_fall = [1000, 750, 500]
         # Define the block fall speed multiplier for some special effects (values below 1 result in faster speeds).
-        self.speed_fall_multiplier = 0.5
+        self.speed_fall_multiplier = 1/3
         # Define the maximum block fall speed (lines/second).
         # self.speed_limit_fall = self.fps + 0
         # Define the increment by which the block fall speed is increased (lines/second).
@@ -110,9 +110,9 @@ class Tetron:
         self.id_special = ['ghost', 'heavy', 'rotate', 'blind']
 
         # Define the number of blocks needed to incrementally increase the difficulty.
-        self.count_increase_difficulty = 10
+        self.count_increase_difficulty = 20
         # Define the number of blocks neeeded to begin increasing the chance of getting a special effect.
-        self.count_increase_chance_special = 30
+        self.count_increase_chance_special = 80
         # Define the maximum probability (between 0 and 1) of getting an advanced tetrimino and the increment by which the probability is increased.
         self.weight_max_advanced = 2/5
         self.weight_increment_advanced = 0.025
@@ -533,12 +533,12 @@ class Tetron:
         else:
             self.combos = 0
         # Calculate points to add to score.
-        score_increment = 10 * cleared_increment
+        score_increment = 5 * cleared_increment
         if cleared_increment >= 4:
-            score_increment = 40
+            score_increment = 10 * cleared_increment
         multipliers = []
         if self.combos > 1:
-            multipliers.append((self.combos+1)/2)
+            multipliers.append(self.combos)  # multipliers.append((self.combos+1)/2)
             print('combo multiplier: ', multipliers[-1])
         score_previous = self.score + 0
         self.score += int(score_increment * np.prod(multipliers))
