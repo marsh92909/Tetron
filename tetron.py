@@ -126,15 +126,14 @@ class Tetron:
         # Create the surface used to display the grid.
         self.grid = pygame.Surface((self.column_count*self.width+(self.column_count+1)*self.margin, self.row_count*self.height+(self.row_count+1)*self.margin))
         
-        # Load background music and sound effects.
-        pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron.mp3'))
+        # Load sound effects.
         # self.sound_game_advance = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_advance.wav'))
         self.sound_game_move = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_move.wav'))
         self.sound_game_rotate = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_rotate.wav'))
         self.sound_game_harddrop = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_harddrop.wav'))
         self.sound_game_softdrop = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_softdrop.wav'))
         self.sound_game_landing = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_landing.wav'))
-        self.sound_game_win = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_win.mp3'))
+        self.sound_game_win = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_win.wav'))
         self.sound_special_ghost = pygame.mixer.Sound(os.path.join(folder_sounds, 'special_ghost.wav'))
         self.sound_special_rotate = pygame.mixer.Sound(os.path.join(folder_sounds, 'special_rotate.wav'))
         self.sound_special_blind = pygame.mixer.Sound(os.path.join(folder_sounds, 'special_blind.wav'))
@@ -200,7 +199,9 @@ class Tetron:
         self.flag_playing = True
         # Create a new tetrimino.
         self.create_new()
-        # Start playing music and loop indefinitely.
+        # Unload current music and start playing music indefinitely.
+        pygame.mixer.music.unload()
+        pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_{}.mp3'.format(self.stage+1)))
         pygame.mixer.music.play(loops=-1)
     
     # Pause or resume the game.
@@ -225,8 +226,9 @@ class Tetron:
         self.flag_blind = False
         self.flag_rotate = False
         self.update()
-        # Stop playing music.
+        # Stop and unload current music.
         pygame.mixer.music.stop()
+        pygame.mixer.music.unload()
 
     # Generate a new tetrimino and replace the current arrays.
     def create_new(self):
@@ -613,12 +615,17 @@ class Tetron:
     
     # Advance to the next stage of the game.
     def stage_advance(self):
-        # Advance to the second stage.
-        if self.stage == 0:
-            pass
-        # Advance to the third stage.
-        elif self.stage == 1:
-            pass
+        # Advance to the second or third stage.
+        if self.stage == 0 or self.stage == 1:
+            # Stop and unload current music.
+            pygame.mixer.music.stop()
+            pygame.mixer.music.unload()
+            # Load transition music.
+            pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_transition_{}.mp3'.format(self.stage+1)))
+            # Set the music to send an event when done playing.
+            pygame.mixer.music.set_endevent(pygame.USEREVENT+1)
+            # Play the music once.
+            pygame.mixer.music.play(loops=0)
         # Win the game.
         elif self.stage == len(self.score_thresholds)-1:
             self.win_game()
@@ -759,6 +766,18 @@ while not done:
                     game.flag_advancing = True
                     # Reset the previous advance time.
                     game.reset_time_advance()
+        # Music ends.
+        elif event.type == pygame.USEREVENT+1:
+            if game.flag_playing:
+                # Stop and unload current music.
+                pygame.mixer.music.stop()
+                pygame.mixer.music.unload()
+                # Load music for current stage.
+                pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_{}.mp3'.format(game.stage+1)))
+                # Disable the event sent when music ends.
+                pygame.mixer.music.set_endevent()
+                # Play indefinitely.
+                pygame.mixer.music.play(loops=-1)
     
     # =============================================================================
     # Keys Held Continuously.
