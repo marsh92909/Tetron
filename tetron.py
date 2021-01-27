@@ -98,11 +98,11 @@ class Tetron:
         # Define the increment by which the block fall speed is increased (lines/second).
         # self.speed_increment = 0.5
         # Define the block move speed (ms) and initial delay for key repeats (ms).
-        self.speed_move = 30
-        self.delay_move = 200
+        self.speed_move = 25
+        self.delay_move = 150
         # Define the soft drop speed (ms) and initial delay for key repeats (ms).
-        self.speed_drop_soft = 100
-        self.delay_drop_soft = 100
+        self.speed_softdrop = 50
+        self.delay_softdrop = 50
 
         # Define the IDs for classic tetriminos, advanced tetriminos, special effects.
         self.id_classic = [100, 200, 300, 400, 500, 600, 700]
@@ -182,7 +182,7 @@ class Tetron:
         self.flag_paused = False
         self.flag_advancing = True
         self.flag_fast_fall = False
-        self.flag_dropping_soft = False
+        self.flag_softdropping = False
         self.flag_ghost = False
         self.flag_heavy = False
         self.flag_rotate = False
@@ -416,9 +416,12 @@ class Tetron:
         # Advance one line if not intersecting.
         if (self.flag_ghost and is_not_at_bottom) or (not self.flag_ghost and (is_not_at_bottom and no_intersection)):
             self.array_current = np.roll(self.array_current, shift=1, axis=0)
-        # Hard drop if intersecting.
         else:
-            self.drop_hard()
+            # Reset advance timer if landed while soft dropping.
+            if self.flag_softdropping:
+                self.stop_softdropping()
+            else:
+                self.harddrop()
             # Play sound effect.
             self.sound_game_landing.play()
         # Update the displayed array.
@@ -484,11 +487,7 @@ class Tetron:
         self.sound_game_rotate.play()
 
     # Hard drop.
-    def drop_hard(self):
-        # # Reset the previous advance time only if not soft dropping. This prevents double advancing.
-        # if not self.flag_dropping_soft:
-        #     self.reset_time_advance()
-
+    def harddrop(self):
         # If a heavy tetrimino, delete placed blocks below the current tetrimino and shift tetrimino to bottom row.
         if self.flag_heavy:
             self.array_dropped[self.array_highlight < 0] = 0
@@ -553,6 +552,29 @@ class Tetron:
             # Create a new tetrimino otherwise.
             else:
                 self.create_new()
+
+    # Start soft dropping.
+    def start_softdropping(self):
+        self.advance()
+        # Set flags.
+        self.flag_softdropping = True
+        self.flag_advancing = False
+        # Reset the previous advance time.
+        self.reset_time_advance()
+        # Record the current time used later to calculate how long this key is held.
+        self.time_start_softdrop = self.time_current + 0
+        # Initialize the time at which the previous repeat occured.
+        self.time_previous_softdrop = 0
+        # Play sound effect.
+        self.sound_game_softdrop.play()
+
+    # Stop soft dropping.
+    def stop_softdropping(self):
+        # Set flags.
+        self.flag_softdropping = False
+        self.flag_advancing = True
+        # Reset the previous advance time.
+        self.reset_time_advance()
 
     # Update the displayed array.
     def update(self):
@@ -726,20 +748,10 @@ while not done:
                         game.rotate(direction)
                 # Hard drop.
                 elif event.key == pygame.K_w:
-                    game.drop_hard()
+                    game.harddrop()
                 # Start soft dropping.
                 elif event.key == pygame.K_s:
-                    game.advance()
-                    game.reset_time_advance()
-                    # Play sound effect.
-                    game.sound_game_softdrop.play()
-                    # Set flags.
-                    game.flag_dropping_soft = True
-                    game.flag_advancing = False
-                    # Record the current time used later to calculate how long this key is held.
-                    game.time_start_drop_soft = game.time_current + 0
-                    # Initialize the time at which the previous repeat occured.
-                    game.time_previous_drop_soft = 0
+                    game.start_softdropping()
         # Key releases.
         elif event.type == pygame.KEYUP:
             if event.key == pygame.K_SPACE:
@@ -761,11 +773,7 @@ while not done:
             if game.flag_playing:
                 # Stop soft dropping.
                 if event.key == pygame.K_s:
-                    # Set flags.
-                    game.flag_dropping_soft = False
-                    game.flag_advancing = True
-                    # Reset the previous advance time.
-                    game.reset_time_advance()
+                    game.stop_softdropping()
         # Music ends.
         elif event.type == pygame.USEREVENT+1:
             if game.flag_playing:
@@ -787,13 +795,14 @@ while not done:
     # Soft drop.
     if keys_pressed[pygame.K_s] and game.flag_playing:
         # Check if the key has been held longer than the required initial delay.
-        if (game.time_current - game.time_start_drop_soft) > game.delay_drop_soft:
+        if (game.time_current - game.time_start_softdrop) > game.delay_softdrop:
             # Check if the key has been held longer than the key repeat interval.
-            if (game.time_current - game.time_previous_drop_soft) > game.speed_drop_soft:
-                game.advance()
-                game.time_previous_drop_soft = game.time_current + 0
-                # Play sound effect.
-                game.sound_game_softdrop.play()
+            if (game.time_current - game.time_previous_softdrop) > game.speed_softdrop:
+                if game.flag_softdropping:  # Check whether soft dropping to prevent advancing line immediately after landing
+                    game.advance()
+                    # Play sound effect.
+                    game.sound_game_softdrop.play()
+                game.time_previous_softdrop = game.time_current + 0
     # Move left.
     if keys_pressed[pygame.K_a] and game.flag_playing:
         # Check if the key has been held longer than the required initial delay.
