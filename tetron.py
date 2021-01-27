@@ -107,7 +107,7 @@ class Tetron:
         # Define the IDs for classic tetriminos, advanced tetriminos, special effects.
         self.id_classic = [100, 200, 300, 400, 500, 600, 700]
         self.id_advanced = [101, 102, 201, 202, 301, 302, 401, 402, 403, 501, 601, 602, 701, 801, 811, 812, 813, 814, 899]
-        self.id_special = ['ghost', 'heavy', 'rotate', 'blind']
+        self.id_special = ['ghost', 'heavy', 'disoriented', 'blind']
 
         # Define the number of blocks needed to incrementally increase the difficulty.
         self.count_increase_difficulty = 20
@@ -120,7 +120,7 @@ class Tetron:
         self.weight_max_special = 1/20
         self.weight_increment_special = 0.005
         # Define durations for special effects (ms).
-        self.duration_max_rotate = 20000
+        self.duration_max_disoriented = 20000
         self.duration_max_blind = 20000
 
         # Create the surface used to display the grid.
@@ -135,7 +135,7 @@ class Tetron:
         self.sound_game_landing = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_landing.wav'))
         self.sound_game_win = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_win.wav'))
         self.sound_special_ghost = pygame.mixer.Sound(os.path.join(folder_sounds, 'special_ghost.wav'))
-        self.sound_special_rotate = pygame.mixer.Sound(os.path.join(folder_sounds, 'special_rotate.wav'))
+        self.sound_special_disoriented = pygame.mixer.Sound(os.path.join(folder_sounds, 'special_disoriented.wav'))
         self.sound_special_blind = pygame.mixer.Sound(os.path.join(folder_sounds, 'special_blind.wav'))
         # Set volume for some sound effects.
         self.sound_game_move.set_volume(0.1)
@@ -185,7 +185,7 @@ class Tetron:
         self.flag_softdropping = False
         self.flag_ghost = False
         self.flag_heavy = False
-        self.flag_rotate = False
+        self.flag_disoriented = False
         self.flag_blind = False
 
     # Start the game.
@@ -224,7 +224,7 @@ class Tetron:
         self.flag_ghost = False
         self.flag_heavy = False
         self.flag_blind = False
-        self.flag_rotate = False
+        self.flag_disoriented = False
         self.update()
         # Stop and unload current music.
         pygame.mixer.music.stop()
@@ -266,10 +266,10 @@ class Tetron:
                 # self.sound_special_heavy.play()
             elif effect_special == self.id_special[2]:
                 # Apply the effect only if it is not currently active.
-                if not self.flag_rotate:
-                    self.flag_rotate = True
-                    self.duration_rotate = 0
-                    self.sound_special_rotate.play()
+                if not self.flag_disoriented:
+                    self.flag_disoriented = True
+                    self.duration_disoriented = 0
+                    self.sound_special_disoriented.play()
             elif effect_special == self.id_special[3]:
                 # Apply the effect only if it is not currently active.
                 if not self.flag_blind:
@@ -871,13 +871,13 @@ while not done:
     rect_text_cleared.left = rect_grid.left
     rect_text_cleared.bottom = height_panel
     screen.blit(text_cleared, rect_text_cleared)
-    # Stop the rotation effect if it has lasted longer than the maximum duration.
-    if game.flag_rotate:
-        if game.duration_rotate > game.duration_max_rotate:
-            game.flag_rotate = False
-            game.duration_rotate = 0
+    # Stop the disoriented effect if it has lasted longer than the maximum duration.
+    if game.flag_disoriented:
+        if game.duration_disoriented > game.duration_max_disoriented:
+            game.flag_disoriented = False
+            game.duration_disoriented = 0
         else:
-            game.duration_rotate += 1000/game.fps
+            game.duration_disoriented += 1000/game.fps
         # Rotate the grid.
         game.grid.blit(pygame.transform.rotate(game.grid, 180), (0,0))
     # Stop the blind effect if it has lasted longer than the maximum duration.
