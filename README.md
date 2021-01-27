@@ -34,8 +34,8 @@ Tetron features the same seven blocks in Tetris but includes more advanced block
 ### Special effects
 * Ghost block: A block that passes through other blocks and through the walls. If hard dropped, a ghost block is locked in-place instead of dropping down.
 * Heavy block: A block that drops to the very bottom instead of stacking on top of other blocks.
+* Disoriented: The entire matrix is rotated.
 * Blind: The colors of all blocks become almost identical to the background, making them harder to see.
-* Rotated: The entire matrix is rotated.
 
 ### Other game modes
 * Classic Mode (Ctrl + Space): Only the origin seven blocks from Tetris appear.
