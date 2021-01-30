@@ -212,7 +212,7 @@ class Tetron:
         self.create_new()
         # Unload current music and start playing music indefinitely.
         pygame.mixer.music.unload()
-        pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_{}.mp3'.format(self.stage+1)))
+        pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_{}.ogg'.format(self.stage+1)))
         pygame.mixer.music.play(loops=-1)
     
     # Pause or resume the game.
@@ -582,7 +582,7 @@ class Tetron:
         if self.flag_playing:
             # Stop the game if the top row is occupied.
             if np.any(self.array_dropped[0, :] > 0):
-                self.stop_game()
+                self.lose_game()
             # Create a new tetrimino otherwise.
             else:
                 self.create_new()
@@ -684,7 +684,7 @@ class Tetron:
             pygame.mixer.music.stop()
             pygame.mixer.music.unload()
             # Load transition music.
-            pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_transition_{}.mp3'.format(self.stage+1)))
+            pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_transition_{}.ogg'.format(self.stage+1)))
             # Set the music to send an event when done playing.
             pygame.mixer.music.set_endevent(pygame.USEREVENT+1)
             # Play the music once.
@@ -700,13 +700,22 @@ class Tetron:
     # Stop the game when the player wins.
     def win_game(self):
         self.stop_game()
+        # Play music.
         pygame.mixer.music.stop()
+        pygame.mixer.music.unload()
+        pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_win.ogg'))
+        pygame.mixer.music.play()
+        # Play sound effect.
         self.sound_game_win.play()
 
     # Stop the game when the player loses.
     def lose_game(self):
         self.stop_game()
+        # Play music.
         pygame.mixer.music.stop()
+        pygame.mixer.music.unload()
+        pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_lose.ogg'))
+        pygame.mixer.music.play()
         # self.sound_game_lose.play()
 
     # Reset the value of the previous advance time to the current time.
@@ -821,18 +830,30 @@ while not done:
                 # Stop soft dropping.
                 if event.key == pygame.K_s:
                     game.stop_softdropping()
-        # Music ends.
+        # Transition music ends.
         elif event.type == pygame.USEREVENT+1:
             if game.flag_playing:
                 # Stop and unload current music.
                 pygame.mixer.music.stop()
                 pygame.mixer.music.unload()
                 # Load music for current stage.
-                pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_{}.mp3'.format(game.stage+1)))
-                # Disable the event sent when music ends.
-                pygame.mixer.music.set_endevent()
-                # Play indefinitely.
-                pygame.mixer.music.play(loops=-1)
+                pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_{}.ogg'.format(game.stage+1)))
+                # For some stages, play the introduction music once, and send an event when done playing.
+                if game.stage == 2:
+                    pygame.mixer.music.set_endevent(pygame.USEREVENT+2)
+                    pygame.mixer.music.play(loops=0)
+                # For stages without introduction music, disable the event sent when music ends, and play indefinitely.
+                else:
+                    pygame.mixer.music.set_endevent()
+                    pygame.mixer.music.play(loops=-1)
+        # Introduction music ends.
+        elif event.type == pygame.USEREVENT+2:
+            # Disable the event.
+            pygame.mixer.music.set_endevent()
+            # Load music.
+            # pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_{}_1.ogg'.format(game.stage+1)))
+            # Play indefinitely.
+            pygame.mixer.music.play(loops=-1)
     
     # =============================================================================
     # Keys Held Continuously.
