@@ -89,8 +89,8 @@ class Tetron:
 
         # Define the scores needed to move to the next stage. The last value is the score needed to win the game.
         self.score_thresholds = [500, 900, 1000]
-        # Define the block fall speeds (ms) for each stage of the game.
-        self.speeds_fall = [1000, 750, 500]
+        # Define the range of block fall speeds (ms) from the start to end of the game.
+        self.speeds_fall = [1000, 500]
         # Define the block fall speed multiplier for some special effects (values below 1 result in faster speeds).
         self.speed_fall_multiplier = 1/3
         # Define the maximum block fall speed (lines/second).
@@ -159,34 +159,6 @@ class Tetron:
 
     # Initialize values of attributes that are both modified during the game and reset when starting the game. Called on first startup and subsequent game starts.
     def initialize(self):
-        # Initialize arrays for current tetrimino, dropped blocks, blocks displayed on screen, and highlighted blocks showing where tetriminos will be hard dropped.
-        self.array_current = np.zeros([self.row_count, self.column_count])
-        self.array_dropped = np.zeros([self.row_count, self.column_count])
-        self.array_display = np.zeros([self.row_count, self.column_count])
-        self.array_highlight = np.zeros([self.row_count, self.column_count])
-        
-        # Initialize the stage of the game as a number.
-        self.stage = 0
-
-        # Initialize lists with Booleans indicating which tetriminos or special effects have been used to prevent duplicates.
-        self.used_classic = [False] * len(self.id_classic)
-        self.used_advanced = [False] * len(self.id_advanced)
-        self.used_special = [False] * len(self.id_special)
-
-        # Initialize the current tetrimino ID.
-        self.id_current = 0
-        # Initialize the number of placed tetriminos.
-        self.count = 0
-        # Initialize the number of successive line clears.
-        self.combos = 0
-        # Initialize the cleared lines counter.
-        self.score = 0
-
-        # Initialize the probability (between 0 and 1) of getting an advanced tetrimino.
-        self.weight_advanced = 0.0
-        # Initialize the probability (between 0 and 1) of getting a special effect.
-        self.weight_special = 0.0
-
         # Initialize flags indicating statuses of the game.
         self.flag_playing = False
         self.flag_paused = False
@@ -197,6 +169,35 @@ class Tetron:
         self.flag_heavy = False
         self.flag_disoriented = False
         self.flag_blind = False
+
+        # Initialize arrays for current tetrimino, dropped blocks, blocks displayed on screen, and highlighted blocks showing where tetriminos will be hard dropped.
+        self.array_current = np.zeros([self.row_count, self.column_count])
+        self.array_dropped = np.zeros([self.row_count, self.column_count])
+        self.array_display = np.zeros([self.row_count, self.column_count])
+        self.array_highlight = np.zeros([self.row_count, self.column_count])
+
+        # Initialize lists with Booleans indicating which tetriminos or special effects have been used to prevent duplicates.
+        self.used_classic = [False] * len(self.id_classic)
+        self.used_advanced = [False] * len(self.id_advanced)
+        self.used_special = [False] * len(self.id_special)
+        # Initialize the current tetrimino ID.
+        self.id_current = 0
+
+        # Initialize the stage of the game as a number.
+        self.stage = 0
+        # Initialize the number of placed tetriminos.
+        self.count = 0
+        # Initialize the number of successive line clears.
+        self.combos = 0
+        # Initialize the cleared lines counter.
+        self.score = 0
+
+        # Initialize the block fall speed.
+        self.update_speed_fall()
+        # Initialize the probability (between 0 and 1) of getting an advanced tetrimino.
+        self.weight_advanced = 0.0
+        # Initialize the probability (between 0 and 1) of getting a special effect.
+        self.weight_special = 0.0
 
     # Start the game.
     def start_game(self):
@@ -558,6 +559,9 @@ class Tetron:
         # Increment the score.
         score_previous = self.score + 0
         self.score += int(score_increment * np.prod(multipliers))
+        # Update the block fall speed if the score was changed.
+        if self.score != score_previous:
+            self.update_speed_fall()
         # Play a sound based on the type of line clear.
         if cleared_perfect:
             self.sound_game_perfect.play()
@@ -648,6 +652,13 @@ class Tetron:
             self.array_display[self.array_highlight < 0] = self.array_highlight[self.array_highlight < 0]
         self.array_display[self.array_dropped > 0] = self.array_dropped[self.array_dropped > 0]
         self.array_display[self.array_current > 0] = self.array_current[self.array_current > 0]
+
+    # Update the block fall speed.
+    def update_speed_fall(self):
+        self.speed_fall = np.interp(self.score, [0, self.score_thresholds[-1]], self.speeds_fall)
+        if self.flag_fast_fall:
+            self.speed_fall *= self.speed_fall_multiplier
+        print('updated speed: ', self.speed_fall)
 
     # Increase the probability of getting an advanced tetrimino.
     def increase_chance_advanced(self):
@@ -862,7 +873,7 @@ while not done:
     if game.flag_playing:
         # Advance current tetrimino.
         if game.flag_advancing:
-            if (game.time_current - game.time_start_advance) >= (game.speeds_fall[game.stage] * (game.speed_fall_multiplier ** game.flag_fast_fall)):
+            if (game.time_current - game.time_start_advance) >= game.speed_fall:
                 game.advance()
                 game.reset_time_advance()
         else:
