@@ -133,6 +133,11 @@ class Tetron:
         self.sound_game_harddrop = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_harddrop.wav'))
         self.sound_game_softdrop = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_softdrop.wav'))
         self.sound_game_landing = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_landing.wav'))
+        self.sound_game_single = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_single.wav'))
+        self.sound_game_double = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_double.wav'))
+        self.sound_game_triple = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_triple.wav'))
+        self.sound_game_tetris = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_tetris.wav'))
+        self.sound_game_perfect = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_perfect.wav'))
         self.sound_game_win = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_win.wav'))
         self.sound_special_ghost = pygame.mixer.Sound(os.path.join(folder_sounds, 'special_ghost.wav'))
         self.sound_special_disoriented = pygame.mixer.Sound(os.path.join(folder_sounds, 'special_disoriented.wav'))
@@ -143,6 +148,11 @@ class Tetron:
         self.sound_game_harddrop.set_volume(0.1)
         self.sound_game_softdrop.set_volume(0.1)
         self.sound_game_landing.set_volume(0.1)
+        self.sound_game_single.set_volume(0.1)
+        self.sound_game_double.set_volume(0.1)
+        self.sound_game_triple.set_volume(0.1)
+        self.sound_game_tetris.set_volume(0.1)
+        self.sound_game_perfect.set_volume(0.1)
 
         # Initialize all other attributes.
         self.initialize()
@@ -526,22 +536,42 @@ class Tetron:
                 np.zeros([cleared_increment,self.column_count]),
                 np.delete(self.array_dropped, obj=cleared_rows, axis=0)
                 ), axis=0)
+        # Check for a perfect clear.
+        cleared_perfect = not np.any(self.array_dropped)
         # Increment the combo counter if a line was cleared.
         if cleared_increment > 0:
             self.combos += 1
         else:
             self.combos = 0
-        # Calculate points to add to score.
+        # Calculate points earned based on the type of line clear.
         score_increment = 5 * cleared_increment
         if cleared_increment >= 4:
             score_increment = 10 * cleared_increment
+        # Calculate point multipliers.
         multipliers = []
         if self.combos > 1:
-            multipliers.append(self.combos)  # multipliers.append((self.combos+1)/2)
+            multipliers.append(self.combos)
             print('combo multiplier: ', multipliers[-1])
+        if cleared_perfect:
+            multipliers.append(cleared_increment)
+            print('perfect clear multiplier: ', multipliers[-1])
+        # Increment the score.
         score_previous = self.score + 0
         self.score += int(score_increment * np.prod(multipliers))
-        # Advance to the next stage of the game.
+        # Play a sound based on the type of line clear.
+        if cleared_perfect:
+            self.sound_game_perfect.play()
+        else:
+            if cleared_increment == 1:
+                self.sound_game_single.play()
+            elif cleared_increment == 2:
+                self.sound_game_double.play()
+            elif cleared_increment == 3:
+                self.sound_game_triple.play()
+            elif cleared_increment >= 4:
+                self.sound_game_tetris.play()
+        
+        # Advance to the next stage of the game if a score threshold is passed.
         if score_previous < self.score_thresholds[self.stage] <= self.score:
             self.stage_advance()
         
@@ -679,7 +709,7 @@ class Tetron:
 # Create an instance of the game class.
 game = Tetron()
 
-# Set up the panel above the grid.
+# Set up the panel above the matrix.
 height_panel = 1 * game.height
 # Set the window title and window icon.
 pygame.display.set_caption(name_program + ' - ' + version_program)
@@ -720,6 +750,12 @@ while not done:
             size_window = pygame.display.get_window_size()  # screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
             # Adjust the rect object of the playing area.
             rect_grid.centerx = size_window[0]//2
+            
+            # # Redefine the width and height of the blocks in the matrix.
+            # game.width = int(np.floor((size_window[1] - ((game.row_count+1)*game.margin)) / (game.row_count+1)))
+            # game.height = game.width + 0
+            # # Redefine the height of the panel above the matrix.
+            # height_panel = 1 * game.height
         # Key presses.
         elif event.type == pygame.KEYDOWN:
             if game.flag_playing:
