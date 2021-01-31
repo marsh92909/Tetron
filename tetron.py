@@ -163,6 +163,8 @@ class Tetron:
         self.flag_playing = False
         self.flag_paused = False
         self.flag_advancing = True
+        self.flag_tspin = False
+        self.flag_tspin_mini = False
         self.flag_fast_fall = False
         self.flag_softdropping = False
         self.flag_ghost = False
@@ -309,9 +311,9 @@ class Tetron:
             tetrimino[2, :] = -1
         elif self.id_current == self.id_classic[5]:  # T
             tetrimino = self.id_current * np.ones([3, 3])
-            tetrimino[0, 0] = -1
-            tetrimino[0, 2] = -1
-            tetrimino[2, :] = -1
+            tetrimino[0, [0,2]] = -2
+            tetrimino[2, [0,2]] = -3
+            tetrimino[2, 1] = -1
         elif self.id_current == self.id_classic[6]:  # Z
             tetrimino = self.id_current * np.ones([3, 3])
             tetrimino[0, 2] = -1
@@ -439,29 +441,6 @@ class Tetron:
         # Update the displayed array.
         self.update()
 
-        # # Row and column indices of occupied blocks in current array.
-        # indices_rows, indices_columns = np.nonzero(self.array_current > 0)
-        # # Determine if at the bottom of the matrix.
-        # is_not_at_bottom = not np.any((indices_rows+1) > (self.array_dropped.shape[0]-1))
-        # # Determine if advancing a line will intersect already placed blocks.
-        # try:
-        #     no_intersection = not np.any(self.array_dropped[indices_rows+1, indices_columns] > 0)
-        # except IndexError:
-        #     no_intersection = False
-        # # Advance one line if not intersecting.
-        # if (self.flag_ghost and is_not_at_bottom) or (not self.flag_ghost and (is_not_at_bottom and no_intersection)):
-        #     self.array_current = np.roll(self.array_current, shift=1, axis=0)
-        # else:
-        #     # Reset advance timer if landed while soft dropping.
-        #     if self.flag_softdropping:
-        #         self.stop_softdropping()
-        #     else:
-        #         self.harddrop()
-        #     # Play sound effect.
-        #     self.sound_game_landing.play()
-        # # Update the displayed array.
-        # self.update()
-
     # Move left one column.
     def move_left(self):
         # Check if already in leftmost column.
@@ -490,11 +469,11 @@ class Tetron:
 
     # Rotate counterclockwise or clockwise by inputting 1 (default) or -1.
     def rotate(self, direction=1):
-        # Define the translation values (right, up) to apply after rotation in the order they should be checked.
+        # Define the translation values (right, down) to apply after rotation in the order they should be checked.
         if direction == 1:
-            translations = [(0,0), (1,0), (1,1), (0,-2), (1,-2)]
+            translations = [(0,0), (1,0), (1,-1), (0,2), (1,2)]  #,  (-1,0), (-1,1), (0,-2), (-1,-2),  (-1,-1), (-1,2),  (1,1), (1,-2)]
         elif direction == -1:
-            translations = [(0,0), (-1,0), (-1,1), (0,-2), (-1,-2)]
+            translations = [(0,0), (-1,0), (-1,-1), (0,2), (-1,2)]  #,  (1,0), (1,1), (0,-2), (1,-2),  (1,-1), (1,2),  (-1,1), (-1,-2)]
         else:
             translations = [(0,0)]
 
@@ -570,39 +549,16 @@ class Tetron:
                 self.update()
                 # Play sound effect.
                 self.sound_game_rotate.play()
+                # Set flag if T-spin or mini T-spin.
+                if self.id_current == self.id_classic[5]:
+                    front_count = np.sum(self.array_dropped[self.array_current == -2] > 0)
+                    back_count = np.sum(self.array_dropped[self.array_current == -3] > 0)
+                    if front_count == 2 and back_count >= 1:
+                        self.flag_tspin = True
+                    elif front_count >= 1 and back_count == 2:
+                        self.flag_tspin_mini = True
                 # Exit the for loop.
                 break
-
-        # # Calculate how many rows and columns the current tetrimino has.
-        # rows_occupied_before = np.sum(np.any(self.tetrimino > 0, axis=1))
-        # columns_occupied_before = np.sum(np.any(self.tetrimino > 0, axis=0))
-        # # Rotate tetrimino.
-        # self.tetrimino = np.rot90(self.tetrimino, k=direction)
-        # # Calculate how many rows and columns the current tetrimino has after rotation.
-        # rows_occupied_after = np.sum(np.any(self.tetrimino > 0, axis=1))
-        # columns_occupied_after = np.sum(np.any(self.tetrimino > 0, axis=0))
-        # # Determine if the rotated tetrimino intersects already placed blocks.
-        # indices_rows, indices_columns = np.nonzero(self.array_current > 0)
-        # is_intersecting = np.any(self.array_dropped[self.array_current != 0][self.tetrimino.flatten()>0] > 0)
-        # if not is_intersecting or self.flag_ghost:
-        #     # Move the tetrimino one block right or left if rotation causes it to exceed the left and right walls.
-        #     if columns_occupied_after > columns_occupied_before:
-        #         if np.any(self.array_current[:, 0] > 0):
-        #             self.array_current = np.roll(self.array_current, shift=1, axis=1)
-        #         elif np.any(self.array_current[:, -1] > 0):
-        #             self.array_current = np.roll(self.array_current, shift=-1, axis=1)
-        #     # Move the tetrimino one block up or down if rotation causes it to exceed the top and bottom walls.
-        #     if rows_occupied_after > rows_occupied_before:
-        #         if np.any(self.array_current[0, :] > 0):
-        #             self.array_current = np.roll(self.array_current, shift=1, axis=0)
-        #         elif np.any(self.array_current[-1, :] > 0):
-        #             self.array_current = np.roll(self.array_current, shift=-1, axis=0)
-        #     # Insert the rotated tetrimino into the array.
-        #     self.array_current[self.array_current != 0] = self.tetrimino.flatten()
-        # # Update the displayed array.
-        # self.update()
-        # # Play sound effect.
-        # self.sound_game_rotate.play()
 
     # Hard drop.
     def harddrop(self):
@@ -655,6 +611,13 @@ class Tetron:
         score_increment = 5 * cleared_increment
         if cleared_increment >= 4:
             score_increment = 10 * cleared_increment
+        # Calculate points for T-spins.
+        if self.flag_tspin:
+            score_increment = 20 * (cleared_increment + 1)
+            print('tspin points ', score_increment)
+        elif self.flag_tspin_mini:
+            score_increment = 5 * (2 ** cleared_increment)
+            print('mini tspin points ', score_increment)
         # Calculate point multipliers.
         multipliers = []
         if self.combos > 1:
@@ -828,6 +791,9 @@ class Tetron:
     # Reset the value of the previous advance time to the current time.
     def reset_time_advance(self):
         self.time_start_advance = self.time_current + 0
+        # Reset the T-spin flags.
+        self.flag_tspin = False
+        self.flag_tspin_mini = False
 
 
 # =============================================================================
