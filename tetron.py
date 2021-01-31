@@ -415,28 +415,52 @@ class Tetron:
 
     # Advance one line.
     def advance(self):
-        # Row and column indices of occupied blocks in current array.
-        indices_rows, indices_columns = np.nonzero(self.array_current > 0)
         # Determine if at the bottom of the matrix.
-        is_not_at_bottom = not np.any((indices_rows+1) > (self.array_dropped.shape[0]-1))
-        # Determine if advancing a line will intersect already placed blocks.
-        try:
-            no_intersection = not np.any(self.array_dropped[indices_rows+1, indices_columns] > 0)
-        except IndexError:
-            no_intersection = False
-        # Advance one line if not intersecting.
-        if (self.flag_ghost and is_not_at_bottom) or (not self.flag_ghost and (is_not_at_bottom and no_intersection)):
-            self.array_current = np.roll(self.array_current, shift=1, axis=0)
+        is_at_bottom = np.any(self.array_current[-1,:] > 0)
+        # Advance the current tetrimino array one line and return a copy.
+        array_current = np.roll(self.array_current, shift=1, axis=0)
+        # Determine if the advanced copy intersects already placed blocks.
+        is_intersecting = np.any(self.array_dropped[array_current > 0] > 0)
+        # Apply the advancement if not intersecting and not at the bottom.
+        if (self.flag_ghost and not is_at_bottom) or (not self.flag_ghost and (not is_at_bottom and not is_intersecting)):
+            self.array_current = np.copy(array_current)
+            # Check whether the tetrimino has landed on any already placed block or on the bottom of the matrix.
+            is_landed_stack = np.any(self.array_dropped[np.roll(self.array_current, shift=1, axis=0) > 0] > 0)
+            is_landed_bottom = np.argmax(np.any(np.flipud(self.array_current) > 0, axis=1)) == 0
+            if (self.flag_ghost and is_landed_bottom) or (not self.flag_ghost and (is_landed_stack or is_landed_bottom)):
+                # Reset advance timer if landed while soft dropping.
+                if self.flag_softdropping:
+                    self.stop_softdropping()
+                # Play sound effect.
+                if not self.flag_ghost:
+                    self.sound_game_landing.play()
         else:
-            # Reset advance timer if landed while soft dropping.
-            if self.flag_softdropping:
-                self.stop_softdropping()
-            else:
-                self.harddrop()
-            # Play sound effect.
-            self.sound_game_landing.play()
+            self.harddrop()
         # Update the displayed array.
         self.update()
+
+        # # Row and column indices of occupied blocks in current array.
+        # indices_rows, indices_columns = np.nonzero(self.array_current > 0)
+        # # Determine if at the bottom of the matrix.
+        # is_not_at_bottom = not np.any((indices_rows+1) > (self.array_dropped.shape[0]-1))
+        # # Determine if advancing a line will intersect already placed blocks.
+        # try:
+        #     no_intersection = not np.any(self.array_dropped[indices_rows+1, indices_columns] > 0)
+        # except IndexError:
+        #     no_intersection = False
+        # # Advance one line if not intersecting.
+        # if (self.flag_ghost and is_not_at_bottom) or (not self.flag_ghost and (is_not_at_bottom and no_intersection)):
+        #     self.array_current = np.roll(self.array_current, shift=1, axis=0)
+        # else:
+        #     # Reset advance timer if landed while soft dropping.
+        #     if self.flag_softdropping:
+        #         self.stop_softdropping()
+        #     else:
+        #         self.harddrop()
+        #     # Play sound effect.
+        #     self.sound_game_landing.play()
+        # # Update the displayed array.
+        # self.update()
 
     # Move left one column.
     def move_left(self):
@@ -538,7 +562,7 @@ class Tetron:
             # Skip to the next interation of the for loop if intersecting.
             if is_intersecting and not self.flag_ghost:
                 continue
-            # Apply the tranlsation if not intersecting and ignore the remaining translations.
+            # Apply the translation if not intersecting and ignore the remaining translations.
             else:
                 self.array_current = np.copy(array_current)
                 self.tetrimino = np.copy(tetrimino_rotated)
