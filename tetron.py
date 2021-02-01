@@ -105,16 +105,25 @@ class Tetron:
         self.id_advanced = [101, 102, 201, 202, 301, 302, 401, 402, 403, 501, 601, 602, 701, 801, 811, 812, 813, 814, 899]
         self.id_special = ['ghost', 'heavy', 'disoriented', 'blind']
 
-        # Define the number of blocks needed to incrementally increase the difficulty.
-        self.count_increase_difficulty = 20
-        # Define the number of blocks neeeded to begin increasing the chance of getting a special effect.
-        self.count_increase_chance_special = 80
+        # # Define the number of blocks needed to incrementally increase the difficulty.
+        # self.count_increase_difficulty = 20
+        # # Define the number of blocks neeeded to begin increasing the chance of getting a special effect.
+        # self.count_update_chance_special = 80
+        
+        # Define the range of probabilities (between 0 and 1) of getting an advanced tetrimino.
+        self.weights_advanced = [0, 2/5]
+        # Define the score needed to begin increasing the probability of getting an advanced tetrimino.
+        self.score_update_chance_advanced = 100
         # Define the maximum probability (between 0 and 1) of getting an advanced tetrimino and the increment by which the probability is increased.
-        self.weight_max_advanced = 2/5
-        self.weight_increment_advanced = 0.025
+        # self.weight_max_advanced = 2/5
+        # self.weight_increment_advanced = 0.025
+        # Define the range of probabilities (between 0 and 1) of getting a special effect.
+        self.weights_special = [0, 1/20]
+        # Define the score needed to begin increasing the probability of getting a special effect.
+        self.score_update_chance_special = 500
         # Define the maximum probability (between 0 and 1) of getting a special effect and the increment by which the probability is increased.
-        self.weight_max_special = 1/20
-        self.weight_increment_special = 0.005
+        # self.weight_max_special = 1/20
+        # self.weight_increment_special = 0.005
         # Define durations for special effects (ms).
         self.duration_max_disoriented = 20000
         self.duration_max_blind = 20000
@@ -190,12 +199,10 @@ class Tetron:
         # Initialize the cleared lines counter.
         self.score = 0
 
-        # Initialize the block fall speed.
+        # Initialize the block fall speed, the probability of getting an advanced tetrimino, and the probability of getting a special effect.
         self.update_speed_fall()
-        # Initialize the probability (between 0 and 1) of getting an advanced tetrimino.
-        self.weight_advanced = 0.0
-        # Initialize the probability (between 0 and 1) of getting a special effect.
-        self.weight_special = 0.0
+        self.update_chance_advanced()  # self.weight_advanced = 0.0
+        self.update_chance_special()  # self.weight_special = 0.0
 
     # Start the game.
     def start_game(self):
@@ -572,12 +579,13 @@ class Tetron:
         self.sound_game_harddrop.play()
         self.update()
 
-        # Increment the placed blocks counter and increase the game difficulty if needed.
+        # Increment the placed blocks counter.
         self.count += 1
-        if (self.count % self.count_increase_difficulty) == 0:
-            self.increase_chance_advanced()
-            if self.count >= self.count_increase_chance_special:
-                self.increase_chance_special()
+        # if (self.count % self.count_increase_difficulty) == 0:
+        #     self.update_chance_advanced()
+        #     if self.count >= self.count_update_chance_special:
+        #         self.update_chance_special()
+        
         # Reset flags for special effects if needed.
         if self.flag_ghost:
             self.flag_ghost = False
@@ -625,9 +633,10 @@ class Tetron:
         # Increment the score.
         score_previous = self.score + 0
         self.score += int(score_increment * np.prod(multipliers))
-        # Update the block fall speed if the score was changed.
-        if self.score != score_previous:
-            self.update_speed_fall()
+        # Update the block fall speed, the probability of getting an advanced tetrimino, and the probability of getting a special effect.
+        self.update_speed_fall()
+        self.update_chance_advanced()
+        self.update_chance_special()
         # Play a sound based on the type of line clear.
         if cleared_perfect:
             self.sound_game_perfect.play()
@@ -721,24 +730,23 @@ class Tetron:
 
     # Update the block fall speed.
     def update_speed_fall(self):
-        self.speed_fall = np.interp(self.score, [0, self.score_thresholds[-1]], self.speeds_fall)
-        print('updated speed: ', self.speed_fall)
+        self.speed_fall = np.interp(self.score, [0, self.score_thresholds[-2]], self.speeds_fall)
 
-    # Increase the probability of getting an advanced tetrimino.
-    def increase_chance_advanced(self):
-        if self.weight_advanced < self.weight_max_advanced:
-            self.weight_advanced += self.weight_increment_advanced
-            # Prevent the probability from exceeding the maximum value caused by rounding errors.
-            self.weight_advanced = min([self.weight_advanced, self.weight_max_advanced])
-        print('Probability advanced: ', self.weight_advanced)
+    # Update the probability of getting an advanced tetrimino.
+    def update_chance_advanced(self):
+        self.weight_advanced = np.interp(self.score, [self.score_update_chance_advanced, self.score_thresholds[-2]], self.weights_advanced)
+        # if self.weight_advanced < self.weight_max_advanced:
+        #     self.weight_advanced += self.weight_increment_advanced
+        #     # Prevent the probability from exceeding the maximum value caused by rounding errors.
+        #     self.weight_advanced = min([self.weight_advanced, self.weight_max_advanced])
     
-    # Increase the probability of getting a special effect.
-    def increase_chance_special(self):
-        if self.weight_special < self.weight_max_special:
-            self.weight_special += self.weight_increment_special
-            # Prevent the probability from exceeding the maximum value caused by rounding errors.
-            self.weight_special = min([self.weight_special, self.weight_max_special])
-        print('Probability special: ', self.weight_special)
+    # Update the probability of getting a special effect.
+    def update_chance_special(self):
+        self.weight_special = np.interp(self.score, [self.score_update_chance_special, self.score_thresholds[-2]], self.weights_special)
+        # if self.weight_special < self.weight_max_special:
+        #     self.weight_special += self.weight_increment_special
+        #     # Prevent the probability from exceeding the maximum value caused by rounding errors.
+        #     self.weight_special = min([self.weight_special, self.weight_max_special])
     
     # Advance to the next stage of the game.
     def stage_advance(self):
