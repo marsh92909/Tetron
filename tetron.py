@@ -70,9 +70,9 @@ class Tetron:
     # Initialize the attributes of the instance of of this class when it is first created.
     def __init__(self):
         # Define the width, height, and margin of the blocks in pixels.
-        self.width = 40
-        self.height = 40
-        self.margin = 1
+        self.block_width = 40
+        self.block_height = 40
+        self.block_margin = 1
 
         # Define the number of rows and columns of the matrix.
         self.row_count = 20
@@ -93,10 +93,6 @@ class Tetron:
         self.speeds_fall = [1000, 500]
         # Define the block fall speed multiplier for some special effects (values below 1 result in faster speeds).
         self.speed_fall_multiplier = 1/3
-        # Define the maximum block fall speed (lines/second).
-        # self.speed_limit_fall = self.fps + 0
-        # Define the increment by which the block fall speed is increased (lines/second).
-        # self.speed_increment = 0.5
         # Define the block move speed (ms) and initial delay for key repeats (ms).
         self.speed_move = 25
         self.delay_move = 150
@@ -124,7 +120,7 @@ class Tetron:
         self.duration_max_blind = 20000
 
         # Create the surface used to display the grid.
-        self.grid = pygame.Surface((self.column_count*self.width+(self.column_count+1)*self.margin, self.row_count*self.height+(self.row_count+1)*self.margin))
+        self.grid = pygame.Surface((self.column_count*self.block_width+(self.column_count+1)*self.block_margin, self.row_count*self.block_height+(self.row_count+1)*self.block_margin))
         
         # Load sound effects.
         # self.sound_game_advance = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_advance.wav'))
@@ -409,7 +405,7 @@ class Tetron:
         # Clear the current tetrimino array.
         self.array_current[:] = 0
         # Update the array of the current tetrimino.
-        row_left = int((self.array_current.shape[1]-tetrimino.shape[1])/2)
+        row_left = int(np.floor((self.column_count-tetrimino.shape[1])/2))
         self.array_current[0:tetrimino.shape[0], row_left:row_left+tetrimino.shape[1]] = self.tetrimino
 
         # Update the displayed array.
@@ -690,7 +686,7 @@ class Tetron:
             # List of Booleans indicating which columns of the matrix contain blocks from the current tetrimino.
             columns = np.any(self.array_current > 0, axis=0)
             # List of row indices of the bottommost blocks in each column of the current tetrimino.
-            indices_current = (self.array_current.shape[0]-1) - np.argmax(np.flipud(self.array_current > 0), axis=0)[columns]
+            indices_current = (self.row_count-1) - np.argmax(np.flipud(self.array_current > 0), axis=0)[columns]
             # Get the current columns of the placed blocks array.
             array_dropped_current = self.array_dropped[:, columns]
             # Clear the blocks at or above the current tetrimino.
@@ -726,8 +722,6 @@ class Tetron:
     # Update the block fall speed.
     def update_speed_fall(self):
         self.speed_fall = np.interp(self.score, [0, self.score_thresholds[-1]], self.speeds_fall)
-        if self.flag_fast_fall:
-            self.speed_fall *= self.speed_fall_multiplier
         print('updated speed: ', self.speed_fall)
 
     # Increase the probability of getting an advanced tetrimino.
@@ -803,13 +797,13 @@ class Tetron:
 game = Tetron()
 
 # Set up the panel above the matrix.
-height_panel = 1 * game.height
+height_panel = 1 * game.block_height
 # Set the window title and window icon.
 pygame.display.set_caption(name_program + ' - ' + version_program)
 icon = pygame.image.load('icon.png')
 pygame.display.set_icon(icon)
 # Set the window size [width, height] in pixels.
-size_window = [game.column_count*game.width+(game.column_count+1)*game.margin, height_panel + game.row_count*game.height+(game.row_count+1)*game.margin]
+size_window = [game.column_count*game.block_width+(game.column_count+1)*game.block_margin, height_panel + game.row_count*game.block_height+(game.row_count+1)*game.block_margin]
 screen = pygame.display.set_mode(size_window, pygame.RESIZABLE)
 # Define a rect object representing the playing area.
 rect_grid = game.grid.get_rect()
@@ -845,10 +839,10 @@ while not done:
             rect_grid.centerx = size_window[0]//2
             
             # # Redefine the width and height of the blocks in the matrix.
-            # game.width = int(np.floor((size_window[1] - ((game.row_count+1)*game.margin)) / (game.row_count+1)))
-            # game.height = game.width + 0
+            # game.block_width = int(np.floor((size_window[1] - ((game.row_count+1)*game.block_margin)) / (game.row_count+1)))
+            # game.block_height = game.block_width + 0
             # # Redefine the height of the panel above the matrix.
-            # height_panel = 1 * game.height
+            # height_panel = 1 * game.block_height
         # Key presses.
         elif event.type == pygame.KEYDOWN:
             if game.flag_playing:
@@ -967,7 +961,7 @@ while not done:
     if game.flag_playing:
         # Advance current tetrimino.
         if game.flag_advancing:
-            if (game.time_current - game.time_start_advance) >= game.speed_fall:
+            if (game.time_current - game.time_start_advance) >= (game.speed_fall * (game.speed_fall_multiplier ** game.flag_fast_fall)):
                 game.advance()
                 game.reset_time_advance()
         else:
@@ -999,7 +993,7 @@ while not done:
                         color = number + 0  # Color of placed blocks
             else:
                 color = 0.25  # Color of blank blocks
-            pygame.draw.rect(surface=game.grid, color=rgb(color, tint=tint), rect=[(game.margin+game.width)*column+game.margin, (game.margin+game.height)*row+game.margin, game.width, game.height])
+            pygame.draw.rect(surface=game.grid, color=rgb(color, tint=tint), rect=[(game.block_margin+game.block_width)*column+game.block_margin, (game.block_margin+game.block_height)*row+game.block_margin, game.block_width, game.block_height])
     # Add elapsed time text to the screen.
     text_time_elapsed = font.render('{:02d}:{:02d}'.format(game.time_elapsed//60000, int((game.time_elapsed/1000)%60)), True, rgb(1))
     rect_text_time_elapsed = text_time_elapsed.get_rect()
