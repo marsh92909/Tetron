@@ -142,6 +142,7 @@ class Tetron:
         self.sound_game_double = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_double.wav'))
         self.sound_game_triple = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_triple.wav'))
         self.sound_game_tetris = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_tetris.wav'))
+        self.sound_game_special = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_special.wav'))
         self.sound_game_perfect = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_perfect.wav'))
         self.sound_game_win = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_win.wav'))
         self.sound_special_ghost = pygame.mixer.Sound(os.path.join(folder_sounds, 'special_ghost.wav'))
@@ -157,6 +158,7 @@ class Tetron:
         self.sound_game_double.set_volume(0.1)
         self.sound_game_triple.set_volume(0.1)
         self.sound_game_tetris.set_volume(0.1)
+        self.sound_game_special.set_volume(0.1)
         self.sound_game_perfect.set_volume(0.1)
 
         # Initialize all other attributes.
@@ -201,8 +203,8 @@ class Tetron:
 
         # Initialize the block fall speed, the probability of getting an advanced tetrimino, and the probability of getting a special effect.
         self.update_speed_fall()
-        self.update_chance_advanced()  # self.weight_advanced = 0.0
-        self.update_chance_special()  # self.weight_special = 0.0
+        self.update_chance_advanced()
+        self.update_chance_special()
 
     # Start the game.
     def start_game(self):
@@ -585,7 +587,7 @@ class Tetron:
         #     self.update_chance_advanced()
         #     if self.count >= self.count_update_chance_special:
         #         self.update_chance_special()
-        
+
         # Reset flags for special effects if needed.
         if self.flag_ghost:
             self.flag_ghost = False
@@ -637,18 +639,22 @@ class Tetron:
         self.update_speed_fall()
         self.update_chance_advanced()
         self.update_chance_special()
-        # Play a sound based on the type of line clear.
+        
+        # Play a sound corresponding to the number of lines cleared.
+        if cleared_increment == 1:
+            self.sound_game_single.play()
+        elif cleared_increment == 2:
+            self.sound_game_double.play()
+        elif cleared_increment == 3:
+            self.sound_game_triple.play()
+        elif cleared_increment >= 4:
+            self.sound_game_tetris.play()
+        # Play a sound for perfect clears.
         if cleared_perfect:
             self.sound_game_perfect.play()
-        else:
-            if cleared_increment == 1:
-                self.sound_game_single.play()
-            elif cleared_increment == 2:
-                self.sound_game_double.play()
-            elif cleared_increment == 3:
-                self.sound_game_triple.play()
-            elif cleared_increment >= 4:
-                self.sound_game_tetris.play()
+        # Play a sound for special line clears.
+        if self.flag_tspin or self.flag_tspin_mini or cleared_increment >= 4:
+            self.sound_game_special.play()
         
         # Advance to the next stage of the game if a score threshold is passed.
         if score_previous < self.score_thresholds[self.stage] <= self.score:
@@ -735,18 +741,10 @@ class Tetron:
     # Update the probability of getting an advanced tetrimino.
     def update_chance_advanced(self):
         self.weight_advanced = np.interp(self.score, [self.score_update_chance_advanced, self.score_thresholds[-2]], self.weights_advanced)
-        # if self.weight_advanced < self.weight_max_advanced:
-        #     self.weight_advanced += self.weight_increment_advanced
-        #     # Prevent the probability from exceeding the maximum value caused by rounding errors.
-        #     self.weight_advanced = min([self.weight_advanced, self.weight_max_advanced])
     
     # Update the probability of getting a special effect.
     def update_chance_special(self):
         self.weight_special = np.interp(self.score, [self.score_update_chance_special, self.score_thresholds[-2]], self.weights_special)
-        # if self.weight_special < self.weight_max_special:
-        #     self.weight_special += self.weight_increment_special
-        #     # Prevent the probability from exceeding the maximum value caused by rounding errors.
-        #     self.weight_special = min([self.weight_special, self.weight_max_special])
     
     # Advance to the next stage of the game.
     def stage_advance(self):
