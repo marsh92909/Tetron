@@ -2,17 +2,17 @@
 Tetris with a twist.
 
 ## Gameplay
-Tetron features the same seven blocks in Tetris but includes more advanced blocks and special effects. Reach a score of 1,000 to win the game.
+Tetron features advanced blocks and special effects in addition to the seven blocks in Tetris. Win the game by reaching a score of 1,000.
 
 ### Controls
 | Action | Key |
-| ----------- | ----------- |
+| :-- | --: |
 | Move Left | A |
 | Move Right | D |
 | Hard Drop | W |
 | Soft Drop | S |
-| Rotate Counterclockwise | Left Arrow |
-| Rotate Clockwise | Right Arrow |
+| Rotate Counterclockwise | ← |
+| Rotate Clockwise | → |
 | Start Game | Space |
 | Stop Game | Escape |
 
@@ -37,9 +37,10 @@ Tetron features the same seven blocks in Tetris but includes more advanced block
 * Disoriented: The entire matrix is rotated.
 * Blind: The colors of all blocks become almost identical to the background, making them harder to see.
 
-### Other game modes
-* Classic Mode (Ctrl + Space): Only the origin seven blocks from Tetris appear.
-* Double Mode (Shift + Space): Play two instances of the game at once.
+### Game modes
+| Mode | Press to Start |
+| :-- | --: |
+| Tetron | Space |
 
 ## Installation
 1. Click on the most recent release found [here](https://github.com/marsh92909/Tetron/releases).
