@@ -791,7 +791,7 @@ class Tetron:
         pygame.mixer.music.stop()
         pygame.mixer.music.unload()
         pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_win.ogg'))
-        pygame.mixer.music.play()
+        pygame.mixer.music.play(loops=0)
         # Play sound effect.
         self.sound_game_win.play()
 
@@ -802,7 +802,7 @@ class Tetron:
         pygame.mixer.music.stop()
         pygame.mixer.music.unload()
         pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_lose.ogg'))
-        pygame.mixer.music.play()
+        pygame.mixer.music.play(loops=0)
         # self.sound_game_lose.play()
 
     # Reset the value of the previous advance time to the current time.
@@ -946,22 +946,9 @@ while not done:
                 pygame.mixer.music.unload()
                 # Load music for current stage.
                 pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_{}.ogg'.format(game.stage+1)))
-                # For some stages, play the introduction music once, and send an event when done playing.
-                if game.stage == 2:
-                    pygame.mixer.music.set_endevent(pygame.USEREVENT+2)
-                    pygame.mixer.music.play(loops=0)
-                # For stages without introduction music, disable the event sent when music ends, and play indefinitely.
-                else:
-                    pygame.mixer.music.set_endevent()
-                    pygame.mixer.music.play(loops=-1)
-        # Introduction music ends.
-        elif event.type == pygame.USEREVENT+2:
-            # Disable the event.
-            pygame.mixer.music.set_endevent()
-            # Load music.
-            # pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_{}_1.ogg'.format(game.stage+1)))
-            # Play indefinitely.
-            pygame.mixer.music.play(loops=-1)
+                # Disable the event sent when music ends, and play indefinitely.
+                pygame.mixer.music.set_endevent()
+                pygame.mixer.music.play(loops=-1)
     
     # =============================================================================
     # Keys Held Continuously.
@@ -1035,16 +1022,22 @@ while not done:
             else:
                 color = 0.25  # Color of blank blocks
             pygame.draw.rect(surface=game.surface_matrix, color=rgb(color, tint=tint), rect=[(game.block_margin+game.block_width)*column+game.block_margin, (game.block_margin+game.block_height)*row+game.block_margin, game.block_width, game.block_height])
+    # Erase the displayed hold queue.
+    game.surface_hold.fill(rgb(0))
     # Draw tetrimino in hold queue.
     if len(game.queue_hold) > 0:
-        # Erase the displayed hold queue.
-        game.surface_hold.fill(rgb(0))
         size = int(min(np.floor([game.width_hold/game.queue_hold[0][0].shape[0], game.width_hold/game.queue_hold[0][0].shape[1]])))
         for row in range(game.queue_hold[0][0].shape[0]):
             for column in range(game.queue_hold[0][0].shape[1]):
                 color = game.queue_hold[0][0][row, column]
                 if color > 0:
                     pygame.draw.rect(surface=game.surface_hold, color=rgb(color), rect=[size*column, size*row, size, size])
+        # Display hold queue label text.
+        text_hold = font_small.render('HOLD', True, rgb(0.5))
+        rect_text_hold = text_hold.get_rect()
+        rect_text_hold.left = rect_hold.left + 0
+        rect_text_hold.bottom = height_panel + 0
+        screen.blit(text_hold, rect_text_hold)
     # Display elapsed time text.
     text_time_elapsed = font_normal.render('{:02d}:{:02d}'.format(game.time_elapsed//60000, int((game.time_elapsed/1000)%60)), True, rgb(1))
     rect_text_time_elapsed = text_time_elapsed.get_rect()
@@ -1057,12 +1050,6 @@ while not done:
     rect_text_cleared.left = rect_matrix.left + 0
     rect_text_cleared.bottom = height_panel + 0
     screen.blit(text_cleared, rect_text_cleared)
-    # Display hold queue label text.
-    text_hold = font_small.render('HOLD', True, rgb(0.5))
-    rect_text_hold = text_hold.get_rect()
-    rect_text_hold.left = rect_hold.left + 0
-    rect_text_hold.bottom = height_panel + 0
-    screen.blit(text_hold, rect_text_hold)
     # Stop the disoriented effect if it has lasted longer than the maximum duration.
     if game.flag_disoriented:
         if game.duration_disoriented > game.duration_max_disoriented:
