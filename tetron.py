@@ -404,14 +404,17 @@ class Tetron:
                 # Create the tetrimino by inverting the dropped blocks.
                 tetrimino = self.id_current * (1 - array_dropped_top)
 
+            # Reset the current rotation value (degrees).
+            self.rotation_current = 0
             # Apply special effects to tetrimino, if any.
             if self.flag_ghost:
                 tetrimino[tetrimino > 0] = 901
             elif self.flag_heavy:
                 tetrimino[tetrimino > 0] = 902
         else:
-            self.id_current = hold_data[1]
             tetrimino = np.copy(hold_data[0])
+            self.id_current = hold_data[1]
+            self.rotation_current = hold_data[2]
 
         # Set the current tetrimino.
         self.tetrimino = tetrimino
@@ -478,13 +481,80 @@ class Tetron:
 
     # Rotate counterclockwise or clockwise by inputting 1 (default) or -1.
     def rotate(self, direction=1):
-        # Define the translation values (right, down) to apply after rotation in the order they should be checked.
-        if direction == 1:
-            translations = [(0,0), (1,0), (1,-1), (0,2), (1,2)]  #,  (-1,0), (-1,1), (0,-2), (-1,-2),  (-1,-1), (-1,2),  (1,1), (1,-2)]
-        elif direction == -1:
-            translations = [(0,0), (-1,0), (-1,-1), (0,2), (-1,2)]  #,  (1,0), (1,1), (0,-2), (1,-2),  (1,-1), (1,2),  (-1,1), (-1,-2)]
+        # List of lists of tuples for all translation values (right, down) for each rotation, defined in the order they should be checked.
+        translations_all = [
+            # J, L, S, T, Z
+            [( 0, 0),	(-1, 0),	(-1,-1),	( 0,+2),	(-1,+2),],  # 0->R
+            [( 0, 0),	(+1, 0),	(+1,+1),	( 0,-2),	(+1,-2),],  # R->0
+            [( 0, 0),	(+1, 0),	(+1,+1),	( 0,-2),	(+1,-2),],  # R->2
+            [( 0, 0),	(-1, 0),	(-1,-1),	( 0,+2),	(-1,+2),],  # 2->R
+            [( 0, 0),	(+1, 0),	(+1,-1),	( 0,+2),	(+1,+2),],  # 2->L
+            [( 0, 0),	(-1, 0),	(-1,+1),	( 0,-2),	(-1,-2),],  # L->2
+            [( 0, 0),	(-1, 0),	(-1,+1),	( 0,-2),	(-1,-2),],  # L->0
+            [( 0, 0),	(+1, 0),	(+1,-1),	( 0,+2),	(+1,+2),],  # 0->L
+            # I
+            [( 0, 0),	(-2, 0),	(+1, 0),	(-2,+1),	(+1,-2),],  # 0->R
+            [( 0, 0),	(+2, 0),	(-1, 0),	(+2,-1),	(-1,+2),],  # R->0
+            [( 0, 0),	(-1, 0),	(+2, 0),	(-1,-2),	(+2,+1),],  # R->2
+            [( 0, 0),	(+1, 0),	(-2, 0),	(+1,+2),	(-2,-1),],  # 2->R
+            [( 0, 0),	(+2, 0),	(-1, 0),	(+2,-1),	(-1,+2),],  # 2->L
+            [( 0, 0),	(-2, 0),	(+1, 0),	(-2,+1),	(+1,-2),],  # L->2
+            [( 0, 0),	(+1, 0),	(-2, 0),	(+1,+2),	(-2,-1),],  # L->0
+            [( 0, 0),	(-1, 0),	(+2, 0),	(-1,-2),	(+2,+1),],  # 0->L
+            # Other
+            [( 0, 0),],
+            ]
+        # Assign the corresponding translation values.
+        if self.id_current in np.array(self.id_classic)[[1, 2, 4, 5, 6]]:
+            if self.rotation_current == 0 and direction == -1:
+                translations = translations_all[0]
+            elif self.rotation_current == 0 and direction == 1:
+                translations = translations_all[7]
+            elif self.rotation_current == 90 and direction == -1:
+                translations = translations_all[6]
+            elif self.rotation_current == 90 and direction == 1:
+                translations = translations_all[5]
+            elif self.rotation_current == 180 and direction == -1:
+                translations = translations_all[4]
+            elif self.rotation_current == 180 and direction == 1:
+                translations = translations_all[3]
+            elif self.rotation_current == 270 and direction == -1:
+                translations = translations_all[2]
+            elif self.rotation_current == 270 and direction == 1:
+                translations = translations_all[1]
+        elif self.id_current == self.id_classic[0]:
+            if self.rotation_current == 0 and direction == -1:
+                translations = translations_all[8]
+            elif self.rotation_current == 0 and direction == 1:
+                translations = translations_all[15]
+            elif self.rotation_current == 90 and direction == -1:
+                translations = translations_all[14]
+            elif self.rotation_current == 90 and direction == 1:
+                translations = translations_all[13]
+            elif self.rotation_current == 180 and direction == -1:
+                translations = translations_all[12]
+            elif self.rotation_current == 180 and direction == 1:
+                translations = translations_all[11]
+            elif self.rotation_current == 270 and direction == -1:
+                translations = translations_all[10]
+            elif self.rotation_current == 270 and direction == 1:
+                translations = translations_all[9]
         else:
-            translations = [(0,0)]
+            translations = translations_all[-1]
+        # if direction == 1:
+        #     translations = [(0,0), (1,0), (1,-1), (0,2), (1,2)]  #,  (-1,0), (-1,1), (0,-2), (-1,-2),  (-1,-1), (-1,2),  (1,1), (1,-2)]
+        # elif direction == -1:
+        #     translations = [(0,0), (-1,0), (-1,-1), (0,2), (-1,2)]  #,  (1,0), (1,1), (0,-2), (1,-2),  (1,-1), (1,2),  (-1,1), (-1,-2)]
+        # else:
+        #     translations = [(0,0)]
+        
+        # Update the current rotation value.
+        if direction == 1:
+            self.rotation_current += 90
+        elif direction == -1:
+            self.rotation_current -= 90
+        if self.rotation_current < 0 or self.rotation_current >= 360:
+            self.rotation_current = abs(self.rotation_current % 360)
 
         # Calculate how many empty rows at top/bottom and empty columns at left/right within tetrimino before attempting rotation.
         top_empty_before, bottom_empty_before = np.argmax(np.any(self.tetrimino > 0, axis=1)), np.argmax(np.any(np.flipud(self.tetrimino > 0), axis=1))
@@ -564,8 +634,10 @@ class Tetron:
                     back_count = np.sum(self.array_dropped[self.array_current == -3] > 0)
                     if front_count == 2 and back_count >= 1:
                         self.flag_tspin = True
+                        self.flag_tspin_mini = False
                     elif front_count >= 1 and back_count == 2:
                         self.flag_tspin_mini = True
+                        self.flag_tspin = False
                 # Exit the for loop.
                 break
 
@@ -700,7 +772,7 @@ class Tetron:
         # Set the flag to prevent another hold.
         self.flag_hold = True
         # Store the current tetrimino and tetrimino ID in the queue.
-        self.queue_hold.append((self.tetrimino, self.id_current))
+        self.queue_hold.append((self.tetrimino, self.id_current, self.rotation_current))
         # Create a new tetrimino if nothing was in the queue.
         if len(self.queue_hold) <= 1:
             self.create_new()
