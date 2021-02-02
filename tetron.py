@@ -541,58 +541,40 @@ class Tetron:
                 translations = translations_all[9]
         else:
             translations = translations_all[-1]
-        # if direction == 1:
-        #     translations = [(0,0), (1,0), (1,-1), (0,2), (1,2)]  #,  (-1,0), (-1,1), (0,-2), (-1,-2),  (-1,-1), (-1,2),  (1,1), (1,-2)]
-        # elif direction == -1:
-        #     translations = [(0,0), (-1,0), (-1,-1), (0,2), (-1,2)]  #,  (1,0), (1,1), (0,-2), (1,-2),  (1,-1), (1,2),  (-1,1), (-1,-2)]
-        # else:
-        #     translations = [(0,0)]
-        
-        # Update the current rotation value.
-        if direction == 1:
-            self.rotation_current += 90
-        elif direction == -1:
-            self.rotation_current -= 90
-        if self.rotation_current < 0 or self.rotation_current >= 360:
-            self.rotation_current = abs(self.rotation_current % 360)
 
         # Calculate how many empty rows at top/bottom and empty columns at left/right within tetrimino before attempting rotation.
         top_empty_before, bottom_empty_before = np.argmax(np.any(self.tetrimino > 0, axis=1)), np.argmax(np.any(np.flipud(self.tetrimino > 0), axis=1))
         left_empty_before, right_empty_before = np.argmax(np.any(self.tetrimino > 0, axis=0)), np.argmax(np.any(np.fliplr(self.tetrimino > 0), axis=0))
+        # Create a copy of the current tetrimino array.
+        array_current = np.copy(self.array_current)
+        # Rotate the tetrimino and return a copy.
+        tetrimino_rotated = np.rot90(self.tetrimino, k=direction)
+        # Calculate how many empty rows at top/bottom and empty columns at left/right within tetrimino after rotation.
+        top_empty_after, bottom_empty_after = np.argmax(np.any(tetrimino_rotated > 0, axis=1)), np.argmax(np.any(np.flipud(tetrimino_rotated > 0), axis=1))
+        left_empty_after, right_empty_after = np.argmax(np.any(tetrimino_rotated > 0, axis=0)), np.argmax(np.any(np.fliplr(tetrimino_rotated > 0), axis=0))
+        # Shift the copy of the current tetrimino array to prevent it from moving outside the left, right, top, bottom walls.
+        if not self.flag_ghost:
+            if left_empty_after < left_empty_before:
+                shift = left_empty_before - left_empty_after - np.argmax(np.any(array_current > 0, axis=0))
+                if shift > 0:
+                    array_current = np.roll(array_current, shift=shift, axis=1)
+            if right_empty_after < right_empty_before:
+                shift = right_empty_before - right_empty_after - np.argmax(np.any(np.fliplr(array_current > 0), axis=0))
+                if shift > 0:
+                    array_current = np.roll(array_current, shift=-1*shift, axis=1)
+        if top_empty_after < top_empty_before:
+            shift = top_empty_before - top_empty_after - np.argmax(np.any(array_current > 0, axis=1))
+            if shift > 0:
+                array_current = np.roll(array_current, shift=shift, axis=0)
+        if bottom_empty_after < bottom_empty_before:
+            shift = bottom_empty_before - bottom_empty_after - np.argmax(np.any(np.flipud(array_current > 0), axis=1))
+            if shift > 0:
+                array_current = np.roll(array_current, shift=-1*shift, axis=0)
+        # Insert the rotated and shifted tetrimino into the current tetrimino array.
+        array_current[array_current != 0] = tetrimino_rotated.flatten()
+
         # Attempt to rotate for each translation.
         for translation in translations:
-            # Create a copy of the current tetrimino array.
-            array_current = np.copy(self.array_current)
-            # Rotate the tetrimino and return a copy.
-            tetrimino_rotated = np.rot90(self.tetrimino, k=direction)
-            # Calculate how many empty rows at top/bottom and empty columns at left/right within tetrimino after rotation.
-            top_empty_after, bottom_empty_after = np.argmax(np.any(tetrimino_rotated > 0, axis=1)), np.argmax(np.any(np.flipud(tetrimino_rotated > 0), axis=1))
-            left_empty_after, right_empty_after = np.argmax(np.any(tetrimino_rotated > 0, axis=0)), np.argmax(np.any(np.fliplr(tetrimino_rotated > 0), axis=0))
-            # Shift the copy of the current tetrimino array to prevent it from moving outside the left, right, top, bottom walls.
-            if not self.flag_ghost:
-                if left_empty_after < left_empty_before:
-                    shift = left_empty_before - left_empty_after - np.argmax(np.any(array_current > 0, axis=0))
-                    if shift > 0:
-                        array_current = np.roll(array_current, shift=shift, axis=1)
-                        print('left kick, ', shift)
-                if right_empty_after < right_empty_before:
-                    shift = right_empty_before - right_empty_after - np.argmax(np.any(np.fliplr(array_current > 0), axis=0))
-                    if shift > 0:
-                        array_current = np.roll(array_current, shift=-1*shift, axis=1)
-                        print('right kick, ', shift)
-            if top_empty_after < top_empty_before:
-                shift = top_empty_before - top_empty_after - np.argmax(np.any(array_current > 0, axis=1))
-                if shift > 0:
-                    array_current = np.roll(array_current, shift=shift, axis=0)
-                    print('top kick, ', shift)
-            if bottom_empty_after < bottom_empty_before:
-                shift = bottom_empty_before - bottom_empty_after - np.argmax(np.any(np.flipud(array_current > 0), axis=1))
-                if shift > 0:
-                    array_current = np.roll(array_current, shift=-1*shift, axis=0)
-                    print('bottom kick, ', shift)
-            # Insert the rotated and shifted tetrimino into the current tetrimino array.
-            array_current[array_current != 0] = tetrimino_rotated.flatten()
-            
             if not self.flag_ghost:
                 # Check whether the translation will move the tetrimino outside the right or left walls.
                 if translation[0] > 0:
@@ -612,18 +594,23 @@ class Tetron:
                     available_count = np.argmax(np.any(np.flipud(array_current > 0), axis=1))
                     if abs(translation[1]) > available_count:
                         continue
-            # Apply the translation if the tetrimino does not move outside any of the four walls.
-            array_current = np.roll(array_current, shift=translation, axis=(1,0))
 
-            # Check whether the rotated and translated tetrimino intersects already placed blocks.
-            is_intersecting = np.any(self.array_dropped[array_current > 0] > 0)
+            # Check whether the rotated tetrimino, when translated, intersects already placed blocks.
+            is_intersecting = np.any(self.array_dropped[np.roll(array_current, shift=translation, axis=(1,0)) > 0] > 0)
             # Skip to the next interation of the for loop if intersecting.
             if is_intersecting and not self.flag_ghost:
                 continue
             # Apply the translation if not intersecting and ignore the remaining translations.
             else:
-                self.array_current = np.copy(array_current)
+                self.array_current = np.roll(array_current, shift=translation, axis=(1,0))
                 self.tetrimino = np.copy(tetrimino_rotated)
+                # Update the current rotation value.
+                if direction == 1:
+                    self.rotation_current += 90
+                elif direction == -1:
+                    self.rotation_current -= 90
+                if self.rotation_current < 0 or self.rotation_current >= 360:
+                    self.rotation_current = abs(self.rotation_current % 360)
                 # Update the displayed array.
                 self.update()
                 # Play sound effect.
