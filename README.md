@@ -11,6 +11,7 @@ Tetron features advanced blocks and special effects in addition to the seven blo
 | Move Right | D |
 | Hard Drop | W |
 | Soft Drop | S |
+| Hold | Q |
 | Rotate Counterclockwise | ← |
 | Rotate Clockwise | → |
 | Start Game | Space |
