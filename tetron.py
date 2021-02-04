@@ -94,9 +94,9 @@ class Tetron:
         self.time_elapsed = 0
 
         # Define the scores needed to move to the next stage. The last value is the score needed to win the game.
-        self.score_thresholds = [500, 900, 1000]
+        self.score_thresholds = [400, 800, 1000] #[500, 900, 1000]
         # Define the range of block fall speeds (ms) from the start to end of the game.
-        self.speeds_fall = [1000, 500]
+        self.speeds_fall = [1000, 250] #[1000, 500]
         # Define the block fall speed multiplier for some special effects (values below 1 result in faster speeds).
         self.speed_fall_multiplier = 1/3
         # Define the block move speed (ms) and initial delay for key repeats (ms).
@@ -118,7 +118,7 @@ class Tetron:
         # Define the range of probabilities (between 0 and 1) of getting a special effect.
         self.weights_special = [0, 1/20]
         # Define the score needed to begin increasing the probability of getting a special effect.
-        self.score_update_chance_special = 500
+        self.score_update_chance_special = self.score_thresholds[0]
         # Define durations for special effects (ms).
         self.duration_max_disoriented = 20000
         self.duration_max_blind = 20000
