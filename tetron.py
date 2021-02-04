@@ -143,6 +143,7 @@ class Tetron:
         self.sound_game_perfect = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_perfect.wav'))
         self.sound_game_win = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_win.wav'))
         self.sound_special_ghost = pygame.mixer.Sound(os.path.join(folder_sounds, 'special_ghost.wav'))
+        self.sound_special_heavy = pygame.mixer.Sound(os.path.join(folder_sounds, 'special_heavy.wav'))
         self.sound_special_disoriented = pygame.mixer.Sound(os.path.join(folder_sounds, 'special_disoriented.wav'))
         self.sound_special_blind = pygame.mixer.Sound(os.path.join(folder_sounds, 'special_blind.wav'))
         # Set volume for some sound effects.
@@ -282,7 +283,7 @@ class Tetron:
                 elif effect_special == self.id_special[1]:
                     self.flag_heavy = True
                     self.flag_fast_fall = True
-                    # self.sound_special_heavy.play()
+                    self.sound_special_heavy.play()
                 elif effect_special == self.id_special[2]:
                     # Apply the effect only if it is not currently active.
                     if not self.flag_disoriented:
@@ -421,9 +422,8 @@ class Tetron:
         # Clear the current tetrimino array.
         self.array_current[:] = 0
         # Update the array of the current tetrimino.
-        row_left = int(np.floor((self.column_count-tetrimino.shape[1])/2))
-        self.array_current[0:tetrimino.shape[0], row_left:row_left+tetrimino.shape[1]] = self.tetrimino
-
+        column_left = int(np.floor((self.column_count-tetrimino.shape[1])/2))
+        self.array_current[0:tetrimino.shape[0], column_left:column_left+tetrimino.shape[1]] = self.tetrimino
         # Update the displayed array.
         self.update()
 
@@ -587,11 +587,11 @@ class Tetron:
                         continue
                 # Check whether the desired translation will move the tetrimino outside the top or bottom walls.
                 if translation[1] > 0:
-                    available_count = np.argmax(np.any(array_current > 0, axis=1))
+                    available_count = np.argmax(np.any(np.flipud(array_current > 0), axis=1))
                     if abs(translation[1]) > available_count:
                         continue
                 elif translation[1] < 0:
-                    available_count = np.argmax(np.any(np.flipud(array_current > 0), axis=1))
+                    available_count = np.argmax(np.any(array_current > 0, axis=1))
                     if abs(translation[1]) > available_count:
                         continue
 
