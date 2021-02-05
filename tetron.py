@@ -94,9 +94,9 @@ class Tetron:
         self.time_elapsed = 0
 
         # Define the scores needed to move to the next stage. The last value is the score needed to win the game.
-        self.score_thresholds = [400, 800, 1000] #[500, 900, 1000]
+        self.score_thresholds = [400, 800, 1000]
         # Define the range of block fall speeds (ms) from the start to end of the game.
-        self.speeds_fall = [1000, 250] #[1000, 500]
+        self.speeds_fall = [1000, 250]
         # Define the block fall speed multiplier for some special effects (values below 1 result in faster speeds).
         self.speed_fall_multiplier = 1/3
         # Define the block move speed (ms) and initial delay for key repeats (ms).
@@ -885,7 +885,7 @@ games_ai = []
 height_panel = 1 * game.block_height
 
 # Set the window title and window icon.
-pygame.display.set_caption(name_program + ' - ' + version_program)
+pygame.display.set_caption(name_program + ' ' + version_program)
 icon = pygame.image.load('icon.png')
 pygame.display.set_icon(icon)
 # Set the window size [width, height] in pixels.
