@@ -7,7 +7,7 @@ a = Analysis(['tetron.py'],
              pathex=['C:\\Users\\Marshall Lee\\Desktop\\Tetron'],
              binaries=[],
              datas=[
-                 ('C:\\Users\\Marshall Lee\\Desktop\\Tetron\\Sounds\\*.mp3', '.\\Sounds'),
+                 ('C:\\Users\\Marshall Lee\\Desktop\\Tetron\\Sounds\\*.ogg', '.\\Sounds'),
                  ('C:\\Users\\Marshall Lee\\Desktop\\Tetron\\Sounds\\*.wav', '.\\Sounds'),
                  ('C:\\Users\\Marshall Lee\\Desktop\\Tetron\\*.png', '.'),
                  ('C:\\Users\\Marshall Lee\\Desktop\\Tetron\\*.ico', '.')
