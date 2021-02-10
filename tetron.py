@@ -21,6 +21,35 @@ folder_images = os.path.abspath(os.path.join(folder_program, 'Images'))
 # Initialize all pygame modules.
 pygame.init()
 
+# Create font objects used to create text.
+font_normal = pygame.font.SysFont('Segoe UI Semibold', 24)
+font_small = pygame.font.SysFont('Segoe UI Semibold', 18)
+
+# Define key controls.
+key_start = pygame.K_RETURN
+key_stop = pygame.K_ESCAPE
+# Define key controls for game modes with one instance of the game.
+key_move_left = pygame.K_LEFT
+key_move_right = pygame.K_RIGHT
+key_rotate_clockwise = [pygame.K_UP, pygame.K_x]
+key_rotate_counterclockwise = [pygame.K_z]
+key_harddrop = pygame.K_SPACE
+key_softdrop = pygame.K_DOWN
+key_hold = pygame.K_c
+# Define key controls for game modes with multiple instances of the game.
+key_left_move_left = pygame.K_a
+key_left_move_right = pygame.K_d
+key_left_rotate_clockwise = pygame.K_w
+key_left_harddrop = pygame.K_q
+key_left_softdrop = pygame.K_s
+key_left_hold = pygame.K_e
+key_right_move_left = pygame.K_j
+key_right_move_right = pygame.K_l
+key_right_rotate_clockwise = pygame.K_i
+key_right_harddrop = pygame.K_u
+key_right_softdrop = pygame.K_k
+key_right_hold = pygame.K_o
+
 
 # =============================================================================
 # Helper Functions.
@@ -76,9 +105,6 @@ class Tetron:
         # Define widths of multiple sizes of spacing between elements.
         self.margin_large = 1 * self.block_width
         self.margin_small = int(0.5 * self.block_width)
-        # Define the widths of the hold and next columns.
-        self.width_hold = 2 * self.block_width
-        self.width_next = 2 * self.block_width
 
         # Define the number of rows and columns of the matrix.
         self.row_count = 20
@@ -123,10 +149,8 @@ class Tetron:
         self.duration_max_disoriented = 20000
         self.duration_max_blind = 20000
 
-        # Create the surface used to display the matrix.
-        self.surface_matrix = pygame.Surface((self.column_count*self.block_width+(self.column_count+1)*self.block_margin, self.row_count*self.block_height+(self.row_count+1)*self.block_margin))
-        # Create the surface used to display the hold queue.
-        self.surface_hold = pygame.Surface((self.width_hold, self.width_hold))
+        # Create and set the sizes of the surfaces used to display each element of the game.
+        self.resize_display()
         
         # Load sound effects.
         # self.sound_game_advance = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_advance.wav'))
@@ -206,6 +230,35 @@ class Tetron:
         self.update_speed_fall()
         self.update_chance_advanced()
         self.update_chance_special()
+
+    # Create and set the sizes of the surfaces used to display each element of the game.
+    def resize_display(self):
+        # Define the widths of the hold and next columns.
+        self.width_hold = 2 * self.block_width
+        self.width_next = 2 * self.block_width
+        # Define the sizes (width, height) of the elements.
+        self.size_matrix = (
+            self.column_count*self.block_width + (self.column_count+1)*self.block_margin,
+            self.row_count*self.block_height + (self.row_count+1)*self.block_margin
+            )
+        self.size_total = (
+            self.width_hold + self.margin_small + self.size_matrix[0] + self.margin_small + self.width_next,
+            self.size_matrix[1]
+            )
+        # Create the main surface used to display all elements together.
+        self.surface_main = pygame.Surface(self.size_total)
+        # Create the surface and rect object used to display the matrix.
+        self.surface_matrix = pygame.Surface(self.size_matrix)
+        self.rect_matrix = self.surface_matrix.get_rect()
+        self.rect_matrix.left = self.width_hold + self.margin_small
+        # Create the text and rect object for the hold queue.
+        self.text_hold = font_small.render('HOLD', False, rgb(0.5))
+        self.rect_text_hold = self.text_hold.get_rect()
+        self.rect_text_hold.top = 0
+        # Create the surface and rect object used to display the hold queue.
+        self.surface_hold = pygame.Surface((self.width_hold, self.width_hold))
+        self.rect_hold = self.surface_hold.get_rect()
+        self.rect_hold.top = self.rect_text_hold.height
 
     # Start the game.
     def start_game(self):
@@ -894,22 +947,10 @@ size_window = [
     height_panel + game.row_count*game.block_height+(game.row_count+1)*game.block_margin
     ]
 screen = pygame.display.set_mode(size_window, pygame.RESIZABLE)
-# Define and position a rect object representing the matrix.
-rect_matrix = game.surface_matrix.get_rect()
-rect_matrix.top = height_panel + 0
-rect_matrix.left = game.width_hold + game.margin_small
-# Define and position a rect object representing the hold queue.
-rect_hold = game.surface_hold.get_rect()
-rect_hold.top = height_panel + 0
-rect_hold.left = rect_matrix.left - game.width_hold - game.margin_small
 
 # Load the logo.
 logo = pygame.image.load('logo.png')
 logo = pygame.transform.scale(logo, [int(height_panel*(logo.get_width()/logo.get_height())), height_panel])
-
-# Create font objects used to create text.
-font_normal = pygame.font.SysFont('Segoe UI Semibold', 24)
-font_small = pygame.font.SysFont('Segoe UI Semibold', 18)
 
 # Loop until the window is closed.
 done = False
@@ -930,54 +971,54 @@ while not done:
         elif event.type == pygame.VIDEORESIZE:
             # Redefine the size of the window.
             size_window = pygame.display.get_window_size()  # screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
-            # Adjust the positions of the elements.
-            rect_matrix.centerx = size_window[0]//2
-            rect_hold.left = rect_matrix.left - game.width_hold - game.margin_small
             
-            # # Redefine the width and height of the blocks in the matrix.
-            # game.block_width = int(np.floor((size_window[1] - ((game.row_count+1)*game.block_margin)) / (game.row_count+1)))
-            # game.block_height = game.block_width + 0
-            # # Redefine the height of the panel above the matrix.
-            # height_panel = 1 * game.block_height
+            # Redefine the width and height of the blocks in the matrix.
+            game.block_width = int(np.floor((size_window[1] - ((game.row_count+1)*game.block_margin)) / (game.row_count+1)))
+            game.block_height = game.block_width + 0
+            # Redefine the height of the panel above the matrix.
+            height_panel = 1 * game.block_height
+
+            # Resize and reposition the elements of each game.
+            game.resize_display()
         # Key presses.
         elif event.type == pygame.KEYDOWN:
             if game.flag_playing:
                 # Move left one column.
-                if event.key == pygame.K_a:
+                if event.key == key_move_left:
                     game.move_left()
                     # Record the current time used later to calculate how long this key is held.
                     game.time_start_move_left = game.time_current + 0
                     # Initialize the time at which the previous repeat occured.
                     game.time_previous_move_left = 0
                 # Move right one column.
-                elif event.key == pygame.K_d:
+                elif event.key == key_move_right:
                     game.move_right()
                     # Record the current time used later to calculate how long this key is held.
                     game.time_start_move_right = game.time_current + 0
                     # Initialize the time at which the previous repeat occured.
                     game.time_previous_move_right = 0
                 # Rotate counterclockwise or clockwise.
-                elif event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT:
-                    if event.key == pygame.K_LEFT:
-                        direction = 1
-                    elif event.key == pygame.K_RIGHT:
+                elif event.key in key_rotate_clockwise or event.key in key_rotate_counterclockwise:
+                    if event.key in key_rotate_clockwise:
                         direction = -1
+                    elif event.key in key_rotate_counterclockwise:
+                        direction = 1
                     # Only rotate if not freebie.
                     if not game.id_current == 899:
                         game.rotate(direction)
                 # Hard drop.
-                elif event.key == pygame.K_w:
+                elif event.key == key_harddrop:
                     game.harddrop()
                 # Start soft dropping.
-                elif event.key == pygame.K_s:
+                elif event.key == key_softdrop:
                     game.start_softdropping()
                 # Hold.
-                elif event.key == pygame.K_q:
+                elif event.key == key_hold:
                     if not game.flag_hold and not game.flag_ghost and not game.flag_heavy:
                         game.hold()
         # Key releases.
         elif event.type == pygame.KEYUP:
-            if event.key == pygame.K_SPACE:
+            if event.key == key_start:
                 if not game.flag_playing:
                     # Resume game.
                     if game.flag_paused:
@@ -989,13 +1030,13 @@ while not done:
                 else:
                     game.pause_game()
             # Stop game.
-            elif event.key == pygame.K_ESCAPE:
+            elif event.key == key_stop:
                 if game.flag_playing or game.flag_paused:
                     game.stop_game()
 
             if game.flag_playing:
                 # Stop soft dropping.
-                if event.key == pygame.K_s:
+                if event.key == key_softdrop:
                     game.stop_softdropping()
         # Transition music ends.
         elif event.type == pygame.USEREVENT+1:
@@ -1015,7 +1056,7 @@ while not done:
     # Get a list of the keys currently being held down.
     keys_pressed = pygame.key.get_pressed()
     # Soft drop.
-    if keys_pressed[pygame.K_s] and game.flag_playing:
+    if keys_pressed[key_softdrop] and game.flag_playing:
         # Check if the key has been held longer than the required initial delay.
         if (game.time_current - game.time_start_softdrop) > game.delay_softdrop:
             # Check if the key has been held longer than the key repeat interval.
@@ -1026,7 +1067,7 @@ while not done:
                     game.sound_game_softdrop.play()
                 game.time_previous_softdrop = game.time_current + 0
     # Move left.
-    if keys_pressed[pygame.K_a] and game.flag_playing:
+    if keys_pressed[key_move_left] and game.flag_playing:
         # Check if the key has been held longer than the required initial delay.
         if (game.time_current - game.time_start_move_left) > game.delay_move:
             # Check if the key has been held longer than the key repeat interval.
@@ -1034,7 +1075,7 @@ while not done:
                 game.move_left()
                 game.time_previous_move_left = game.time_current + 0
     # Move right.
-    if keys_pressed[pygame.K_d] and game.flag_playing:
+    if keys_pressed[key_move_right] and game.flag_playing:
         # Check if the key has been held longer than the required initial delay.
         if (game.time_current - game.time_start_move_right) > game.delay_move:
             # Check if the key has been held longer than the key repeat interval.
@@ -1063,7 +1104,7 @@ while not done:
     if not game.flag_playing:
         rect_logo = logo.get_rect()
         rect_logo.bottom = height_panel
-        rect_logo.centerx = rect_matrix.centerx + 0
+        rect_logo.centerx = size_window[0]//2
         screen.blit(logo, rect_logo)
     # Draw each block inside the matrix.
     for row in range(game.row_count):
@@ -1081,6 +1122,8 @@ while not done:
             else:
                 color = 0.25  # Color of blank blocks
             pygame.draw.rect(surface=game.surface_matrix, color=rgb(color, tint=tint), rect=[(game.block_margin+game.block_width)*column+game.block_margin, (game.block_margin+game.block_height)*row+game.block_margin, game.block_width, game.block_height])
+    # Draw the matrix inside the main surface.
+    game.surface_main.blit(game.surface_matrix, game.rect_matrix)
     # Erase the displayed hold queue.
     game.surface_hold.fill(rgb(0))
     # Draw tetrimino in hold queue.
@@ -1091,24 +1134,21 @@ while not done:
                 color = game.queue_hold[0][0][row, column]
                 if color > 0:
                     pygame.draw.rect(surface=game.surface_hold, color=rgb(color), rect=[size*column, size*row, size, size])
-        # Display hold queue label text.
-        text_hold = font_small.render('HOLD', True, rgb(0.5))
-        rect_text_hold = text_hold.get_rect()
-        rect_text_hold.left = rect_hold.left + 0
-        rect_text_hold.bottom = height_panel + 0
-        screen.blit(text_hold, rect_text_hold)
+        # Display the hold queue and text.
+        game.surface_main.blit(game.surface_hold, game.rect_hold)
+        game.surface_main.blit(game.text_hold, game.rect_text_hold)
+    # Display score text.
+    text_score = font_normal.render('{}'.format(game.score), True, rgb(1))
+    rect_text_score = text_score.get_rect()
+    rect_text_score.left = (size_window[0]-game.size_matrix[0])//2
+    rect_text_score.bottom = height_panel + 0
+    screen.blit(text_score, rect_text_score)
     # Display elapsed time text.
     text_time_elapsed = font_normal.render('{:02d}:{:02d}'.format(game.time_elapsed//60000, int((game.time_elapsed/1000)%60)), True, rgb(1))
     rect_text_time_elapsed = text_time_elapsed.get_rect()
-    rect_text_time_elapsed.right = rect_matrix.right + 0
+    rect_text_time_elapsed.right = (size_window[0]-game.size_matrix[0])//2 + game.size_matrix[0]
     rect_text_time_elapsed.bottom = height_panel + 0
     screen.blit(text_time_elapsed, rect_text_time_elapsed)
-    # Display cleared lines text.
-    text_cleared = font_normal.render('{}'.format(game.score), True, rgb(1))
-    rect_text_cleared = text_cleared.get_rect()
-    rect_text_cleared.left = rect_matrix.left + 0
-    rect_text_cleared.bottom = height_panel + 0
-    screen.blit(text_cleared, rect_text_cleared)
     # Stop the disoriented effect if it has lasted longer than the maximum duration.
     if game.flag_disoriented:
         if game.duration_disoriented > game.duration_max_disoriented:
@@ -1125,10 +1165,9 @@ while not done:
             game.duration_blind = 0
         else:
             game.duration_blind += 1000/game.fps
-    # Display the matrix in the window.
-    screen.blit(game.surface_matrix, rect_matrix)
-    # Display the hold queue in the window.
-    screen.blit(game.surface_hold, rect_hold)
+    
+    # Display the games in the window.
+    screen.blit(game.surface_main, ((size_window[0]-game.size_total[0])//2,height_panel)) # screen.blit(game.surface_matrix, game.rect_matrix)
     
     # Update the screen.
     pygame.display.flip()
