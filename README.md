@@ -7,14 +7,14 @@ Tetron features advanced blocks and special effects in addition to the seven blo
 ### Controls
 | Action | Key |
 | :-- | --: |
-| Move Left | A |
-| Move Right | D |
-| Hard Drop | W |
-| Soft Drop | S |
-| Hold | Q |
-| Rotate Counterclockwise | ← |
-| Rotate Clockwise | → |
-| Start Game | Space |
+| Move Left | ← |
+| Move Right | → |
+| Rotate Clockwise | ↑ or X |
+| Rotate Counterclockwise | Z |
+| Hard Drop | Space |
+| Soft Drop | ↓ |
+| Hold | C |
+| Start Game | Enter |
 | Stop Game | Escape |
 
 ### Advanced blocks
@@ -41,7 +41,7 @@ Tetron features advanced blocks and special effects in addition to the seven blo
 ### Game modes
 | Mode | Press to Start |
 | :-- | --: |
-| Tetron | Space |
+| Tetron | Enter |
 
 ## Installation
 1. Click on the most recent release found [here](https://github.com/marsh92909/Tetron/releases).
