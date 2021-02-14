@@ -4,13 +4,13 @@ block_cipher = None
 
 
 a = Analysis(['tetron.py'],
-             pathex=['C:\\Users\\Marshall Lee\\Desktop\\Tetron'],
+             pathex=['C:\\Users\\Marshall\\Desktop\\Tetron'],
              binaries=[],
              datas=[
-                 ('C:\\Users\\Marshall Lee\\Desktop\\Tetron\\Sounds\\*.ogg', '.\\Sounds'),
-                 ('C:\\Users\\Marshall Lee\\Desktop\\Tetron\\Sounds\\*.wav', '.\\Sounds'),
-                 ('C:\\Users\\Marshall Lee\\Desktop\\Tetron\\*.png', '.'),
-                 ('C:\\Users\\Marshall Lee\\Desktop\\Tetron\\*.ico', '.')
+                 ('C:\\Users\\Marshall\\Desktop\\Tetron\\Sounds\\*.ogg', '.\\Sounds'),
+                 ('C:\\Users\\Marshall\\Desktop\\Tetron\\Sounds\\*.wav', '.\\Sounds'),
+                 ('C:\\Users\\Marshall\\Desktop\\Tetron\\*.png', '.'),
+                 ('C:\\Users\\Marshall\\Desktop\\Tetron\\*.ico', '.')
                  ],
              hiddenimports=[],
              hookspath=[],
