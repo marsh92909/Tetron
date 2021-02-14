@@ -13,9 +13,9 @@ import pygame
 
 # Program information.
 name_program = 'Tetron'
-version_program = '1.0.0'
+version_program = '1.0.1'
 # Get the path to the folder containing the program.
-folder_program = os.path.dirname(os.path.realpath(sys.argv[0]))  #getattr(sys, '_MEIPASS', os.path.abspath(os.path.dirname(__file__)))
+folder_program = getattr(sys, '_MEIPASS', os.path.abspath(os.path.dirname(__file__)))  # os.path.dirname(os.path.realpath(sys.argv[0]))
 folder_sounds = os.path.abspath(os.path.join(folder_program, 'Sounds'))
 folder_images = os.path.abspath(os.path.join(folder_program, 'Images'))
 # Initialize all pygame modules.
@@ -817,7 +817,7 @@ class Tetron:
     # Reset the advance timer if the tetrimino is directly above an already placed block or is on the bottom of the matrix.
     def check_landed(self):
         is_landed_stack = np.any(self.array_dropped[np.roll(self.array_current, shift=1, axis=0) > 0] > 0)
-        is_landed_bottom = np.any(self.array_current[-1,:] > 0)  # np.argmax(np.any(np.flipud(self.array_current) > 0, axis=1)) == 0
+        is_landed_bottom = np.any(self.array_current[-1,:] > 0)
         if (self.flag_ghost and is_landed_bottom) or (not self.flag_ghost and (is_landed_stack or is_landed_bottom)):
             # If landed while soft dropping, reset advance timer in addition to resetting specific flags.
             if self.flag_softdropping:
@@ -948,7 +948,7 @@ height_panel = 1 * game.block_height
 
 # Set the window title and window icon.
 pygame.display.set_caption(name_program + ' ' + version_program)
-icon = pygame.image.load('icon.png')
+icon = pygame.image.load(os.path.join(folder_program, 'icon.png'))
 pygame.display.set_icon(icon)
 # Set the window size [width, height] in pixels.
 size_window = [
@@ -958,7 +958,7 @@ size_window = [
 screen = pygame.display.set_mode(size_window, pygame.RESIZABLE)
 
 # Load the logo.
-logo = pygame.image.load('logo.png')
+logo = pygame.image.load(os.path.join(folder_program, 'logo.png'))
 logo = pygame.transform.scale(logo, [int(height_panel*(logo.get_width()/logo.get_height())), height_panel])
 
 # Loop until the window is closed.
