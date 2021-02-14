@@ -182,6 +182,11 @@ class Tetron:
         self.sound_game_tetris.set_volume(0.1)
         self.sound_game_special.set_volume(0.1)
         self.sound_game_perfect.set_volume(0.1)
+        self.sound_game_win.set_volume(0.25)
+        self.sound_special_ghost.set_volume(0.25)
+        self.sound_special_heavy.set_volume(0.25)
+        self.sound_special_disoriented.set_volume(0.25)
+        self.sound_special_blind.set_volume(0.5)
 
         # Initialize all other attributes.
         self.initialize()
