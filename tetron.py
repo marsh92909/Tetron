@@ -122,7 +122,7 @@ class Tetron:
         # Define the scores needed to move to the next stage. The last value is the score needed to win the game.
         self.score_thresholds = [400, 800, 1000]
         # Define the range of block fall speeds (ms) from the start to end of the game.
-        self.speeds_fall = [1000, 250]
+        self.speeds_fall = [1000, 200]
         # Define the block fall speed multiplier for some special effects (values below 1 result in faster speeds).
         self.speed_fall_multiplier = 1/3
         # Define the block move speed (ms) and initial delay for key repeats (ms).
@@ -138,7 +138,7 @@ class Tetron:
         self.id_special = ['ghost', 'heavy', 'disoriented', 'blind']
         
         # Define the range of probabilities (between 0 and 1) of getting an advanced tetrimino.
-        self.weights_advanced = [0, 2/5]
+        self.weights_advanced = [0, 1/3]
         # Define the score needed to begin increasing the probability of getting an advanced tetrimino.
         self.score_update_chance_advanced = 100
         # Define the range of probabilities (between 0 and 1) of getting a special effect.
@@ -491,16 +491,8 @@ class Tetron:
         # Apply the advancement if not intersecting and not at the bottom.
         if (self.flag_ghost and not is_at_bottom) or (not self.flag_ghost and (not is_at_bottom and not is_intersecting)):
             self.array_current = np.copy(array_current)
-            # Check whether the tetrimino has landed on any already placed block or on the bottom of the matrix.
-            is_landed_stack = np.any(self.array_dropped[np.roll(self.array_current, shift=1, axis=0) > 0] > 0)
-            is_landed_bottom = np.argmax(np.any(np.flipud(self.array_current) > 0, axis=1)) == 0
-            if (self.flag_ghost and is_landed_bottom) or (not self.flag_ghost and (is_landed_stack or is_landed_bottom)):
-                # Reset advance timer if landed while soft dropping.
-                if self.flag_softdropping:
-                    self.stop_softdropping()
-                # Play sound effect.
-                if not self.flag_ghost:
-                    self.sound_game_landing.play()
+            # Reset the advance timer if the tetrimino has landed.
+            self.check_landed()
         else:
             self.harddrop()
         # Update the displayed array.
@@ -668,6 +660,8 @@ class Tetron:
                 self.update()
                 # Play sound effect.
                 self.sound_game_rotate.play()
+                # Reset the advance timer if the tetrimino has landed.
+                self.check_landed()
                 # Set flag if T-spin or mini T-spin.
                 if self.id_current == self.id_classic[5]:
                     front_count = np.sum(self.array_dropped[self.array_current == -2] > 0)
@@ -819,6 +813,21 @@ class Tetron:
         # Swap the current tetrimino with the one in the queue.
         else:
             self.create_new(self.queue_hold.pop(0))
+    
+    # Reset the advance timer if the tetrimino is directly above an already placed block or is on the bottom of the matrix.
+    def check_landed(self):
+        is_landed_stack = np.any(self.array_dropped[np.roll(self.array_current, shift=1, axis=0) > 0] > 0)
+        is_landed_bottom = np.any(self.array_current[-1,:] > 0)  # np.argmax(np.any(np.flipud(self.array_current) > 0, axis=1)) == 0
+        if (self.flag_ghost and is_landed_bottom) or (not self.flag_ghost and (is_landed_stack or is_landed_bottom)):
+            # If landed while soft dropping, reset advance timer in addition to resetting specific flags.
+            if self.flag_softdropping:
+                self.stop_softdropping()
+            # If landed normally, reset advance timer only.
+            else:
+                self.reset_time_advance()
+            # Play sound effect.
+            if not self.flag_ghost:
+                self.sound_game_landing.play()
 
     # Update the displayed array.
     def update(self):
@@ -944,7 +953,7 @@ pygame.display.set_icon(icon)
 # Set the window size [width, height] in pixels.
 size_window = [
     game.column_count*game.block_width + (game.column_count+1)*game.block_margin + (game.width_hold+game.margin_small) + (game.width_next+game.margin_small),
-    height_panel + game.row_count*game.block_height+(game.row_count+1)*game.block_margin
+    round(0.8 * pygame.display.Info().current_h)  # height_panel + game.row_count*game.block_height+(game.row_count+1)*game.block_margin
     ]
 screen = pygame.display.set_mode(size_window, pygame.RESIZABLE)
 
@@ -1122,8 +1131,6 @@ while not done:
             else:
                 color = 0.25  # Color of blank blocks
             pygame.draw.rect(surface=game.surface_matrix, color=rgb(color, tint=tint), rect=[(game.block_margin+game.block_width)*column+game.block_margin, (game.block_margin+game.block_height)*row+game.block_margin, game.block_width, game.block_height])
-    # Draw the matrix inside the main surface.
-    game.surface_main.blit(game.surface_matrix, game.rect_matrix)
     # Erase the displayed hold queue.
     game.surface_hold.fill(rgb(0))
     # Draw tetrimino in hold queue.
@@ -1166,6 +1173,8 @@ while not done:
         else:
             game.duration_blind += 1000/game.fps
     
+    # Draw the matrix inside the main surface.
+    game.surface_main.blit(game.surface_matrix, game.rect_matrix)
     # Display the games in the window.
     screen.blit(game.surface_main, ((size_window[0]-game.size_total[0])//2,height_panel)) # screen.blit(game.surface_matrix, game.rect_matrix)
     
