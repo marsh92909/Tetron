@@ -59,6 +59,8 @@ If a `.spec` file already exists and has the correct information:
 3. Open the `dist` folder to find the compiled folder containing the `.exe` file and other files.
 4. Zip the folder and distribute.
 
+Note: Make sure any file paths in the `.spec` file have the correct user name.
+
 ### Create a `.spec` file
 If a `.spec` file does not exist, create it first:
 1. Open Command Prompt and set the current directory to the folder where the `.py` file is: `cd Desktop\Tetron`.
