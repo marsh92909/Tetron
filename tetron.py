@@ -257,7 +257,7 @@ class Tetron:
         self.rect_matrix = self.surface_matrix.get_rect()
         self.rect_matrix.left = self.width_hold + self.margin_small
         # Create the text and rect object for the hold queue.
-        self.text_hold = font_small.render('HOLD', False, rgb(0.5))
+        self.text_hold = font_small.render('HOLD', True, rgb(0.5))
         self.rect_text_hold = self.text_hold.get_rect()
         self.rect_text_hold.top = 0
         # Create the surface and rect object used to display the hold queue.
@@ -707,8 +707,9 @@ class Tetron:
         if self.flag_fast_fall:
             self.flag_fast_fall = False
         self.flag_hold = False
-        # Update the values of previously placed ghost blocks.
+        # Update the values of previously placed ghost blocks and heavy blocks.
         self.array_dropped[self.array_dropped == 901] = 900
+        self.array_dropped[self.array_dropped == 902] = 900
 
         # Check for cleared lines and empty them.
         cleared_rows = np.argwhere(np.all(self.array_dropped > 0, axis=1))
@@ -1112,8 +1113,10 @@ while not done:
     # =============================================================================
     # Draw Screen.
     # =============================================================================
-    # Erase the screen.
+    # Erase all surfaces.
     screen.fill(rgb(0))
+    game.surface_main.fill(rgb(0))
+    game.surface_hold.fill(rgb(0))
     # Display the logo if not playing.
     if not game.flag_playing:
         rect_logo = logo.get_rect()
@@ -1136,8 +1139,6 @@ while not done:
             else:
                 color = 0.25  # Color of blank blocks
             pygame.draw.rect(surface=game.surface_matrix, color=rgb(color, tint=tint), rect=[(game.block_margin+game.block_width)*column+game.block_margin, (game.block_margin+game.block_height)*row+game.block_margin, game.block_width, game.block_height])
-    # Erase the displayed hold queue.
-    game.surface_hold.fill(rgb(0))
     # Draw tetrimino in hold queue.
     if len(game.queue_hold) > 0:
         size = int(min(np.floor([game.width_hold/game.queue_hold[0][0].shape[0], game.width_hold/game.queue_hold[0][0].shape[1]])))
