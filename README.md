@@ -44,30 +44,34 @@ Tetron features advanced blocks and special effects in addition to the seven blo
 | Tetron | Enter |
 
 ## Installation
-1. Click on the most recent release found [here](https://github.com/marsh92909/Tetron/releases).
-2. Click on the `Tetron.zip` file to download it.
-3. Unzip the file and place the Tetron folder anywhere. Do not move, modify, or delete any file in this folder, including the `.exe` file, or the program may not open.
-4. Open the Tetron folder and create a shortcut of the `.exe` file. Move the shortcut to the desktop for convenience.
+1. Open the [latest release](https://github.com/marsh92909/Tetron/releases/latest).
+2. Click on the `Tetron.exe` file to download it, and place it anywhere.
 
 ## Compilation
-Using PyInstaller 4.2 and Python 3.9.1 on Windows 10.
+Using PyInstaller 4.2 and Python 3.9.1 on Windows 10. PyInstaller can compile either a single .exe file or a folder containing an .exe file along with other files. The instructions below are for compiling a single .exe file.
 
-### Compile a folder with existing `.spec` file
-If a `.spec` file already exists and has the correct information:
-1. Open Command Prompt and set the current directory to the folder where the `.py` file is: `cd Desktop\Tetron`.
-2. Enter `pyinstaller tetron.spec` to compile the folder.
-3. Open the `dist` folder to find the compiled folder containing the `.exe` file and other files.
-4. Zip the folder and distribute.
+### Set up a .spec file
+1. Open Command Prompt and set the current directory to the folder where the main .py file is: `cd Desktop\Tetron`.
+2. Create a .spec file by entering in Command Prompt: `pyi-makespec --onefile --windowed --name Tetron --icon icon.ico tetron.py`. The .spec file will appear in the current directory.
+   1. To compile a folder instead, change `--onefile` to `--onedir`.
+3. Open the .spec file to add additional information:
+   1. Specify all the files (images, audio, etc.) to be included in the program in the `datas` argument to `Analysis`. This argument is a list of tuples in which each tuple contains two strings. ([Source](https://pyinstaller.readthedocs.io/en/stable/spec-files.html#adding-data-files))
+      > 1. The first string specifies the file or files as they are in this system now.
+      
+      To specify all of a type of file within a folder, use an asterisk in place of the file name: `'C:\\Users\\...\\Tetron\\*.wav'`. Make sure the file paths have the correct user name.
 
-Note: Make sure any file paths in the `.spec` file have the correct user name.
+      > 2. The second specifies the name of the folder to contain the files at run-time.
 
-### Create a `.spec` file
-If a `.spec` file does not exist, create it first:
-1. Open Command Prompt and set the current directory to the folder where the `.py` file is: `cd Desktop\Tetron`.
-2. Create a `.spec` file by entering `pyi-makespec --windowed --name Tetron tetron.py`. The file will appear in the current directory.
-3. Open the `.spec` file to add additional information:
-   1. The `datas` argument to `Analysis` contains the files to be included in the compiled folder. It is a list of tuples in which each tuple represents a file and contains two strings. The first string is the path to the file to be included. To include all of a type of file, use an asterisk in place of the file name: `'C:\\Users\\...\\Tetron\\*.mp3'`. The second string is the path to the folder, relative to the compiled folder, in which the file will be placed during compilation. To place a file directly in the compiled folder, use `'.'`. To place a file in a folder within the compiled folder, use `'.\\<folder name>'`.
-   2. The `icon` argument to `EXE` is a string of the file name of the icon file: `'icon.ico'`.
+      To place a file in the same directory used by the program at run-time, use `'.'`. To place a file in a folder within that directory, use `'.\\<folder name>'`.
+
+Note: If compiling a folder, the generated .spec file will contain an instance of COLLECT.
+
+### Compile the program with the .spec file
+1. Open Command Prompt and set the current directory to the folder where the main .py file is: `cd Desktop\Tetron`.
+2. Enter `pyinstaller tetron.spec` to compile the program. PyInstaller will create a `build` and `dist` folder if they do not already exist.
+3. Open the `dist` folder to find the compiled program.
+
+Note: A .spec file is not required to compile a program, but it makes compilation easier by shortening the command that is typed in Command Prompt.
 
 ## Credits
 ### Programming
