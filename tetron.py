@@ -96,18 +96,18 @@ def rgb(color, tint=0):
 # The main class containing all actions related to the game, such as moving and rotating blocks.
 class Tetron:
     # Initialize the attributes of the instance of of this class when it is first created.
-    def __init__(self):
-        # Define the width, height, and margin of the blocks in pixels.
-        self.block_width = 40
-        self.block_height = 40
-        self.block_margin = 1
+    def __init__(self, width_block, height_block, spacing_block, row_count, column_count):
+        # Define the width, height, and spacing of the blocks in pixels.
+        self.width_block = width_block
+        self.height_block = height_block
+        self.spacing_block = spacing_block
         # Define widths of multiple sizes of spacing between elements.
-        self.margin_large = 1 * self.block_width
-        self.margin_small = int(0.5 * self.block_width)
+        self.spacing_large = 1 * self.width_block
+        self.spacing_small = int(0.5 * self.width_block)
 
         # Define the number of rows and columns of the matrix.
-        self.row_count = 20
-        self.column_count = 10
+        self.row_count = row_count
+        self.column_count = column_count
 
         # Create a clock that manages how fast the screen updates.
         self.clock = pygame.time.Clock()
@@ -238,17 +238,28 @@ class Tetron:
         self.update_chance_special()
 
     # Create and set the sizes of the surfaces used to display each element of the game.
-    def resize_display(self):
+    def resize_display(self, width_block=None, height_block=None, spacing_block=None, row_count=None, column_count=None):
+        # Resize the basic elements used to determine the sizes of other elements.
+        if width_block is not None:
+            self.width_block = width_block
+        if height_block is not None:
+            self.height_block = height_block
+        if spacing_block is not None:
+            self.spacing_block = spacing_block
+        if row_count is not None:
+            self.row_count = row_count
+        if column_count is not None:
+            self.column_count = column_count
         # Define the widths of the hold and next columns.
-        self.width_hold = 2 * self.block_width
-        self.width_next = 2 * self.block_width
+        self.width_hold = 2 * self.width_block
+        self.width_next = 2 * self.width_block
         # Define the sizes (width, height) of the elements.
         self.size_matrix = (
-            self.column_count*self.block_width + (self.column_count+1)*self.block_margin,
-            self.row_count*self.block_height + (self.row_count+1)*self.block_margin
+            self.column_count*self.width_block + (self.column_count+1)*self.spacing_block,
+            self.row_count*self.height_block + (self.row_count+1)*self.spacing_block
             )
         self.size_total = (
-            self.width_hold + self.margin_small + self.size_matrix[0] + self.margin_small + self.width_next,
+            self.width_hold + self.spacing_small + self.size_matrix[0] + self.spacing_small + self.width_next,
             self.size_matrix[1]
             )
         # Create the main surface used to display all elements together.
@@ -256,7 +267,7 @@ class Tetron:
         # Create the surface and rect object used to display the matrix.
         self.surface_matrix = pygame.Surface(self.size_matrix)
         self.rect_matrix = self.surface_matrix.get_rect()
-        self.rect_matrix.left = self.width_hold + self.margin_small
+        self.rect_matrix.left = self.width_hold + self.spacing_small
         # Create the text and rect object for the hold queue.
         self.text_hold = font_small.render('HOLD', True, rgb(0.5))
         self.rect_text_hold = self.text_hold.get_rect()
@@ -941,34 +952,63 @@ class Tetron:
         # Reset the T-spin flags.
         self.flag_tspin = False
         self.flag_tspin_mini = False
-
+    
+    # Draw each block in the matrix.
+    def draw_matrix(self):
+        # Draw each block inside the matrix.
+        for row in range(self.row_count):
+            for column in range(self.column_count):
+                number = self.array_display[row, column]
+                tint = 0
+                if number != 0:
+                    if self.flag_blind:
+                        color = 0.28  # Color of placed blocks in blind mode
+                    else:
+                        if number < 0:
+                            color = 0.35  # Color of highlighted blocks
+                        else:
+                            color = number + 0  # Color of placed blocks
+                else:
+                    color = 0.25  # Color of blank blocks
+                pygame.draw.rect(surface=self.surface_matrix, color=rgb(color, tint=tint), rect=[(self.spacing_block+self.width_block)*column+self.spacing_block, (self.spacing_block+self.height_block)*row+self.spacing_block, self.width_block, self.height_block])
 
 # =============================================================================
 # Main Program Loop.
 # =============================================================================
+# Define the numbers of rows and columns.
+row_count = 20
+column_count = 10
+# Define the size of the space between blocks in pixels.
+spacing_block = 1
+# Get the size of the display.
+info_display = pygame.display.Info()
+# Define the height and width of the blocks in pixels.
+height_block = round(((0.8 * info_display.current_h) - ((row_count+1) * spacing_block)) / (row_count+1))
+width_block = height_block + 0
+# Define the height of the panel above the matrix in pixels.
+height_panel = 1 * height_block
+
 # Create an instance of the game.
-game = Tetron()
+game = Tetron(width_block, height_block, spacing_block, row_count, column_count)
 # Create lists to store multiple instances of the game.
 games_player = [game]
 games_ai = []
 
-# Define the height of the panel above the matrix.
-height_panel = 1 * game.block_height
-
+# Set the window size [width, height] in pixels.
+size_window = [
+    column_count*width_block + (column_count+1)*spacing_block + (game.width_hold+game.spacing_small) + (game.width_next+game.spacing_small),
+    height_panel + row_count*height_block+(row_count+1)*spacing_block  # round(0.8 * pygame.display.Info().current_h)
+    ]
 # Set the window title and window icon.
 pygame.display.set_caption(name_program + ' ' + version_program)
 icon = pygame.image.load(os.path.join(folder_program, 'icon.png'))
 pygame.display.set_icon(icon)
-# Set the window size [width, height] in pixels.
-size_window = [
-    game.column_count*game.block_width + (game.column_count+1)*game.block_margin + (game.width_hold+game.margin_small) + (game.width_next+game.margin_small),
-    round(0.8 * pygame.display.Info().current_h)  # height_panel + game.row_count*game.block_height+(game.row_count+1)*game.block_margin
-    ]
+# Create the window.
 screen = pygame.display.set_mode(size_window, pygame.RESIZABLE)
 
 # Load the logo.
-logo = pygame.image.load(os.path.join(folder_program, 'logo.png'))
-logo = pygame.transform.scale(logo, [int(height_panel*(logo.get_width()/logo.get_height())), height_panel])
+logo_full = pygame.image.load(os.path.join(folder_program, 'logo.png'))
+logo = pygame.transform.scale(logo_full, [int(height_panel*(logo_full.get_width()/logo_full.get_height())), height_panel])
 
 # Loop until the window is closed.
 done = False
@@ -987,17 +1027,19 @@ while not done:
             done = True
         # Window is resized.
         elif event.type == pygame.VIDEORESIZE:
-            # Redefine the size of the window.
+            # Get the new size of the window.
             size_window = pygame.display.get_window_size()  # screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
             
             # Redefine the width and height of the blocks in the matrix.
-            game.block_width = int(np.floor((size_window[1] - ((game.row_count+1)*game.block_margin)) / (game.row_count+1)))
-            game.block_height = game.block_width + 0
+            width_block = int(np.floor((size_window[1] - ((row_count+1)*spacing_block)) / (row_count+1)))
+            height_block = width_block + 0
             # Redefine the height of the panel above the matrix.
-            height_panel = 1 * game.block_height
-
+            height_panel = height_block + 0
             # Resize and reposition the elements of each game.
-            game.resize_display()
+            game.resize_display(width_block=width_block, height_block=height_block)
+
+            # Resize the logo.
+            logo = pygame.transform.scale(logo_full, [int(height_panel*(logo_full.get_width()/logo_full.get_height())), height_panel])
         # Key presses.
         elif event.type == pygame.KEYDOWN:
             if game.flag_playing:
@@ -1126,22 +1168,23 @@ while not done:
         rect_logo.bottom = height_panel
         rect_logo.centerx = size_window[0]//2
         screen.blit(logo, rect_logo)
-    # Draw each block inside the matrix.
-    for row in range(game.row_count):
-        for column in range(game.column_count):
-            number = game.array_display[row, column]
-            tint = 0
-            if number != 0:
-                if game.flag_blind:
-                    color = 0.28  # Color of placed blocks in blind mode
-                else:
-                    if number < 0:
-                        color = 0.35  # Color of highlighted blocks
-                    else:
-                        color = number + 0  # Color of placed blocks
-            else:
-                color = 0.25  # Color of blank blocks
-            pygame.draw.rect(surface=game.surface_matrix, color=rgb(color, tint=tint), rect=[(game.block_margin+game.block_width)*column+game.block_margin, (game.block_margin+game.block_height)*row+game.block_margin, game.block_width, game.block_height])
+    game.draw_matrix()
+    # # Draw each block inside the matrix.
+    # for row in range(game.row_count):
+    #     for column in range(game.column_count):
+    #         number = game.array_display[row, column]
+    #         tint = 0
+    #         if number != 0:
+    #             if game.flag_blind:
+    #                 color = 0.28  # Color of placed blocks in blind mode
+    #             else:
+    #                 if number < 0:
+    #                     color = 0.35  # Color of highlighted blocks
+    #                 else:
+    #                     color = number + 0  # Color of placed blocks
+    #         else:
+    #             color = 0.25  # Color of blank blocks
+    #         pygame.draw.rect(surface=game.surface_matrix, color=rgb(color, tint=tint), rect=[(game.spacing_block+game.width_block)*column+game.spacing_block, (game.spacing_block+game.height_block)*row+game.spacing_block, game.width_block, game.height_block])
     # Draw hold queue.
     if len(game.queue_hold) > 0:
         # Create a copy of the current tetrimino array and properly pad it for displaying in the hold queue.
