@@ -55,14 +55,15 @@ Using PyInstaller 4.2 and Python 3.9.1 on Windows 10. PyInstaller can compile ei
 2. Create a .spec file by entering in Command Prompt: `pyi-makespec --onefile --windowed --name Tetron --icon icon.ico tetron.py`. The .spec file will appear in the current directory.
    1. To compile a folder instead, change `--onefile` to `--onedir`.
 3. Open the .spec file to add additional information:
-   1. Specify all the files (images, audio, etc.) to be included in the program in the `datas` argument to `Analysis`. This argument is a list of tuples in which each tuple contains two strings. ([Source](https://pyinstaller.readthedocs.io/en/stable/spec-files.html#adding-data-files))
+   1. Delete the path in the list in the `pathex` argument to `Analysis`.
+   2. Specify all the files (images, audio, etc.) to be included in the program in the `datas` argument to `Analysis`. This argument is a list of tuples in which each tuple contains two strings. ([Source](https://pyinstaller.readthedocs.io/en/stable/spec-files.html#adding-data-files))
       > 1. The first string specifies the file or files as they are in this system now.
       
-      To specify all of a type of file within a folder, use an asterisk in place of the file name: `'C:\\Users\\...\\Tetron\\*.wav'`. Make sure the file paths have the correct user name.
+      This string can be a relative path relative to the current directory used during compilation. To specify all of a type of file within a folder, use an asterisk in place of the file name: `'<folder name>\\*.wav'`.
 
       > 2. The second specifies the name of the folder to contain the files at run-time.
 
-      To place a file in the same directory used by the program at run-time, use `'.'`. To place a file in a folder within that directory, use `'.\\<folder name>'`.
+      To place a file in the same directory used by the program at run-time, use `'.'`. To place a file in a folder within that directory, use `'.\\<folder name>'`. 
 
 Note: If compiling a folder, the generated .spec file will contain an instance of COLLECT.
 
