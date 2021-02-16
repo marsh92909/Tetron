@@ -124,7 +124,7 @@ class Tetron:
         # Define the range of block fall speeds (ms) from the start to end of the game.
         self.speeds_fall = [1000, 200]
         # Define the block fall speed multiplier for some special effects (values below 1 result in faster speeds).
-        self.speed_fall_multiplier = 1/3
+        self.speed_fall_multiplier = 1/2
         # Define the block move speed (ms) and initial delay for key repeats (ms).
         self.speed_move = 25
         self.delay_move = 150
@@ -158,6 +158,7 @@ class Tetron:
         self.sound_game_rotate = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_rotate.wav'))
         self.sound_game_harddrop = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_harddrop.wav'))
         self.sound_game_softdrop = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_softdrop.wav'))
+        self.sound_game_hold = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_hold.wav'))
         self.sound_game_landing = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_landing.wav'))
         self.sound_game_single = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_single.wav'))
         self.sound_game_double = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_double.wav'))
@@ -175,6 +176,7 @@ class Tetron:
         self.sound_game_rotate.set_volume(0.1)
         self.sound_game_harddrop.set_volume(0.1)
         self.sound_game_softdrop.set_volume(0.1)
+        self.sound_game_hold.set_volume(0.1)
         self.sound_game_landing.set_volume(0.1)
         self.sound_game_single.set_volume(0.1)
         self.sound_game_double.set_volume(0.1)
@@ -807,7 +809,7 @@ class Tetron:
         # Reset the previous advance time.
         self.reset_time_advance()
 
-    # Hold.
+    # Store the current tetrimino array, the current ID, and current rotation in a tuple and store it in the hold queue.
     def hold(self):
         # Set the flag to prevent another hold.
         self.flag_hold = True
@@ -819,7 +821,9 @@ class Tetron:
         # Swap the current tetrimino with the one in the queue.
         else:
             self.create_new(self.queue_hold.pop(0))
-    
+        # Play sound effect.
+        self.sound_game_hold.play()
+
     # Reset the advance timer if the tetrimino is directly above an already placed block or is on the bottom of the matrix.
     def check_landed(self):
         is_landed_stack = np.any(self.array_dropped[np.roll(self.array_current, shift=1, axis=0) > 0] > 0)
@@ -1139,12 +1143,18 @@ while not done:
             else:
                 color = 0.25  # Color of blank blocks
             pygame.draw.rect(surface=game.surface_matrix, color=rgb(color, tint=tint), rect=[(game.block_margin+game.block_width)*column+game.block_margin, (game.block_margin+game.block_height)*row+game.block_margin, game.block_width, game.block_height])
-    # Draw tetrimino in hold queue.
+    # Draw hold queue.
     if len(game.queue_hold) > 0:
-        size = int(min(np.floor([game.width_hold/game.queue_hold[0][0].shape[0], game.width_hold/game.queue_hold[0][0].shape[1]])))
-        for row in range(game.queue_hold[0][0].shape[0]):
-            for column in range(game.queue_hold[0][0].shape[1]):
-                color = game.queue_hold[0][0][row, column]
+        # Create a copy of the current tetrimino array and properly pad it for displaying in the hold queue.
+        tetrimino_mini = np.copy(game.queue_hold[0][0])
+        if tetrimino_mini.shape[0] <= 2:
+            tetrimino_mini = np.pad(tetrimino_mini, ((1,1), (0,0)), mode='constant', constant_values=0)
+        if tetrimino_mini.shape[1] <= 2:
+            tetrimino_mini = np.pad(tetrimino_mini, ((0,0), (1,1)), mode='constant', constant_values=0)
+        size = int(min(np.floor([game.width_hold/tetrimino_mini.shape[0], game.width_hold/tetrimino_mini.shape[1]])))
+        for row in range(tetrimino_mini.shape[0]):
+            for column in range(tetrimino_mini.shape[1]):
+                color = tetrimino_mini[row, column]
                 if color > 0:
                     pygame.draw.rect(surface=game.surface_hold, color=rgb(color), rect=[size*column, size*row, size, size])
         # Display the hold queue and text.
