@@ -752,7 +752,8 @@ class Tetron:
         # Calculate point multipliers.
         multipliers = []
         if self.combos > 1:
-            multipliers.append(self.combos)
+            if self.id_current != 899:
+                multipliers.append(self.combos)
             print('combo multiplier: ', multipliers[-1])
         if cleared_perfect:
             multipliers.append(cleared_increment)
@@ -906,8 +907,11 @@ class Tetron:
     
     # Advance to the next stage of the game.
     def stage_advance(self):
+        # Win the game if the maximum score threshold is reached.
+        if self.score >= self.score_thresholds[-1]:
+            self.win_game()
         # Advance to the second or third stage.
-        if self.stage == 0 or self.stage == 1:
+        elif self.stage == 0 or self.stage == 1:
             # Stop and unload current music.
             pygame.mixer.music.stop()
             pygame.mixer.music.unload()
@@ -917,9 +921,7 @@ class Tetron:
             pygame.mixer.music.set_endevent(pygame.USEREVENT+1)
             # Play the music once.
             pygame.mixer.music.play(loops=0)
-        # Win the game.
-        elif self.stage == len(self.score_thresholds)-1:
-            self.win_game()
+
         # Increment the stage value.
         if self.stage < len(self.score_thresholds)-1:
             self.stage += 1
