@@ -972,6 +972,26 @@ class Tetron:
                     color = 0.25  # Color of blank blocks
                 pygame.draw.rect(surface=self.surface_matrix, color=rgb(color, tint=tint), rect=[(self.spacing_block+self.width_block)*column+self.spacing_block, (self.spacing_block+self.height_block)*row+self.spacing_block, self.width_block, self.height_block])
 
+    # Draw the block in the hold queue.
+    def draw_hold(self):
+        if len(self.queue_hold) > 0:
+            # Create a copy of the current tetrimino array and properly pad it for displaying in the hold queue.
+            tetrimino_mini = np.copy(self.queue_hold[0][0])
+            if tetrimino_mini.shape[0] <= 2:
+                tetrimino_mini = np.pad(tetrimino_mini, ((1,1), (0,0)), mode='constant', constant_values=0)
+            if tetrimino_mini.shape[1] <= 2:
+                tetrimino_mini = np.pad(tetrimino_mini, ((0,0), (1,1)), mode='constant', constant_values=0)
+            size = int(min(np.floor([self.width_hold/tetrimino_mini.shape[0], self.width_hold/tetrimino_mini.shape[1]])))
+            for row in range(tetrimino_mini.shape[0]):
+                for column in range(tetrimino_mini.shape[1]):
+                    color = tetrimino_mini[row, column]
+                    if color > 0:
+                        pygame.draw.rect(surface=self.surface_hold, color=rgb(color), rect=[size*column, size*row, size, size])
+            # Display the hold queue and text.
+            self.surface_main.blit(self.surface_hold, self.rect_hold)
+            self.surface_main.blit(self.text_hold, self.rect_text_hold)
+
+
 # =============================================================================
 # Main Program Loop.
 # =============================================================================
@@ -1168,40 +1188,10 @@ while not done:
         rect_logo.bottom = height_panel
         rect_logo.centerx = size_window[0]//2
         screen.blit(logo, rect_logo)
+    # Draw each block inside the matrix.
     game.draw_matrix()
-    # # Draw each block inside the matrix.
-    # for row in range(game.row_count):
-    #     for column in range(game.column_count):
-    #         number = game.array_display[row, column]
-    #         tint = 0
-    #         if number != 0:
-    #             if game.flag_blind:
-    #                 color = 0.28  # Color of placed blocks in blind mode
-    #             else:
-    #                 if number < 0:
-    #                     color = 0.35  # Color of highlighted blocks
-    #                 else:
-    #                     color = number + 0  # Color of placed blocks
-    #         else:
-    #             color = 0.25  # Color of blank blocks
-    #         pygame.draw.rect(surface=game.surface_matrix, color=rgb(color, tint=tint), rect=[(game.spacing_block+game.width_block)*column+game.spacing_block, (game.spacing_block+game.height_block)*row+game.spacing_block, game.width_block, game.height_block])
     # Draw hold queue.
-    if len(game.queue_hold) > 0:
-        # Create a copy of the current tetrimino array and properly pad it for displaying in the hold queue.
-        tetrimino_mini = np.copy(game.queue_hold[0][0])
-        if tetrimino_mini.shape[0] <= 2:
-            tetrimino_mini = np.pad(tetrimino_mini, ((1,1), (0,0)), mode='constant', constant_values=0)
-        if tetrimino_mini.shape[1] <= 2:
-            tetrimino_mini = np.pad(tetrimino_mini, ((0,0), (1,1)), mode='constant', constant_values=0)
-        size = int(min(np.floor([game.width_hold/tetrimino_mini.shape[0], game.width_hold/tetrimino_mini.shape[1]])))
-        for row in range(tetrimino_mini.shape[0]):
-            for column in range(tetrimino_mini.shape[1]):
-                color = tetrimino_mini[row, column]
-                if color > 0:
-                    pygame.draw.rect(surface=game.surface_hold, color=rgb(color), rect=[size*column, size*row, size, size])
-        # Display the hold queue and text.
-        game.surface_main.blit(game.surface_hold, game.rect_hold)
-        game.surface_main.blit(game.text_hold, game.rect_text_hold)
+    game.draw_hold()
     # Display score text.
     text_score = font_normal.render('{}'.format(game.score), True, rgb(1))
     rect_text_score = text_score.get_rect()
