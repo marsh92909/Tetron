@@ -27,6 +27,16 @@ font_small = pygame.font.SysFont('Segoe UI Semibold', 18)
 # Define key controls.
 key_start = pygame.K_RETURN
 key_stop = pygame.K_ESCAPE
+key_mode_1 = pygame.K_1
+key_mode_2 = pygame.K_2
+key_mode_3 = pygame.K_3
+key_mode_4 = pygame.K_4
+key_mode_5 = pygame.K_5
+key_mode_6 = pygame.K_6
+key_mode_7 = pygame.K_7
+key_mode_8 = pygame.K_8
+key_mode_9 = pygame.K_9
+key_toggle_classic = pygame.K_0
 # Define key controls for game modes with one instance of the game.
 key_move_left = pygame.K_LEFT
 key_move_right = pygame.K_RIGHT
@@ -1028,9 +1038,23 @@ pygame.display.set_icon(icon)
 # Create the window.
 screen = pygame.display.set_mode(size_window, pygame.RESIZABLE)
 
-# Load the logo.
+# Initialize the game mode and the classic Tetris flag.
+game_mode = 1
+flag_classic = False
+# Load the Tetron logo.
 logo_full = pygame.image.load(os.path.join(folder_program, 'logo.png'))
 logo = pygame.transform.scale(logo_full, [int(height_panel*(logo_full.get_width()/logo_full.get_height())), height_panel])
+# Create text for classic Tetris.
+text_classic = font_normal.render('Tetris', True, rgb(1))
+# Create prefix text for other game modes.
+text_mode_1_prefix = font_normal.render('', True, rgb(1))
+text_mode_1_suffix = font_normal.render('', True, rgb(1))
+text_mode_2_prefix = font_normal.render('Twin ', True, rgb(1))
+text_mode_2_suffix = font_normal.render('', True, rgb(1))
+text_mode_3_prefix = font_normal.render('', True, rgb(1))
+text_mode_3_suffix = font_normal.render(' Vs.', True, rgb(1))
+text_mode_4_prefix = font_normal.render('', True, rgb(1))
+text_mode_4_suffix = font_normal.render(' 99', True, rgb(1))
 
 # Loop until the window is closed.
 done = False
@@ -1098,6 +1122,20 @@ while not done:
                 elif event.key == key_hold:
                     if not game.flag_hold and not game.flag_ghost and not game.flag_heavy:
                         game.hold()
+            else:
+                if not game.flag_paused:
+                    # Switch game modes.
+                    if event.key == key_mode_1 and game_mode != 1:
+                        game_mode = 1
+                    elif event.key == key_mode_2 and game_mode != 2:
+                        game_mode = 2
+                    elif False: #event.key == key_mode_3 and game_mode != 3:
+                        game_mode = 3
+                    elif False: #event.key == key_mode_4 and game_mode != 4:
+                        game_mode = 4
+                    # Toggle classic Tetris.
+                    elif event.key == key_toggle_classic:
+                        flag_classic = not flag_classic
         # Key releases.
         elif event.type == pygame.KEYUP:
             if event.key == key_start:
@@ -1182,14 +1220,56 @@ while not done:
     # =============================================================================
     # Erase all surfaces.
     screen.fill(rgb(0))
+    surface_mode.fill(rgb(0))
     game.surface_main.fill(rgb(0))
     game.surface_hold.fill(rgb(0))
-    # Display the logo if not playing.
+    # Draw the game mode if not playing.
     if not game.flag_playing:
-        rect_logo = logo.get_rect()
-        rect_logo.bottom = height_panel
-        rect_logo.centerx = size_window[0]//2
-        screen.blit(logo, rect_logo)
+        # Get the width of the logo or text.
+        if flag_classic:
+            width_name = text_classic.get_width()
+        else:
+            width_name = logo.get_width()
+        # Create the game mode surface and insert the prefix.
+        if game_mode == 1:
+            width_prefix = text_mode_1_prefix.get_width()
+            width_suffix = text_mode_1_suffix.get_width()
+            surface_mode = pygame.Surface((width_prefix+width_name+width_suffix, height_panel))
+            surface_mode.blit(text_mode_1_prefix, (0,surface_mode.get_height()-text_mode_1_prefix.get_height()))
+        elif game_mode == 2:
+            width_prefix = text_mode_2_prefix.get_width()
+            width_suffix = text_mode_2_suffix.get_width()
+            surface_mode = pygame.Surface((width_prefix+width_name+width_suffix, height_panel))
+            surface_mode.blit(text_mode_2_prefix, (0,surface_mode.get_height()-text_mode_2_prefix.get_height()))
+        elif game_mode == 3:
+            width_prefix = text_mode_3_prefix.get_width()
+            width_suffix = text_mode_3_suffix.get_width()
+            surface_mode = pygame.Surface((width_prefix+width_name+width_suffix, height_panel))
+            surface_mode.blit(text_mode_3_prefix, (0,surface_mode.get_height()-text_mode_3_prefix.get_height()))
+        elif game_mode == 4:
+            width_prefix = text_mode_4_prefix.get_width()
+            width_suffix = text_mode_4_suffix.get_width()
+            surface_mode = pygame.Surface((width_prefix+width_name+width_suffix, height_panel))
+            surface_mode.blit(text_mode_4_prefix, (0,surface_mode.get_height()-text_mode_4_prefix.get_height()))
+        # Insert the logo or text.
+        if flag_classic:
+            surface_mode.blit(text_classic, (width_prefix,surface_mode.get_height()-text_classic.get_height()))
+        else:
+            surface_mode.blit(logo, (width_prefix,0))
+        # Insert the suffix.
+        if game_mode == 1:
+            surface_mode.blit(text_mode_1_suffix, (surface_mode.get_width()-text_mode_1_suffix.get_width(),surface_mode.get_height()-text_mode_1_suffix.get_height()))
+        elif game_mode == 2:
+            surface_mode.blit(text_mode_2_suffix, (surface_mode.get_width()-text_mode_2_suffix.get_width(),surface_mode.get_height()-text_mode_2_suffix.get_height()))
+        elif game_mode == 3:
+            surface_mode.blit(text_mode_3_suffix, (surface_mode.get_width()-text_mode_3_suffix.get_width(),surface_mode.get_height()-text_mode_3_suffix.get_height()))
+        elif game_mode == 4:
+            surface_mode.blit(text_mode_4_suffix, (surface_mode.get_width()-text_mode_4_suffix.get_width(),surface_mode.get_height()-text_mode_4_suffix.get_height()))
+        # Insert the game mode surface in the screen.
+        rect_mode = surface_mode.get_rect()
+        rect_mode.bottom = height_panel + 0
+        rect_mode.centerx = size_window[0]//2
+        screen.blit(surface_mode, rect_mode)
     # Draw each block inside the matrix.
     game.draw_matrix()
     # Draw hold queue.
