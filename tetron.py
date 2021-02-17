@@ -12,7 +12,7 @@ import pygame
 
 # Program information.
 name_program = 'Tetron'
-version_program = '1.0.1'
+version_program = '1.1.0'
 # Get the path to the folder containing the program.
 folder_program = getattr(sys, '_MEIPASS', os.path.abspath(os.path.dirname(__file__)))  # os.path.dirname(os.path.realpath(sys.argv[0]))
 folder_sounds = os.path.abspath(os.path.join(folder_program, 'Sounds'))
@@ -145,6 +145,8 @@ class Tetron:
         self.id_classic = [100, 200, 300, 400, 500, 600, 700]
         self.id_advanced = [101, 102, 201, 202, 301, 302, 401, 402, 403, 501, 601, 602, 701, 801, 811, 812, 813, 814, 899]
         self.id_special = ['ghost', 'heavy', 'disoriented', 'blind']
+        # Initialize the classic flag. Define this attribute here to prevent resetting its value on game restarts.
+        self.flag_classic = False
         
         # Define the range of probabilities (between 0 and 1) of getting an advanced tetrimino.
         self.weights_advanced = [0, 1/3]
@@ -909,11 +911,17 @@ class Tetron:
 
     # Update the probability of getting an advanced tetrimino.
     def update_chance_advanced(self):
-        self.weight_advanced = np.interp(self.score, [self.score_update_chance_advanced, self.score_thresholds[-2]], self.weights_advanced)
+        if self.flag_classic:
+            self.weight_advanced = 0
+        else:
+            self.weight_advanced = np.interp(self.score, [self.score_update_chance_advanced, self.score_thresholds[-2]], self.weights_advanced)
     
     # Update the probability of getting a special effect.
     def update_chance_special(self):
-        self.weight_special = np.interp(self.score, [self.score_update_chance_special, self.score_thresholds[-2]], self.weights_special)
+        if self.flag_classic:
+            self.weight_special = 0
+        else:
+            self.weight_special = np.interp(self.score, [self.score_update_chance_special, self.score_thresholds[-2]], self.weights_special)
     
     # Advance to the next stage of the game.
     def stage_advance(self):
@@ -1055,6 +1063,8 @@ text_mode_3_prefix = font_normal.render('', True, rgb(1))
 text_mode_3_suffix = font_normal.render(' Vs.', True, rgb(1))
 text_mode_4_prefix = font_normal.render('', True, rgb(1))
 text_mode_4_suffix = font_normal.render(' 99', True, rgb(1))
+# Initialize the game mode surface.
+surface_mode = pygame.Surface((0,0))
 
 # Loop until the window is closed.
 done = False
@@ -1136,6 +1146,7 @@ while not done:
                     # Toggle classic Tetris.
                     elif event.key == key_toggle_classic:
                         flag_classic = not flag_classic
+                        game.flag_classic = flag_classic
         # Key releases.
         elif event.type == pygame.KEYUP:
             if event.key == key_start:
