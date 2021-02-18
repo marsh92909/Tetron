@@ -123,9 +123,13 @@ class Tetron:
         self.clock = pygame.time.Clock()
         # Define the frames per second of the game.
         self.fps = 60
-        # Initialize the current time (measured from time pygame.init() was called), the start time (when player starts game), and the elapsed duration between these two times.
+        # Initialize the current time, measured from the time pygame.init() was called.
         self.time_current = 0
+        # Initialize the time at the previous frame.
+        self.time_previous = 0
+        # Initialize the time when the game is started.
         self.time_start = 0
+        # Initialize the time elapsed since the start time.
         self.time_elapsed = 0
 
         # Define the scores needed to move to the next stage. The last value is the score needed to win the game.
@@ -140,6 +144,8 @@ class Tetron:
         # Define the soft drop speed (ms) and initial delay for key repeats (ms).
         self.speed_softdrop = 50
         self.delay_softdrop = 50
+        # Define the maximum duration (ms) for a tetrimino to remain landed before locking.
+        self.duration_max_landed = 500
 
         # Define the IDs for classic tetriminos, advanced tetriminos, special effects.
         self.id_classic = [100, 200, 300, 400, 500, 600, 700]
@@ -210,6 +216,7 @@ class Tetron:
         self.flag_playing = False
         self.flag_paused = False
         self.flag_advancing = True
+        self.flag_landed = False
         self.flag_hold = False
         self.flag_tspin = False
         self.flag_tspin_mini = False
@@ -535,6 +542,8 @@ class Tetron:
             indices_rows, indices_columns = np.nonzero(self.array_current > 0)
             if self.flag_ghost or not np.any(self.array_dropped[indices_rows, indices_columns-1] > 0):
                 self.array_current = np.roll(self.array_current, shift=-1, axis=1)
+                # Reset the advance timer if the tetrimino has landed.
+                self.check_landed()
                 # Update the displayed array.
                 self.update()
                 # Play sound effect.
@@ -548,6 +557,8 @@ class Tetron:
             indices_rows, indices_columns = np.nonzero(self.array_current > 0)
             if self.flag_ghost or not np.any(self.array_dropped[indices_rows, indices_columns+1] > 0):
                 self.array_current = np.roll(self.array_current, shift=1, axis=1)
+                # Reset the advance timer if the tetrimino has landed.
+                self.check_landed()
                 # Update the displayed array.
                 self.update()
                 # Play sound effect.
@@ -766,7 +777,7 @@ class Tetron:
         if self.combos > 1:
             if self.id_current != 899:
                 multipliers.append(self.combos)
-            print('combo multiplier: ', multipliers[-1])
+                print('combo multiplier: ', multipliers[-1])
         if cleared_perfect:
             multipliers.append(cleared_increment)
             print('perfect clear multiplier: ', multipliers[-1])
@@ -852,6 +863,8 @@ class Tetron:
         is_landed_stack = np.any(self.array_dropped[np.roll(self.array_current, shift=1, axis=0) > 0] > 0)
         is_landed_bottom = np.any(self.array_current[-1,:] > 0)
         if (self.flag_ghost and is_landed_bottom) or (not self.flag_ghost and (is_landed_stack or is_landed_bottom)):
+            self.flag_landed = True
+            self.time_landed = self.time_current + 0
             # If landed while soft dropping, reset advance timer in addition to resetting specific flags.
             if self.flag_softdropping:
                 self.stop_softdropping()
@@ -861,6 +874,8 @@ class Tetron:
             # Play sound effect.
             if not self.flag_ghost:
                 self.sound_game_landing.play()
+        else:
+            self.flag_landed = False
 
     # Update the displayed array.
     def update(self):
@@ -1069,10 +1084,12 @@ surface_mode = pygame.Surface((0,0))
 # Loop until the window is closed.
 done = False
 while not done:
-    # Calculate the current time and elapsed time.
+    # Record the time of the previous frame.
+    game.time_previous = game.time_current + 0
+    # Calculate current time and elapsed time.
     game.time_current = pygame.time.get_ticks()
     if game.flag_playing:
-        game.time_elapsed = pygame.time.get_ticks() - game.time_start
+        game.time_elapsed = game.time_current - game.time_start
 
     # =============================================================================
     # Key Presses/Releases And Other Events.
@@ -1099,14 +1116,14 @@ while not done:
         # Key presses.
         elif event.type == pygame.KEYDOWN:
             if game.flag_playing:
-                # Move left one column.
+                # Move left.
                 if event.key == key_move_left:
                     game.move_left()
                     # Record the current time used later to calculate how long this key is held.
                     game.time_start_move_left = game.time_current + 0
                     # Initialize the time at which the previous repeat occured.
                     game.time_previous_move_left = 0
-                # Move right one column.
+                # Move right.
                 elif event.key == key_move_right:
                     game.move_right()
                     # Record the current time used later to calculate how long this key is held.
@@ -1220,9 +1237,14 @@ while not done:
     if game.flag_playing:
         # Advance current tetrimino.
         if game.flag_advancing:
-            if (game.time_current - game.time_start_advance) >= (game.speed_fall * (game.speed_fall_multiplier ** game.flag_fast_fall)):
-                game.advance()
-                game.reset_time_advance()
+            if (
+                # Check if the required time for automatic advancing has elapsed.
+                (not game.flag_landed and (game.time_current - game.time_start_advance) >= (game.speed_fall * (game.speed_fall_multiplier ** game.flag_fast_fall))) or
+                # If tetrimino is landed, check if the maximum time has elapsed.
+                (game.flag_landed and (game.time_current - game.time_landed >= game.duration_max_landed))
+                ):
+                    game.advance()
+                    game.reset_time_advance()
         else:
             game.reset_time_advance()
     
@@ -1303,7 +1325,7 @@ while not done:
             game.flag_disoriented = False
             game.duration_disoriented = 0
         else:
-            game.duration_disoriented += 1000/game.fps
+            game.duration_disoriented += (game.time_current - game.time_previous)
         # Rotate the matrix.
         game.surface_matrix.blit(pygame.transform.rotate(game.surface_matrix, 180), (0,0))
     # Stop the blind effect if it has lasted longer than the maximum duration.
@@ -1312,7 +1334,7 @@ while not done:
             game.flag_blind = False
             game.duration_blind = 0
         else:
-            game.duration_blind += 1000/game.fps
+            game.duration_blind += (game.time_current - game.time_previous)
     
     # Draw the matrix inside the main surface.
     game.surface_main.blit(game.surface_matrix, game.rect_matrix)
