@@ -49,13 +49,13 @@ key_hold = pygame.K_c
 key_left_move_left = pygame.K_a
 key_left_move_right = pygame.K_d
 key_left_rotate_clockwise = pygame.K_w
-key_left_harddrop = pygame.K_q
+# key_left_harddrop = pygame.K_q
 key_left_softdrop = pygame.K_s
 key_left_hold = pygame.K_e
 key_right_move_left = pygame.K_j
 key_right_move_right = pygame.K_l
 key_right_rotate_clockwise = pygame.K_i
-key_right_harddrop = pygame.K_u
+# key_right_harddrop = pygame.K_u
 key_right_softdrop = pygame.K_k
 key_right_hold = pygame.K_o
 
@@ -119,10 +119,6 @@ class Tetron:
         self.row_count = row_count
         self.column_count = column_count
 
-        # Create a clock that manages how fast the screen updates.
-        self.clock = pygame.time.Clock()
-        # Define the frames per second of the game.
-        self.fps = 60
         # Initialize the current time, measured from the time pygame.init() was called.
         self.time_current = 0
         # Initialize the time at the previous frame.
@@ -1041,17 +1037,19 @@ info_display = pygame.display.Info()
 height_block = round(((0.8 * info_display.current_h) - ((row_count+1) * spacing_block)) / (row_count+1))
 width_block = height_block + 0
 # Define the height of the panel above the matrix in pixels.
-height_panel = 1 * height_block
+height_panel = height_block + 0
+# Define the width of spacing between elements.
+spacing_large = width_block + 0
 
 # Create an instance of the game.
-game = Tetron(width_block, height_block, spacing_block, row_count, column_count)
-# Create lists to store multiple instances of the game.
-games_player = [game]
+# game = Tetron(width_block, height_block, spacing_block, row_count, column_count)
+# Create lists to store multiple instances of the game. Create a player instance of the game.
+games_player = [Tetron(width_block, height_block, spacing_block, row_count, column_count)]
 games_ai = []
 
 # Set the window size [width, height] in pixels.
 size_window = [
-    column_count*width_block + (column_count+1)*spacing_block + (game.width_hold+game.spacing_small) + (game.width_next+game.spacing_small),
+    column_count*width_block + (column_count+1)*spacing_block + (games_player[0].width_hold+games_player[0].spacing_small) + (games_player[0].width_next+games_player[0].spacing_small),
     height_panel + row_count*height_block+(row_count+1)*spacing_block  # round(0.8 * pygame.display.Info().current_h)
     ]
 # Set the window title and window icon.
@@ -1081,15 +1079,21 @@ text_mode_4_suffix = font_normal.render(' 99', True, rgb(1))
 # Initialize the game mode surface.
 surface_mode = pygame.Surface((0,0))
 
+# Create a clock that manages how fast the screen updates.
+clock = pygame.time.Clock()
+# Define the frames per second of the game.
+fps = 60
+
 # Loop until the window is closed.
 done = False
 while not done:
-    # Record the time of the previous frame.
-    game.time_previous = game.time_current + 0
-    # Calculate current time and elapsed time.
-    game.time_current = pygame.time.get_ticks()
-    if game.flag_playing:
-        game.time_elapsed = game.time_current - game.time_start
+    for game in games_player:
+        # Record the time of the previous frame.
+        game.time_previous = game.time_current + 0
+        # Calculate current time and elapsed time.
+        game.time_current = pygame.time.get_ticks()
+        if game.flag_playing:
+            game.time_elapsed = game.time_current - game.time_start
 
     # =============================================================================
     # Key Presses/Releases And Other Events.
@@ -1103,59 +1107,104 @@ while not done:
             # Get the new size of the window.
             size_window = pygame.display.get_window_size()  # screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
             
-            # Redefine the width and height of the blocks in the matrix.
+            # Redefine the sizes of elements.
             width_block = int(np.floor((size_window[1] - ((row_count+1)*spacing_block)) / (row_count+1)))
             height_block = width_block + 0
-            # Redefine the height of the panel above the matrix.
             height_panel = height_block + 0
+            spacing_large = width_block + 0
             # Resize and reposition the elements of each game.
-            game.resize_display(width_block=width_block, height_block=height_block)
+            for game in games_player:
+                game.resize_display(width_block=width_block, height_block=height_block)
 
             # Resize the logo.
             logo = pygame.transform.scale(logo_full, [int(height_panel*(logo_full.get_width()/logo_full.get_height())), height_panel])
         # Key presses.
         elif event.type == pygame.KEYDOWN:
-            if game.flag_playing:
+            if all([game.flag_playing for game in games_player]):
                 # Move left.
-                if event.key == key_move_left:
-                    game.move_left()
+                if event.key in [key_move_left, key_left_move_left, key_right_move_left]:
+                    if len(games_player) == 1:
+                        if event.key == key_move_left:
+                            index = 0
+                    elif len(games_player) >= 2:
+                        if event.key == key_left_move_left:
+                            index = 0
+                        elif event.key == key_right_move_left:
+                            index = 1
+                    games_player[index].move_left()
                     # Record the current time used later to calculate how long this key is held.
-                    game.time_start_move_left = game.time_current + 0
+                    games_player[index].time_start_move_left = games_player[index].time_current + 0
                     # Initialize the time at which the previous repeat occured.
-                    game.time_previous_move_left = 0
+                    games_player[index].time_previous_move_left = 0
                 # Move right.
-                elif event.key == key_move_right:
-                    game.move_right()
+                elif event.key in [key_move_right, key_left_move_right, key_right_move_right]:
+                    if len(games_player) == 1:
+                        if event.key == key_move_right:
+                            index = 0
+                    elif len(games_player) >= 2:
+                        if event.key == key_left_move_right:
+                            index = 0
+                        elif event.key == key_right_move_right:
+                            index = 1
+                    games_player[index].move_right()
                     # Record the current time used later to calculate how long this key is held.
-                    game.time_start_move_right = game.time_current + 0
+                    games_player[index].time_start_move_right = games_player[index].time_current + 0
                     # Initialize the time at which the previous repeat occured.
-                    game.time_previous_move_right = 0
+                    games_player[index].time_previous_move_right = 0
                 # Rotate counterclockwise or clockwise.
-                elif event.key in key_rotate_clockwise or event.key in key_rotate_counterclockwise:
-                    if event.key in key_rotate_clockwise:
+                elif event.key in key_rotate_clockwise+[key_left_rotate_clockwise,key_right_rotate_clockwise] or event.key in key_rotate_counterclockwise:
+                    if len(games_player) == 1:
+                        if event.key in key_rotate_clockwise + key_rotate_counterclockwise:
+                            index = 0
+                    elif len(games_player) >= 2:
+                        if event.key == key_left_rotate_clockwise:
+                            index = 0
+                        elif event.key == key_right_rotate_clockwise:
+                            index = 1
+                    if event.key in key_rotate_clockwise+[key_left_rotate_clockwise,key_right_rotate_clockwise]:
                         direction = -1
                     elif event.key in key_rotate_counterclockwise:
                         direction = 1
                     # Only rotate if not freebie.
-                    if not game.id_current == 899:
-                        game.rotate(direction)
+                    if not games_player[index].id_current == 899:
+                        games_player[index].rotate(direction)
                 # Hard drop.
                 elif event.key == key_harddrop:
-                    game.harddrop()
+                    for game in games_player:
+                        game.harddrop()
                 # Start soft dropping.
-                elif event.key == key_softdrop:
-                    game.start_softdropping()
+                elif event.key in [key_softdrop, key_left_softdrop, key_right_softdrop]:
+                    if len(games_player) == 1:
+                        if event.key == key_softdrop:
+                            index = 0
+                    elif len(games_player) >= 2:
+                        if event.key == key_left_softdrop:
+                            index = 0
+                        elif event.key == key_right_softdrop:
+                            index = 1
+                    games_player[index].start_softdropping()
                 # Hold.
-                elif event.key == key_hold:
-                    if not game.flag_hold and not game.flag_ghost and not game.flag_heavy:
-                        game.hold()
+                elif event.key in [key_hold, key_left_hold, key_right_hold]:
+                    if len(games_player) == 1:
+                        if event.key == key_hold:
+                            index = 0
+                    elif len(games_player) >= 2:
+                        if event.key == key_left_hold:
+                            index = 0
+                        elif event.key == key_right_hold:
+                            index = 1
+                    if not games_player[index].flag_hold and not games_player[index].flag_ghost and not games_player[index].flag_heavy:
+                        games_player[index].hold()
             else:
-                if not game.flag_paused:
+                if not any([game.flag_paused for game in games_player]):
                     # Switch game modes.
                     if event.key == key_mode_1 and game_mode != 1:
                         game_mode = 1
+                        games_player = [games_player[0]]
                     elif event.key == key_mode_2 and game_mode != 2:
                         game_mode = 2
+                        games_player = [games_player[0]]
+                        games_player.append(Tetron(width_block, height_block, spacing_block, row_count, column_count))
                     elif False: #event.key == key_mode_3 and game_mode != 3:
                         game_mode = 3
                     elif False: #event.key == key_mode_4 and game_mode != 4:
@@ -1163,37 +1212,53 @@ while not done:
                     # Toggle classic Tetris.
                     elif event.key == key_toggle_classic:
                         flag_classic = not flag_classic
+                        for game in games_player:
+                            game.flag_classic = flag_classic
+                    # Update the classic flag for all games in case toggling was performed before a game mode switch.
+                    for game in games_player:
                         game.flag_classic = flag_classic
         # Key releases.
         elif event.type == pygame.KEYUP:
             if event.key == key_start:
-                if not game.flag_playing:
-                    # Resume game.
-                    if game.flag_paused:
-                        game.pause_game()
-                    # Start game.
-                    else:
-                        game.start_game()
+                if not any([game.flag_playing for game in games_player]):
+                    for game in games_player + games_ai:
+                        # Resume game.
+                        if game.flag_paused:
+                            game.pause_game()
+                        # Start game.
+                        else:
+                            game.start_game()
                 # Pause game.
                 else:
-                    game.pause_game()
+                    for game in games_player + games_ai:
+                        game.pause_game()
             # Stop game.
             elif event.key == key_stop:
-                if game.flag_playing or game.flag_paused:
-                    game.stop_game()
+                if all([game.flag_playing for game in games_player]) or all([game.flag_paused for game in games_player]):
+                    for game in games_player + games_ai:
+                        game.stop_game()
 
-            if game.flag_playing:
+            if all([game.flag_playing for game in games_player]):
                 # Stop soft dropping.
-                if event.key == key_softdrop:
-                    game.stop_softdropping()
+                if event.key in [key_softdrop, key_left_softdrop, key_right_softdrop]:
+                    if len(games_player) == 1:
+                        if event.key == key_softdrop:
+                            index = 0
+                    elif len(games_player) >= 2:
+                        if event.key == key_left_softdrop:
+                            index = 0
+                        elif event.key == key_right_softdrop:
+                            index = 1
+                    for game in games_player:
+                        game.stop_softdropping()
         # Transition music ends.
         elif event.type == pygame.USEREVENT+1:
-            if game.flag_playing:
+            if all([game.flag_playing for game in games_player]):
                 # Stop and unload current music.
                 pygame.mixer.music.stop()
                 pygame.mixer.music.unload()
                 # Load music for current stage.
-                pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_{}.ogg'.format(game.stage+1)))
+                pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_{}.ogg'.format(games_player[0].stage+1)))
                 # Disable the event sent when music ends, and play indefinitely.
                 pygame.mixer.music.set_endevent()
                 pygame.mixer.music.play(loops=-1)
@@ -1204,49 +1269,74 @@ while not done:
     # Get a list of the keys currently being held down.
     keys_pressed = pygame.key.get_pressed()
     # Soft drop.
-    if keys_pressed[key_softdrop] and game.flag_playing:
+    if (keys_pressed[key_softdrop] or keys_pressed[key_left_softdrop] or keys_pressed[key_right_softdrop]) and all([game.flag_playing for game in games_player]):
+        if len(games_player) == 1:
+            if keys_pressed[key_softdrop]:
+                index = 0
+        elif len(games_player) >= 2:
+            if keys_pressed[key_left_softdrop]:
+                index = 0
+            elif keys_pressed[key_right_softdrop]:
+                index = 1
         # Check if the key has been held longer than the required initial delay.
-        if (game.time_current - game.time_start_softdrop) > game.delay_softdrop:
+        if (games_player[index].time_current - games_player[index].time_start_softdrop) > games_player[index].delay_softdrop:
             # Check if the key has been held longer than the key repeat interval.
-            if (game.time_current - game.time_previous_softdrop) > game.speed_softdrop:
-                if game.flag_softdropping:  # Check whether soft dropping to prevent advancing line immediately after landing
-                    game.advance()
+            if (games_player[index].time_current - games_player[index].time_previous_softdrop) > games_player[index].speed_softdrop:
+                if games_player[index].flag_softdropping:  # Check whether soft dropping to prevent advancing line immediately after landing
+                    games_player[index].advance()
                     # Play sound effect.
-                    game.sound_game_softdrop.play()
-                game.time_previous_softdrop = game.time_current + 0
+                    games_player[index].sound_game_softdrop.play()
+                games_player[index].time_previous_softdrop = games_player[index].time_current + 0
     # Move left.
-    if keys_pressed[key_move_left] and game.flag_playing:
+    if (keys_pressed[key_move_left] or keys_pressed[key_left_move_left] or keys_pressed[key_right_move_left]) and all([game.flag_playing for game in games_player]):
+        if len(games_player) == 1:
+            if keys_pressed[key_move_left]:
+                index = 0
+        elif len(games_player) >= 2:
+            if keys_pressed[key_left_move_left]:
+                index = 0
+            elif keys_pressed[key_right_move_left]:
+                index = 1
         # Check if the key has been held longer than the required initial delay.
-        if (game.time_current - game.time_start_move_left) > game.delay_move:
+        if (games_player[index].time_current - games_player[index].time_start_move_left) > games_player[index].delay_move:
             # Check if the key has been held longer than the key repeat interval.
-            if (game.time_current - game.time_previous_move_left) > game.speed_move:
-                game.move_left()
-                game.time_previous_move_left = game.time_current + 0
+            if (games_player[index].time_current - games_player[index].time_previous_move_left) > games_player[index].speed_move:
+                games_player[index].move_left()
+                games_player[index].time_previous_move_left = games_player[index].time_current + 0
     # Move right.
-    if keys_pressed[key_move_right] and game.flag_playing:
+    if (keys_pressed[key_move_right] or keys_pressed[key_left_move_right] or keys_pressed[key_right_move_right]) and all([game.flag_playing for game in games_player]):
+        if len(games_player) == 1:
+            if keys_pressed[key_move_right]:
+                index = 0
+        elif len(games_player) >= 2:
+            if keys_pressed[key_left_move_right]:
+                index = 0
+            elif keys_pressed[key_right_move_right]:
+                index = 1
         # Check if the key has been held longer than the required initial delay.
-        if (game.time_current - game.time_start_move_right) > game.delay_move:
+        if (games_player[index].time_current - games_player[index].time_start_move_right) > games_player[index].delay_move:
             # Check if the key has been held longer than the key repeat interval.
-            if (game.time_current - game.time_previous_move_right) > game.speed_move:
-                game.move_right()
-                game.time_previous_move_right = game.time_current + 0
+            if (games_player[index].time_current - games_player[index].time_previous_move_right) > games_player[index].speed_move:
+                games_player[index].move_right()
+                games_player[index].time_previous_move_right = games_player[index].time_current + 0
     
     # =============================================================================
     # Time-Based Actions.
     # =============================================================================
-    if game.flag_playing:
-        # Advance current tetrimino.
-        if game.flag_advancing:
-            if (
-                # Check if the required time for automatic advancing has elapsed.
-                (not game.flag_landed and (game.time_current - game.time_start_advance) >= (game.speed_fall * (game.speed_fall_multiplier ** game.flag_fast_fall))) or
-                # If tetrimino is landed, check if the maximum time has elapsed.
-                (game.flag_landed and (game.time_current - game.time_landed >= game.duration_max_landed))
-                ):
-                    game.advance()
-                    game.reset_time_advance()
-        else:
-            game.reset_time_advance()
+    for game in games_player:
+        if game.flag_playing:
+            # Advance current tetrimino.
+            if game.flag_advancing:
+                if (
+                    # Check if the required time for automatic advancing has elapsed.
+                    (not game.flag_landed and (game.time_current - game.time_start_advance) >= (game.speed_fall * (game.speed_fall_multiplier ** game.flag_fast_fall))) or
+                    # If tetrimino is landed, check if the maximum time has elapsed.
+                    (game.flag_landed and (game.time_current - game.time_landed >= game.duration_max_landed))
+                    ):
+                        game.advance()
+                        game.reset_time_advance()
+            else:
+                game.reset_time_advance()
     
     # =============================================================================
     # Draw Screen.
@@ -1254,10 +1344,11 @@ while not done:
     # Erase all surfaces.
     screen.fill(rgb(0))
     surface_mode.fill(rgb(0))
-    game.surface_main.fill(rgb(0))
-    game.surface_hold.fill(rgb(0))
+    for game in games_player:
+        game.surface_main.fill(rgb(0))
+        game.surface_hold.fill(rgb(0))
     # Draw the game mode if not playing.
-    if not game.flag_playing:
+    if not any([game.flag_playing for game in games_player]):
         # Get the width of the logo or text.
         if flag_classic:
             width_name = text_classic.get_width()
@@ -1303,49 +1394,58 @@ while not done:
         rect_mode.bottom = height_panel + 0
         rect_mode.centerx = size_window[0]//2
         screen.blit(surface_mode, rect_mode)
-    # Draw each block inside the matrix.
-    game.draw_matrix()
-    # Draw hold queue.
-    game.draw_hold()
+    for game in games_player:
+        # Draw each block inside the matrix.
+        game.draw_matrix()
+        # Draw hold queue.
+        game.draw_hold()
     # Display score text.
-    text_score = font_normal.render('{}'.format(game.score), True, rgb(1))
+    text_score = font_normal.render('{}'.format(sum([game.score for game in games_player])), True, rgb(1))
     rect_text_score = text_score.get_rect()
-    rect_text_score.left = (size_window[0]-game.size_matrix[0])//2
+    rect_text_score.left = (
+        size_window[0] - sum([game.size_total[0] for game in games_player]) - ((len(games_player)-1)*spacing_large)
+        )//2 + games_player[0].width_hold + games_player[0].spacing_small
     rect_text_score.bottom = height_panel + 0
     screen.blit(text_score, rect_text_score)
     # Display elapsed time text.
-    text_time_elapsed = font_normal.render('{:02d}:{:02d}'.format(game.time_elapsed//60000, int((game.time_elapsed/1000)%60)), True, rgb(1))
+    text_time_elapsed = font_normal.render('{:02d}:{:02d}'.format(games_player[0].time_elapsed//60000, int((games_player[0].time_elapsed/1000)%60)), True, rgb(1))
     rect_text_time_elapsed = text_time_elapsed.get_rect()
-    rect_text_time_elapsed.right = (size_window[0]-game.size_matrix[0])//2 + game.size_matrix[0]
+    rect_text_time_elapsed.right = size_window[0] - (
+        size_window[0] - sum([game.size_total[0] for game in games_player]) - ((len(games_player)-1)*spacing_large)
+        )//2 - games_player[-1].width_next - games_player[-1].spacing_small   #(size_window[0]-game.size_matrix[0])//2 + game.size_matrix[0]
     rect_text_time_elapsed.bottom = height_panel + 0
     screen.blit(text_time_elapsed, rect_text_time_elapsed)
-    # Stop the disoriented effect if it has lasted longer than the maximum duration.
-    if game.flag_disoriented:
-        if game.duration_disoriented > game.duration_max_disoriented:
-            game.flag_disoriented = False
-            game.duration_disoriented = 0
-        else:
-            game.duration_disoriented += (game.time_current - game.time_previous)
-        # Rotate the matrix.
-        game.surface_matrix.blit(pygame.transform.rotate(game.surface_matrix, 180), (0,0))
-    # Stop the blind effect if it has lasted longer than the maximum duration.
-    if game.flag_blind:
-        if game.duration_blind > game.duration_max_blind:
-            game.flag_blind = False
-            game.duration_blind = 0
-        else:
-            game.duration_blind += (game.time_current - game.time_previous)
-    
-    # Draw the matrix inside the main surface.
-    game.surface_main.blit(game.surface_matrix, game.rect_matrix)
-    # Display the games in the window.
-    screen.blit(game.surface_main, ((size_window[0]-game.size_total[0])//2,height_panel)) # screen.blit(game.surface_matrix, game.rect_matrix)
+
+    for index, game in enumerate(games_player):
+        # Stop the disoriented effect if it has lasted longer than the maximum duration.
+        if game.flag_disoriented:
+            if game.duration_disoriented > game.duration_max_disoriented:
+                game.flag_disoriented = False
+                game.duration_disoriented = 0
+            else:
+                game.duration_disoriented += (game.time_current - game.time_previous)
+            # Rotate the matrix.
+            game.surface_matrix.blit(pygame.transform.rotate(game.surface_matrix, 180), (0,0))
+        # Stop the blind effect if it has lasted longer than the maximum duration.
+        if game.flag_blind:
+            if game.duration_blind > game.duration_max_blind:
+                game.flag_blind = False
+                game.duration_blind = 0
+            else:
+                game.duration_blind += (game.time_current - game.time_previous)
+        
+        # Draw the matrix inside the main surface.
+        game.surface_main.blit(game.surface_matrix, game.rect_matrix)
+        # Display the game in the window.
+        screen.blit(game.surface_main, 
+        ((size_window[0] - sum([i.size_total[0] for i in games_player]) - index*spacing_large)//2 + sum([i.size_total[0] for i in games_player[:index]]) + index*spacing_large, height_panel)
+        ) # screen.blit(game.surface_matrix, game.rect_matrix)
     
     # Update the screen.
     pygame.display.flip()
 
     # Limit the game to 60 frames per second by delaying every iteration of this loop.
-    game.clock.tick(game.fps)
+    clock.tick(fps)
  
 # Close the window and quit.
 pygame.quit()
