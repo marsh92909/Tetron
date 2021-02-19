@@ -1152,9 +1152,9 @@ while not done:
             else:
                 if not game.flag_paused:
                     # Switch game modes.
-                    if event.key == key_mode_1 and game_mode != 1:
+                    if False: #event.key == key_mode_1 and game_mode != 1:
                         game_mode = 1
-                    elif event.key == key_mode_2 and game_mode != 2:
+                    elif False: #event.key == key_mode_2 and game_mode != 2:
                         game_mode = 2
                     elif False: #event.key == key_mode_3 and game_mode != 3:
                         game_mode = 3
