@@ -252,9 +252,7 @@ class Tetron:
         self.score_increment = []
 
         # Initialize the block fall speed, the probability of getting an advanced tetrimino, and the probability of getting a special effect.
-        self.update_speed_fall()
-        self.update_chance_advanced()
-        self.update_chance_special()
+        self.update_difficulty()
 
     # Create and set the sizes of the surfaces used to display each element of the game.
     def resize_display(self, width_block=None, height_block=None, spacing_block=None, row_count=None, column_count=None):
@@ -781,10 +779,8 @@ class Tetron:
         # score_previous = self.score + 0
         # self.score += int(score_increment * np.prod(multipliers))
         self.score_increment.append(int(score_increment * np.prod(multipliers)))
-        # # Update the block fall speed, the probability of getting an advanced tetrimino, and the probability of getting a special effect.
-        # self.update_speed_fall()
-        # self.update_chance_advanced()
-        # self.update_chance_special()
+        # # Update the game difficulty.
+        # self.update_difficulty()
         
         # Play a sound corresponding to the number of lines cleared.
         if cleared_increment == 1:
@@ -917,23 +913,39 @@ class Tetron:
         self.array_display[self.array_dropped > 0] = self.array_dropped[self.array_dropped > 0]
         self.array_display[self.array_current > 0] = self.array_current[self.array_current > 0]
 
-    # Update the block fall speed.
-    def update_speed_fall(self):
+    # Update the game difficulty.
+    def update_difficulty(self):
+        # Update the block fall speed.
         self.speed_fall = np.interp(self.score, [0, self.score_thresholds[-2]], self.speeds_fall)
-
-    # Update the probability of getting an advanced tetrimino.
-    def update_chance_advanced(self):
+        # Update the probability of getting an advanced tetrimino.
         if self.flag_classic:
             self.weight_advanced = 0
         else:
             self.weight_advanced = np.interp(self.score, [self.score_update_chance_advanced, self.score_thresholds[-2]], self.weights_advanced)
-    
-    # Update the probability of getting a special effect.
-    def update_chance_special(self):
+        # Update the probability of getting a special effect.
         if self.flag_classic:
             self.weight_special = 0
         else:
             self.weight_special = np.interp(self.score, [self.score_update_chance_special, self.score_thresholds[-2]], self.weights_special)
+
+    # DELETE THESE 3
+    # # Update the block fall speed.
+    # def update_speed_fall(self):
+    #     self.speed_fall = np.interp(self.score, [0, self.score_thresholds[-2]], self.speeds_fall)
+
+    # # Update the probability of getting an advanced tetrimino.
+    # def update_chance_advanced(self):
+    #     if self.flag_classic:
+    #         self.weight_advanced = 0
+    #     else:
+    #         self.weight_advanced = np.interp(self.score, [self.score_update_chance_advanced, self.score_thresholds[-2]], self.weights_advanced)
+    
+    # # Update the probability of getting a special effect.
+    # def update_chance_special(self):
+    #     if self.flag_classic:
+    #         self.weight_special = 0
+    #     else:
+    #         self.weight_special = np.interp(self.score, [self.score_update_chance_special, self.score_thresholds[-2]], self.weights_special)
     
     # Advance to the next stage of the game.   # DELETE IF NOT USED
     # def stage_advance(self):
@@ -1337,9 +1349,7 @@ while not done:
     for game in games_player:
         game.score = score
         # Update the block fall speed, the probability of getting an advanced tetrimino, and the probability of getting a special effect.
-        game.update_speed_fall()
-        game.update_chance_advanced()
-        game.update_chance_special()
+        game.update_difficulty()
     
     # Advance to the next stage of the game if a score threshold is passed.
     if score_previous < games_player[0].score_thresholds[stage] <= score:
