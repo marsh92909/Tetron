@@ -49,15 +49,13 @@ key_hold = pygame.K_c
 key_left_move_left = pygame.K_a
 key_left_move_right = pygame.K_d
 key_left_rotate_clockwise = pygame.K_w
-# key_left_harddrop = pygame.K_q
 key_left_softdrop = pygame.K_s
 key_left_hold = pygame.K_e
 key_right_move_left = pygame.K_j
 key_right_move_right = pygame.K_l
 key_right_rotate_clockwise = pygame.K_i
-# key_right_harddrop = pygame.K_u
 key_right_softdrop = pygame.K_k
-key_right_hold = pygame.K_o
+key_right_hold = pygame.K_u
 
 
 # =============================================================================
@@ -1067,8 +1065,6 @@ height_panel = height_block + 0
 # Define the width of spacing between elements.
 spacing_large = width_block + 0
 
-# Create an instance of the game.
-# game = Tetron(width_block, height_block, spacing_block, row_count, column_count)
 # Create lists to store multiple instances of the game. Create a player instance of the game.
 games_player = [Tetron(width_block, height_block, spacing_block, row_count, column_count)]
 games_ai = []
