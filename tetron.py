@@ -505,6 +505,8 @@ class Tetron:
         # Update the array of the current tetrimino.
         column_left = int(np.floor((self.column_count-tetrimino.shape[1])/2))
         self.array_current[0:tetrimino.shape[0], column_left:column_left+tetrimino.shape[1]] = self.tetrimino
+        # Check for landing.
+        self.check_landed()
         # Update the displayed array.
         self.update()
 
@@ -733,6 +735,7 @@ class Tetron:
             self.flag_heavy = False
         if self.flag_fast_fall:
             self.flag_fast_fall = False
+        self.flag_landed = False
         self.flag_hold = False
         # Update the values of previously placed ghost blocks and heavy blocks.
         self.array_dropped[self.array_dropped == 901] = 900
