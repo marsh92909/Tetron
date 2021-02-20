@@ -248,6 +248,8 @@ class Tetron:
         self.combos = 0
         # Initialize the cleared lines counter.
         self.score = 0
+        # Initialize the score increment queue.
+        self.score_increment = []
 
         # Initialize the block fall speed, the probability of getting an advanced tetrimino, and the probability of getting a special effect.
         self.update_speed_fall()
@@ -772,6 +774,7 @@ class Tetron:
                 np.zeros([cleared_increment,self.column_count]),
                 np.delete(self.array_dropped, obj=cleared_rows, axis=0)
                 ), axis=0)
+        
         # Check for a perfect clear.
         cleared_perfect = not np.any(self.array_dropped)
         # Increment the combo counter if a line was cleared.
@@ -800,12 +803,13 @@ class Tetron:
             multipliers.append(cleared_increment)
             print('perfect clear multiplier: ', multipliers[-1])
         # Increment the score.
-        score_previous = self.score + 0
-        self.score += int(score_increment * np.prod(multipliers))
-        # Update the block fall speed, the probability of getting an advanced tetrimino, and the probability of getting a special effect.
-        self.update_speed_fall()
-        self.update_chance_advanced()
-        self.update_chance_special()
+        # score_previous = self.score + 0
+        # self.score += int(score_increment * np.prod(multipliers))
+        self.score_increment.append(int(score_increment * np.prod(multipliers)))
+        # # Update the block fall speed, the probability of getting an advanced tetrimino, and the probability of getting a special effect.
+        # self.update_speed_fall()
+        # self.update_chance_advanced()
+        # self.update_chance_special()
         
         # Play a sound corresponding to the number of lines cleared.
         if cleared_increment == 1:
@@ -823,9 +827,9 @@ class Tetron:
         if self.flag_tspin or self.flag_tspin_mini or cleared_increment >= 4:
             self.sound_game_special.play()
         
-        # Advance to the next stage of the game if a score threshold is passed.
-        if score_previous < self.score_thresholds[self.stage] <= self.score:
-            self.stage_advance()
+        # # Advance to the next stage of the game if a score threshold is passed.
+        # if score_previous < self.score_thresholds[self.stage] <= self.score:
+        #     self.stage_advance()
         
         # Reset the previous advance time.
         self.reset_time_advance()
@@ -1068,6 +1072,8 @@ spacing_large = width_block + 0
 # Create lists to store multiple instances of the game. Create a player instance of the game.
 games_player = [Tetron(width_block, height_block, spacing_block, row_count, column_count)]
 games_ai = []
+# Initialize the score.
+score = 0
 
 # Set the window size [width, height] in pixels.
 size_window = [
@@ -1344,6 +1350,22 @@ while not done:
                 games_player[index].time_previous_move_right = games_player[index].time_current + 0
     
     # =============================================================================
+    # Calculate Score.
+    # =============================================================================
+    score_previous = score + 0
+    score += sum([game.score_increment.pop(0) for game in games_player if len(game.score_increment) > 0])
+    for game in games_player:
+        game.score = score
+        # Update the block fall speed, the probability of getting an advanced tetrimino, and the probability of getting a special effect.
+        game.update_speed_fall()
+        game.update_chance_advanced()
+        game.update_chance_special()
+        # Advance to the next stage of the game if a score threshold is passed.
+        if score_previous < games_player[0].score_thresholds[games_player[0].stage] <= score:
+            game.stage_advance()
+
+
+    # =============================================================================
     # Time-Based Actions.
     # =============================================================================
     for game in games_player:
@@ -1423,7 +1445,7 @@ while not done:
         # Draw hold queue.
         game.draw_hold()
     # Display score text.
-    text_score = font_normal.render('{}'.format(sum([game.score for game in games_player])), True, rgb(1))
+    text_score = font_normal.render('{}'.format(score), True, rgb(1))
     rect_text_score = text_score.get_rect()
     rect_text_score.left = (
         size_window[0] - sum([game.size_total[0] for game in games_player]) - ((len(games_player)-1)*spacing_large)
