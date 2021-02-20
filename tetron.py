@@ -211,6 +211,8 @@ class Tetron:
         # Initialize flags indicating statuses of the game.
         self.flag_playing = False
         self.flag_paused = False
+        self.flag_lose = False
+
         self.flag_advancing = True
         self.flag_landed = False
         self.flag_hold = False
@@ -239,7 +241,7 @@ class Tetron:
         self.queue_hold = []
 
         # Initialize the stage of the game as a number.
-        self.stage = 0
+        # self.stage = 0
         # Initialize the number of placed tetriminos.
         self.count = 0
         # Initialize the number of successive line clears.
@@ -305,10 +307,6 @@ class Tetron:
         self.flag_playing = True
         # Create a new tetrimino.
         self.create_new()
-        # Unload current music and start playing music indefinitely.
-        pygame.mixer.music.unload()
-        pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_{}.ogg'.format(self.stage+1)))
-        pygame.mixer.music.play(loops=-1)
     
     # Pause or resume the game.
     def pause_game(self):
@@ -316,25 +314,21 @@ class Tetron:
         if self.flag_paused:
             game.flag_playing = True
             game.flag_paused = False
-            pygame.mixer.music.unpause()
         # Pause game.
         else:
             game.flag_playing = False
             game.flag_paused = True
-            pygame.mixer.music.pause()
     
     # Stop the game.
     def stop_game(self):
         self.flag_playing = False
         self.flag_paused = False
+        self.flag_lose = False
         self.flag_ghost = False
         self.flag_heavy = False
         self.flag_blind = False
         self.flag_disoriented = False
         self.update()
-        # Stop and unload current music.
-        pygame.mixer.music.stop()
-        pygame.mixer.music.unload()
 
     # Generate a new tetrimino and replace the current arrays.
     def create_new(self, hold_data=None):
@@ -491,26 +485,6 @@ class Tetron:
                         array_dropped_top[rows_highest[column]:, column] = 1
                 # Create the tetrimino by inverting the dropped blocks.
                 tetrimino = self.id_current * (1 - array_dropped_top)
-
-                # # Randomly select a portion of the array for some game modes.
-                # if self.game_mode == 2:
-                #     # Add a filled row at the top.
-                #     tetrimino = np.concatenate((self.id_current*np.ones([1,self.column_count]), tetrimino), axis=0)
-                #     # List of values of top block in each column of stack.
-                #     values = self.array_dropped[rows_highest, range(self.column_count)]
-                #     # Change any values from empty columns to -1 to be changed later.
-                #     values[values == 0] = -1
-                #     # Replace lowest blocks in tetrimino with above values.
-                #     tetrimino[
-                #         tetrimino.shape[0] - np.argmax(np.flipud(tetrimino), axis=0) - 1,
-                #         range(tetrimino.shape[1])
-                #         ] = values
-                #     mask = np.logical_or(tetrimino == -1, tetrimino == self.id_current)
-                #     tetrimino[mask] = np.random.randint(100, 799, size=tetrimino.shape)[mask]
-                #     # Randomly select a range of columns.
-                #     width = random.choice([2, 3])
-                #     index = random.choice(range(0, self.column_count-width+1))
-                #     tetrimino = tetrimino[:, index:index+width]
 
             # Reset the current rotation value (degrees).
             self.rotation_current = 0
@@ -835,7 +809,7 @@ class Tetron:
         if self.flag_playing:
             # Stop the game if the top row is occupied.
             if np.any(self.array_dropped[0, :] > 0):
-                self.lose_game()
+                self.flag_lose = True
             # Create a new tetrimino otherwise.
             else:
                 self.create_new()
@@ -958,48 +932,35 @@ class Tetron:
         else:
             self.weight_special = np.interp(self.score, [self.score_update_chance_special, self.score_thresholds[-2]], self.weights_special)
     
-    # Advance to the next stage of the game.
-    def stage_advance(self):
-        # Win the game if the maximum score threshold is reached.
-        if self.score >= self.score_thresholds[-1]:
-            self.win_game()
-        # Advance to the second or third stage.
-        elif self.stage == 0 or self.stage == 1:
-            # Stop and unload current music.
-            pygame.mixer.music.stop()
-            pygame.mixer.music.unload()
-            # Load transition music.
-            pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_transition_{}.ogg'.format(self.stage+1)))
-            # Set the music to send an event when done playing.
-            pygame.mixer.music.set_endevent(pygame.USEREVENT+1)
-            # Play the music once.
-            pygame.mixer.music.play(loops=0)
+    # Advance to the next stage of the game.   # DELETE IF NOT USED
+    # def stage_advance(self):
+    #     # Win the game if the maximum score threshold is reached.
+    #     if self.score >= self.score_thresholds[-1]:
+    #         self.win_game()
+    #     # Advance to the second or third stage.
+    #     elif self.stage == 0 or self.stage == 1:
+    #         # Stop and unload current music.
+    #         pygame.mixer.music.stop()
+    #         pygame.mixer.music.unload()
+    #         # Load transition music.
+    #         pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_transition_{}.ogg'.format(self.stage+1)))
+    #         # Set the music to send an event when done playing.
+    #         pygame.mixer.music.set_endevent(pygame.USEREVENT+1)
+    #         # Play the music once.
+    #         pygame.mixer.music.play(loops=0)
 
-        # Increment the stage value.
-        if self.stage < len(self.score_thresholds)-1:
-            self.stage += 1
-            print('Stage: ', self.stage)
+    #     # Increment the stage value.
+    #     if self.stage < len(self.score_thresholds)-1:
+    #         self.stage += 1
+    #         print('Stage: ', self.stage)
     
-    # Stop the game when the player wins.
-    def win_game(self):
-        self.stop_game()
-        # Play music.
-        pygame.mixer.music.stop()
-        pygame.mixer.music.unload()
-        pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_win.ogg'))
-        pygame.mixer.music.play(loops=0)
-        # Play sound effect.
-        self.sound_game_win.play()
+    # Stop the game when the player wins.   # DELETE IF NOT USED
+    # def win_game(self):
+    #     self.stop_game()
 
-    # Stop the game when the player loses.
-    def lose_game(self):
-        self.stop_game()
-        # Play music.
-        pygame.mixer.music.stop()
-        pygame.mixer.music.unload()
-        pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_lose.ogg'))
-        pygame.mixer.music.play(loops=0)
-        # self.sound_game_lose.play()
+    # Stop the game when the player loses.   # DELETE IF NOT USED
+    # def lose_game(self):
+    #     self.stop_game()
 
     # Reset the value of the previous advance time to the current time.
     def reset_time_advance(self):
@@ -1068,8 +1029,9 @@ spacing_large = width_block + 0
 # Create lists to store multiple instances of the game. Create a player instance of the game.
 games_player = [Tetron(width_block, height_block, spacing_block, row_count, column_count)]
 games_ai = []
-# Initialize the score.
+# Initialize the score and stage number.
 score = 0
+stage = 0
 
 # Set the window size [width, height] in pixels.
 size_window = [
@@ -1111,6 +1073,9 @@ fps = 60
 # Loop until the window is closed.
 done = False
 while not done:
+    flag_playing = all([game.flag_playing for game in games_player])
+    flag_paused = all([game.flag_paused for game in games_player])
+    
     for game in games_player:
         # Record the time of the previous frame.
         game.time_previous = game.time_current + 0
@@ -1144,7 +1109,7 @@ while not done:
             logo = pygame.transform.scale(logo_full, [int(height_panel*(logo_full.get_width()/logo_full.get_height())), height_panel])
         # Key presses.
         elif event.type == pygame.KEYDOWN:
-            if all([game.flag_playing for game in games_player]):
+            if flag_playing:
                 # Move left.
                 if event.key in [key_move_left, key_left_move_left, key_right_move_left]:
                     if len(games_player) == 1:
@@ -1245,25 +1210,40 @@ while not done:
         # Key releases.
         elif event.type == pygame.KEYUP:
             if event.key == key_start:
-                if not any([game.flag_playing for game in games_player]):
-                    for game in games_player + games_ai:
-                        # Resume game.
-                        if game.flag_paused:
+                if not flag_playing: #any([game.flag_playing for game in games_player]):
+                    # Resume game.
+                    if flag_paused:
+                        pygame.mixer.music.unpause()
+                        for game in games_player + games_ai:
                             game.pause_game()
-                        # Start game.
-                        else:
+                    # Start game.
+                    else:
+                        score = 0
+                        stage = 0
+                        # Unload current music and start playing music indefinitely.
+                        pygame.mixer.music.unload()
+                        pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_{}.ogg'.format(stage+1)))
+                        pygame.mixer.music.play(loops=-1)
+                        # Start each game.
+                        for game in games_player + games_ai:
                             game.start_game()
                 # Pause game.
                 else:
+                    pygame.mixer.music.pause()
+                    # Pause each game.
                     for game in games_player + games_ai:
                         game.pause_game()
             # Stop game.
             elif event.key == key_stop:
-                if all([game.flag_playing for game in games_player]) or all([game.flag_paused for game in games_player]):
+                if flag_playing or flag_paused:
+                    # Stop and unload current music.
+                    pygame.mixer.music.stop()
+                    pygame.mixer.music.unload()
+                    # Stop each game.
                     for game in games_player + games_ai:
                         game.stop_game()
 
-            if all([game.flag_playing for game in games_player]):
+            if flag_playing:
                 # Stop soft dropping.
                 if event.key in [key_softdrop, key_left_softdrop, key_right_softdrop]:
                     if len(games_player) == 1:
@@ -1278,12 +1258,12 @@ while not done:
                         game.stop_softdropping()
         # Transition music ends.
         elif event.type == pygame.USEREVENT+1:
-            if all([game.flag_playing for game in games_player]):
+            if flag_playing:
                 # Stop and unload current music.
                 pygame.mixer.music.stop()
                 pygame.mixer.music.unload()
                 # Load music for current stage.
-                pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_{}.ogg'.format(games_player[0].stage+1)))
+                pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_{}.ogg'.format(stage+1)))
                 # Disable the event sent when music ends, and play indefinitely.
                 pygame.mixer.music.set_endevent()
                 pygame.mixer.music.play(loops=-1)
@@ -1293,57 +1273,58 @@ while not done:
     # =============================================================================
     # Get a list of the keys currently being held down.
     keys_pressed = pygame.key.get_pressed()
-    # Soft drop.
-    if (keys_pressed[key_softdrop] or keys_pressed[key_left_softdrop] or keys_pressed[key_right_softdrop]) and all([game.flag_playing for game in games_player]):
-        if len(games_player) == 1:
-            if keys_pressed[key_softdrop]:
-                index = 0
-        elif len(games_player) >= 2:
-            if keys_pressed[key_left_softdrop]:
-                index = 0
-            elif keys_pressed[key_right_softdrop]:
-                index = 1
-        # Check if the key has been held longer than the required initial delay.
-        if (games_player[index].time_current - games_player[index].time_start_softdrop) > games_player[index].delay_softdrop:
-            # Check if the key has been held longer than the key repeat interval.
-            if (games_player[index].time_current - games_player[index].time_previous_softdrop) > games_player[index].speed_softdrop:
-                if games_player[index].flag_softdropping:  # Check whether soft dropping to prevent advancing line immediately after landing
-                    games_player[index].advance()
-                    # Play sound effect.
-                    games_player[index].sound_game_softdrop.play()
-                games_player[index].time_previous_softdrop = games_player[index].time_current + 0
-    # Move left.
-    if (keys_pressed[key_move_left] or keys_pressed[key_left_move_left] or keys_pressed[key_right_move_left]) and all([game.flag_playing for game in games_player]):
-        if len(games_player) == 1:
-            if keys_pressed[key_move_left]:
-                index = 0
-        elif len(games_player) >= 2:
-            if keys_pressed[key_left_move_left]:
-                index = 0
-            elif keys_pressed[key_right_move_left]:
-                index = 1
-        # Check if the key has been held longer than the required initial delay.
-        if (games_player[index].time_current - games_player[index].time_start_move_left) > games_player[index].delay_move:
-            # Check if the key has been held longer than the key repeat interval.
-            if (games_player[index].time_current - games_player[index].time_previous_move_left) > games_player[index].speed_move:
-                games_player[index].move_left()
-                games_player[index].time_previous_move_left = games_player[index].time_current + 0
-    # Move right.
-    if (keys_pressed[key_move_right] or keys_pressed[key_left_move_right] or keys_pressed[key_right_move_right]) and all([game.flag_playing for game in games_player]):
-        if len(games_player) == 1:
-            if keys_pressed[key_move_right]:
-                index = 0
-        elif len(games_player) >= 2:
-            if keys_pressed[key_left_move_right]:
-                index = 0
-            elif keys_pressed[key_right_move_right]:
-                index = 1
-        # Check if the key has been held longer than the required initial delay.
-        if (games_player[index].time_current - games_player[index].time_start_move_right) > games_player[index].delay_move:
-            # Check if the key has been held longer than the key repeat interval.
-            if (games_player[index].time_current - games_player[index].time_previous_move_right) > games_player[index].speed_move:
-                games_player[index].move_right()
-                games_player[index].time_previous_move_right = games_player[index].time_current + 0
+    if flag_playing:
+        # Soft drop.
+        if (keys_pressed[key_softdrop] or keys_pressed[key_left_softdrop] or keys_pressed[key_right_softdrop]):
+            if len(games_player) == 1:
+                if keys_pressed[key_softdrop]:
+                    index = 0
+            elif len(games_player) >= 2:
+                if keys_pressed[key_left_softdrop]:
+                    index = 0
+                elif keys_pressed[key_right_softdrop]:
+                    index = 1
+            # Check if the key has been held longer than the required initial delay.
+            if (games_player[index].time_current - games_player[index].time_start_softdrop) > games_player[index].delay_softdrop:
+                # Check if the key has been held longer than the key repeat interval.
+                if (games_player[index].time_current - games_player[index].time_previous_softdrop) > games_player[index].speed_softdrop:
+                    if games_player[index].flag_softdropping:  # Check whether soft dropping to prevent advancing line immediately after landing
+                        games_player[index].advance()
+                        # Play sound effect.
+                        games_player[index].sound_game_softdrop.play()
+                    games_player[index].time_previous_softdrop = games_player[index].time_current + 0
+        # Move left.
+        if (keys_pressed[key_move_left] or keys_pressed[key_left_move_left] or keys_pressed[key_right_move_left]):
+            if len(games_player) == 1:
+                if keys_pressed[key_move_left]:
+                    index = 0
+            elif len(games_player) >= 2:
+                if keys_pressed[key_left_move_left]:
+                    index = 0
+                elif keys_pressed[key_right_move_left]:
+                    index = 1
+            # Check if the key has been held longer than the required initial delay.
+            if (games_player[index].time_current - games_player[index].time_start_move_left) > games_player[index].delay_move:
+                # Check if the key has been held longer than the key repeat interval.
+                if (games_player[index].time_current - games_player[index].time_previous_move_left) > games_player[index].speed_move:
+                    games_player[index].move_left()
+                    games_player[index].time_previous_move_left = games_player[index].time_current + 0
+        # Move right.
+        if (keys_pressed[key_move_right] or keys_pressed[key_left_move_right] or keys_pressed[key_right_move_right]):
+            if len(games_player) == 1:
+                if keys_pressed[key_move_right]:
+                    index = 0
+            elif len(games_player) >= 2:
+                if keys_pressed[key_left_move_right]:
+                    index = 0
+                elif keys_pressed[key_right_move_right]:
+                    index = 1
+            # Check if the key has been held longer than the required initial delay.
+            if (games_player[index].time_current - games_player[index].time_start_move_right) > games_player[index].delay_move:
+                # Check if the key has been held longer than the key repeat interval.
+                if (games_player[index].time_current - games_player[index].time_previous_move_right) > games_player[index].speed_move:
+                    games_player[index].move_right()
+                    games_player[index].time_previous_move_right = games_player[index].time_current + 0
     
     # =============================================================================
     # Calculate Score.
@@ -1356,9 +1337,47 @@ while not done:
         game.update_speed_fall()
         game.update_chance_advanced()
         game.update_chance_special()
-        # Advance to the next stage of the game if a score threshold is passed.
-        if score_previous < games_player[0].score_thresholds[games_player[0].stage] <= score:
-            game.stage_advance()
+    
+    # Advance to the next stage of the game if a score threshold is passed.
+    if score_previous < games_player[0].score_thresholds[stage] <= score:
+        # Win the game if the maximum score threshold is reached.
+        if score >= games_player[0].score_thresholds[-1]:
+            # Play music.
+            pygame.mixer.music.stop()
+            pygame.mixer.music.unload()
+            pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_win.ogg'))
+            pygame.mixer.music.play(loops=0)
+            # Play sound effect.
+            self.sound_game_win.play()
+            # Stop each game.
+            for game in games_player:
+                game.stop_game()
+        # Play transition music once.
+        elif stage == 0 or stage == 1:
+            # Stop and unload current music.
+            pygame.mixer.music.stop()
+            pygame.mixer.music.unload()
+            # Load transition music.
+            pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_transition_{}.ogg'.format(stage+1)))
+            # Set the music to send an event when done playing.
+            pygame.mixer.music.set_endevent(pygame.USEREVENT+1)
+            # Play the music once.
+            pygame.mixer.music.play(loops=0)
+        # Increment the stage value.
+        if stage < len(games_player[0].score_thresholds)-1:
+            stage += 1
+            print('Stage: ', stage)
+    
+    # Stop the game if a game has been lost.
+    if any([game.flag_lose for game in games_player]):
+         # Play music.
+        pygame.mixer.music.stop()
+        pygame.mixer.music.unload()
+        pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_lose.ogg'))
+        pygame.mixer.music.play(loops=0)
+        # Stop each game.
+        for game in games_player:
+            game.stop_game()
 
 
     # =============================================================================
