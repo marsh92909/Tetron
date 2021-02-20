@@ -12,7 +12,7 @@ import pygame
 
 # Program information.
 name_program = 'Tetron'
-version_program = '1.1.0'
+version_program = '1.2.0'
 # Get the path to the folder containing the program.
 folder_program = getattr(sys, '_MEIPASS', os.path.abspath(os.path.dirname(__file__)))  # os.path.dirname(os.path.realpath(sys.argv[0]))
 folder_sounds = os.path.abspath(os.path.join(folder_program, 'Sounds'))
@@ -149,6 +149,8 @@ class Tetron:
         self.id_special = ['ghost', 'heavy', 'disoriented', 'blind']
         # Initialize the classic flag. Define this attribute here to prevent resetting its value on game restarts.
         self.flag_classic = False
+        # Initialize the game mode. Define this attribute here to prevent resetting its value on game restarts.
+        self.game_mode = 1
         
         # Define the range of probabilities (between 0 and 1) of getting an advanced tetrimino.
         self.weights_advanced = [0, 1/3]
@@ -339,7 +341,11 @@ class Tetron:
         if hold_data is None:
             # Randomly select a category to choose from, then randomly select a tetrimino within the category with each tetrimino having an equal probability.
             if random.choices([True, False], [self.weight_advanced, 1-self.weight_advanced], k=1)[0]:
-                id = random.choice([self.id_advanced[i] for i in range(len(self.id_advanced)) if not self.used_advanced[i]])
+                if self.game_mode == 2:
+                    # Only create freebie blocks.
+                    id = self.id_advanced[-1]
+                else:
+                    id = random.choice([self.id_advanced[i] for i in range(len(self.id_advanced)) if not self.used_advanced[i]])
                 self.id_current = id
                 self.used_advanced[self.id_advanced.index(id)] = True
                 # Reset all values in the list to False.
@@ -473,22 +479,65 @@ class Tetron:
                 tetrimino = -1 * np.ones([3, 3])
                 tetrimino[0:2, [0,2]] = self.id_current
             elif self.id_current == 899:  # Freebie
-                # Index of highest row containing dropped blocks.
-                index_highest = np.argmax(np.any(self.array_dropped > 0, axis=1))
-                # Index of lowest row that can fit this tetrimino.
-                index_lowest = max(np.argmax(self.array_dropped, axis=0))
-                # Get the top rows of the dropped blocks.
-                number_rows = index_lowest-index_highest + 1
-                array_dropped_top = np.copy(self.array_dropped[index_highest:index_highest+number_rows, :]) > 0
-                # Get the row indices of the highest blocks in each column of the dropped blocks array, with values of -1 for empty columns.
-                rows_highest = np.argmax(array_dropped_top, axis=0)
-                rows_highest[np.all(array_dropped_top == 0, axis=0)] = -1
-                # Fill the blocks below the highest blocks in each column.
-                for column in range(len(rows_highest)):
-                    if rows_highest[column] >= 0:
-                        array_dropped_top[rows_highest[column]:, column] = 1
-                # Create the tetrimino by inverting the dropped blocks.
-                tetrimino = self.id_current * (1 - array_dropped_top)
+                if False: #self.game_mode == 2:
+                    # List of row indices of highest available positions in each column.
+                    indices_available = np.where(
+                        np.any(self.array_dropped > 0, axis=0),
+                        np.argmax(self.array_dropped > 0, axis=0)-1,
+                        (self.row_count-1) * np.ones(self.column_count)
+                        )
+                    # np.argwhere(np.abs(np.diff(indices_available)) >= 3)
+                    # Randomly select a range of columns.
+                    width = random.choice([2, 3])
+                    index = random.choice(range(0, self.column_count-width+1))
+                    indices_available_selected = indices_available[index:index+width]
+                    array_dropped_top = np.copy(self.array_dropped[min(indices_available_selected)-1:max(indices_available_selected), index:index+width])
+                    # Get the row indices of the highest blocks in each column of the dropped blocks array, with values of -1 for empty columns.
+                    rows_highest = np.argmax(array_dropped_top, axis=0)
+                    rows_highest[np.all(array_dropped_top == 0, axis=0)] = -1
+                    # Fill the blocks below the highest blocks in each column.
+                    for column in range(len(rows_highest)):
+                        if rows_highest[column] >= 0:
+                            array_dropped_top[rows_highest[column]:, column] = 1
+                    # Create the tetrimino by inverting the dropped blocks.
+                    tetrimino = self.id_current * (1 - array_dropped_top)
+                else:
+                    # Index of highest row containing dropped blocks.
+                    index_highest = np.argmax(np.any(self.array_dropped > 0, axis=1))
+                    # Index of lowest row that can fit this tetrimino.
+                    index_lowest = max(np.argmax(self.array_dropped, axis=0))
+                    # Get the top rows of the dropped blocks.
+                    number_rows = index_lowest-index_highest + 1
+                    array_dropped_top = np.copy(self.array_dropped[index_highest:index_highest+number_rows, :]) > 0
+                    # Get the row indices of the highest blocks in each column of the dropped blocks array, with values of -1 for empty columns.
+                    rows_highest = np.argmax(array_dropped_top, axis=0)
+                    rows_highest[np.all(array_dropped_top == 0, axis=0)] = -1
+                    # Fill the blocks below the highest blocks in each column.
+                    for column in range(len(rows_highest)):
+                        if rows_highest[column] >= 0:
+                            array_dropped_top[rows_highest[column]:, column] = 1
+                    # Create the tetrimino by inverting the dropped blocks.
+                    tetrimino = self.id_current * (1 - array_dropped_top)
+
+                    # Randomly select a portion of the array for some game modes.
+                    if self.game_mode == 2:
+                        # Add a filled row at the top.
+                        tetrimino = np.concatenate((self.id_current*np.ones([1,self.column_count]), tetrimino), axis=0)
+                        # List of values of top block in each column of stack.
+                        values = self.array_dropped[rows_highest, range(self.column_count)]
+                        # Change any values from empty columns to -1 to be changed later.
+                        values[values == 0] = -1
+                        # Replace lowest blocks in tetrimino with above values.
+                        tetrimino[
+                            tetrimino.shape[0] - np.argmax(np.flipud(tetrimino), axis=0) - 1,
+                            range(tetrimino.shape[1])
+                            ] = values
+                        mask = np.logical_or(tetrimino == -1, tetrimino == self.id_current)
+                        tetrimino[mask] = np.random.randint(100, 799, size=tetrimino.shape)[mask]
+                        # Randomly select a range of columns.
+                        width = random.choice([2, 3])
+                        index = random.choice(range(0, self.column_count-width+1))
+                        tetrimino = tetrimino[:, index:index+width]
 
             # Reset the current rotation value (degrees).
             self.rotation_current = 0
@@ -925,7 +974,10 @@ class Tetron:
         if self.flag_classic:
             self.weight_advanced = 0
         else:
-            self.weight_advanced = np.interp(self.score, [self.score_update_chance_advanced, self.score_thresholds[-2]], self.weights_advanced)
+            if self.game_mode == 2:
+                self.weight_advanced = 1
+            else:
+                self.weight_advanced = np.interp(self.score, [self.score_update_chance_advanced, self.score_thresholds[-2]], self.weights_advanced)
     
     # Update the probability of getting a special effect.
     def update_chance_special(self):
@@ -1217,6 +1269,7 @@ while not done:
                     # Update the classic flag for all games in case toggling was performed before a game mode switch.
                     for game in games_player:
                         game.flag_classic = flag_classic
+                        game.game_mode = game_mode
         # Key releases.
         elif event.type == pygame.KEYUP:
             if event.key == key_start:
