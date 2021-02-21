@@ -219,6 +219,7 @@ class Tetron:
         self.flag_tspin = False
         self.flag_tspin_mini = False
         self.flag_fast_fall = False
+        self.flag_harddrop = False
         self.flag_softdropping = False
         self.flag_ghost = False
         self.flag_heavy = False
@@ -719,6 +720,8 @@ class Tetron:
                 self.array_current = -1 * self.array_highlight
         # Drop the tetrimino.
         self.array_dropped[self.array_current > 0] = self.array_current[self.array_current > 0]
+        # Set flag to hard drop other game instances.
+        self.flag_harddrop = True
         # Play sound effect.
         self.sound_game_harddrop.play()
         self.update()
@@ -1225,7 +1228,7 @@ while not done:
         # Key releases.
         elif event.type == pygame.KEYUP:
             if event.key == key_start:
-                if not flag_playing: #any([game.flag_playing for game in games_player]):
+                if not flag_playing:
                     # Resume game.
                     if flag_paused:
                         pygame.mixer.music.unpause()
@@ -1290,60 +1293,67 @@ while not done:
     keys_pressed = pygame.key.get_pressed()
     if flag_playing:
         # Soft drop.
-        if (keys_pressed[key_softdrop] or keys_pressed[key_left_softdrop] or keys_pressed[key_right_softdrop]):
+        if keys_pressed[key_softdrop] or keys_pressed[key_left_softdrop] or keys_pressed[key_right_softdrop]:
+            indices = []
             if len(games_player) == 1:
                 if keys_pressed[key_softdrop]:
-                    index = 0
+                    indices.append(0)
             elif len(games_player) >= 2:
                 if keys_pressed[key_left_softdrop]:
-                    index = 0
-                elif keys_pressed[key_right_softdrop]:
-                    index = 1
+                    indices.append(0)
+                if keys_pressed[key_right_softdrop]:
+                    indices.append(1)
             # Check if the key has been held longer than the required initial delay.
-            if (games_player[index].time_current - games_player[index].time_start_softdrop) > games_player[index].delay_softdrop:
-                # Check if the key has been held longer than the key repeat interval.
-                if (games_player[index].time_current - games_player[index].time_previous_softdrop) > games_player[index].speed_softdrop:
-                    if games_player[index].flag_softdropping:  # Check whether soft dropping to prevent advancing line immediately after landing
-                        games_player[index].advance()
-                        # Play sound effect.
-                        games_player[index].sound_game_softdrop.play()
-                    games_player[index].time_previous_softdrop = games_player[index].time_current + 0
+            for index in indices:
+                if (games_player[index].time_current - games_player[index].time_start_softdrop) > games_player[index].delay_softdrop:
+                    # Check if the key has been held longer than the key repeat interval.
+                    if (games_player[index].time_current - games_player[index].time_previous_softdrop) > games_player[index].speed_softdrop:
+                        if games_player[index].flag_softdropping:  # Check whether soft dropping to prevent advancing line immediately after landing
+                            games_player[index].advance()
+                            # Play sound effect.
+                            games_player[index].sound_game_softdrop.play()
+                        games_player[index].time_previous_softdrop = games_player[index].time_current + 0
         # Move left.
-        if (keys_pressed[key_move_left] or keys_pressed[key_left_move_left] or keys_pressed[key_right_move_left]):
+        if keys_pressed[key_move_left] or keys_pressed[key_left_move_left] or keys_pressed[key_right_move_left]:
+            indices = []
             if len(games_player) == 1:
                 if keys_pressed[key_move_left]:
-                    index = 0
+                    indices.append(0)
             elif len(games_player) >= 2:
                 if keys_pressed[key_left_move_left]:
-                    index = 0
-                elif keys_pressed[key_right_move_left]:
-                    index = 1
+                    indices.append(0)
+                if keys_pressed[key_right_move_left]:
+                    indices.append(1)
             # Check if the key has been held longer than the required initial delay.
-            if (games_player[index].time_current - games_player[index].time_start_move_left) > games_player[index].delay_move:
-                # Check if the key has been held longer than the key repeat interval.
-                if (games_player[index].time_current - games_player[index].time_previous_move_left) > games_player[index].speed_move:
-                    games_player[index].move_left()
-                    games_player[index].time_previous_move_left = games_player[index].time_current + 0
+            for index in indices:
+                if (games_player[index].time_current - games_player[index].time_start_move_left) > games_player[index].delay_move:
+                    # Check if the key has been held longer than the key repeat interval.
+                    if (games_player[index].time_current - games_player[index].time_previous_move_left) > games_player[index].speed_move:
+                        games_player[index].move_left()
+                        games_player[index].time_previous_move_left = games_player[index].time_current + 0
         # Move right.
-        if (keys_pressed[key_move_right] or keys_pressed[key_left_move_right] or keys_pressed[key_right_move_right]):
+        if keys_pressed[key_move_right] or keys_pressed[key_left_move_right] or keys_pressed[key_right_move_right]:
+            indices = []
             if len(games_player) == 1:
                 if keys_pressed[key_move_right]:
-                    index = 0
+                    indices.append(0)
             elif len(games_player) >= 2:
                 if keys_pressed[key_left_move_right]:
-                    index = 0
-                elif keys_pressed[key_right_move_right]:
-                    index = 1
+                    indices.append(0)
+                if keys_pressed[key_right_move_right]:
+                    indices.append(1)
             # Check if the key has been held longer than the required initial delay.
-            if (games_player[index].time_current - games_player[index].time_start_move_right) > games_player[index].delay_move:
-                # Check if the key has been held longer than the key repeat interval.
-                if (games_player[index].time_current - games_player[index].time_previous_move_right) > games_player[index].speed_move:
-                    games_player[index].move_right()
-                    games_player[index].time_previous_move_right = games_player[index].time_current + 0
+            for index in indices:
+                if (games_player[index].time_current - games_player[index].time_start_move_right) > games_player[index].delay_move:
+                    # Check if the key has been held longer than the key repeat interval.
+                    if (games_player[index].time_current - games_player[index].time_previous_move_right) > games_player[index].speed_move:
+                        games_player[index].move_right()
+                        games_player[index].time_previous_move_right = games_player[index].time_current + 0
     
     # =============================================================================
-    # Calculate Score.
+    # Score, Stage Transitions, Win/Lose.
     # =============================================================================
+    # Calculate score.
     score_previous = score + 0
     score += sum([game.score_increment.pop(0) for game in games_player if len(game.score_increment) > 0])
     for game in games_player:
@@ -1394,11 +1404,17 @@ while not done:
 
 
     # =============================================================================
-    # Time-Based Actions.
+    # Line Advancements.
     # =============================================================================
+    # Hard drop all games if one game has hard dropped.
+    if any([game.flag_harddrop for game in games_player]):
+        for game in games_player:
+            if not game.flag_harddrop:
+                game.harddrop()
+            game.flag_harddrop = False
+    # Advance current tetriminos.
     for game in games_player:
         if game.flag_playing:
-            # Advance current tetrimino.
             if game.flag_advancing:
                 if (
                     # Check if the required time for automatic advancing has elapsed.
