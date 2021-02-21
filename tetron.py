@@ -104,7 +104,8 @@ def rgb(color, tint=0):
 # The main class containing all actions related to the game, such as moving and rotating blocks.
 class Tetron:
     # Initialize the attributes of the instance of of this class when it is first created.
-    def __init__(self, width_block, height_block, spacing_block, row_count, column_count):
+    def __init__(self, instance_number, width_block, height_block, spacing_block, row_count, column_count):
+        self.instance_number = instance_number
         # Define the width, height, and spacing of the blocks in pixels.
         self.width_block = width_block
         self.height_block = height_block
@@ -721,7 +722,8 @@ class Tetron:
         # Set flag to hard drop other game instances.
         self.flag_harddrop = True
         # Play sound effect.
-        self.sound_game_harddrop.play()
+        if self.instance_number == 0:
+            self.sound_game_harddrop.play()
         self.update()
 
         # Increment the placed blocks counter.
@@ -781,7 +783,7 @@ class Tetron:
                 print('perfect clear multiplier: ', multipliers[-1])
         if self.game_mode == 2:
             # Twin multiplier.
-            multipliers.append(2)
+            multipliers.append(1.6)
         # Put the score increment in the queue.
         self.score_increment.append(int(score_increment * np.prod(multipliers)))
         
@@ -835,20 +837,27 @@ class Tetron:
         # Reset the previous advance time.
         self.reset_time_advance()
 
-    # Store the current tetrimino array, the current ID, and current rotation in a tuple and store it in the hold queue.
+    # Hold.
     def hold(self):
         # Set the flag to prevent another hold.
         self.flag_hold = True
-        # Store the current tetrimino and tetrimino ID in the queue.
+        # Store the current tetrimino array, the current ID, and current rotation in a tuple and store it in the hold queue.
         self.queue_hold.append((self.tetrimino, self.id_current, self.rotation_current))
-        # Create a new tetrimino if nothing was in the queue.
-        if len(self.queue_hold) <= 1:
-            self.create_new()
-        # Swap the current tetrimino with the one in the queue.
-        else:
-            self.create_new(self.queue_hold.pop(0))
+        if self.game_mode != 2:
+            # Create a new tetrimino if nothing was in the queue.
+            if len(self.queue_hold) <= 1:
+                self.create_new()
+            # Swap the current tetrimino with the one in the queue.
+            else:
+                self.create_new(self.queue_hold.pop(0))
         # Play sound effect.
-        self.sound_game_hold.play()
+        if self.instance_number == 0:
+            self.sound_game_hold.play()
+    
+    # Swap.
+    def swap(self, game):
+        # Swap the current tetrimino with one from another game.
+        self.create_new(game.queue_hold.pop(0))
 
     # Reset the advance timer if the tetrimino is directly above an already placed block or is on the bottom of the matrix.
     def check_landed(self):
@@ -991,9 +1000,11 @@ height_panel = height_block + 0
 # Define the width of spacing between elements.
 spacing_large = width_block + 0
 
-# Create lists to store multiple instances of the game. Create a player instance of the game.
-games_player = [Tetron(width_block, height_block, spacing_block, row_count, column_count)]
+# Create lists to store multiple instances of the game.
+games_player = []
 games_ai = []
+# Create a player instance of the game.
+games_player.append(Tetron(len(games_player), width_block, height_block, spacing_block, row_count, column_count))
 # Initialize the score and stage number.
 score = 0
 stage = 0
@@ -1015,7 +1026,7 @@ game_mode = 1
 flag_classic = False
 # Load the Tetron logo.
 logo_full = pygame.image.load(os.path.join(folder_program, 'logo.png'))
-logo = pygame.transform.scale(logo_full, [int(height_panel*(logo_full.get_width()/logo_full.get_height())), height_panel])
+logo = pygame.transform.smoothscale(logo_full, [int(height_panel*(logo_full.get_width()/logo_full.get_height())), height_panel])
 # Create text for classic Tetris.
 text_classic = font_normal.render('Tetris', True, rgb(1))
 # Create prefix text for other game modes.
@@ -1071,7 +1082,7 @@ while not done:
                 game.resize_display(width_block=width_block, height_block=height_block)
 
             # Resize the logo.
-            logo = pygame.transform.scale(logo_full, [int(height_panel*(logo_full.get_width()/logo_full.get_height())), height_panel])
+            logo = pygame.transform.smoothscale(logo_full, [int(height_panel*(logo_full.get_width()/logo_full.get_height())), height_panel])
         # Key presses.
         elif event.type == pygame.KEYDOWN:
             if flag_playing:
@@ -1145,20 +1156,33 @@ while not done:
                             indices.append(1)
                     for index in indices:
                         games_player[index].start_softdropping()
-                # Hold.
+                # Hold / Swap.
                 elif event.key in [key_hold, key_left_hold, key_right_hold]:
                     indices = []
                     if len(games_player) == 1:
                         if event.key == key_hold:
                             indices.append(0)
                     elif len(games_player) >= 2:
-                        if event.key == key_left_hold:
-                            indices.append(0)
-                        elif event.key == key_right_hold:
-                            indices.append(1)
-                    for index in indices:
-                        if not games_player[index].flag_hold and not games_player[index].flag_ghost and not games_player[index].flag_heavy:
+                        indices = [0, 1]
+                        # if event.key == key_left_hold:
+                        #     indices.append(0)
+                        # elif event.key == key_right_hold:
+                        #     indices.append(1)
+                    # Check that no games currently holding, no games have a ghost block, and no games have a heavy block.
+                    if not any([any([game.flag_hold, game.flag_ghost, game.flag_heavy]) for game in games_player]):  # if not games_player[index].flag_hold and not games_player[index].flag_ghost and not games_player[index].flag_heavy:
+                        # Hold.
+                        for index in indices:
                             games_player[index].hold()
+                        # Swap.
+                        for index in indices:
+                            index_swap = np.roll(range(0,len(games_player)), 1)[index]
+                            games_player[index].swap(games_player[index_swap])
+                # # Swap.
+                # elif event.key in [key_left_hold, key_right_hold]:
+                #     if len(games_player) >= 2:
+                #         for index, game in enumerate(games_player):
+                #             index_swap = np.roll(range(0,len(games_player)), 1)[index]
+                #             game.swap((games_player[index_swap].tetrimino, games_player[index_swap].id_current, games_player[index_swap].rotation_current))
             else:
                 if not flag_paused:
                     # Switch game modes.
@@ -1168,7 +1192,7 @@ while not done:
                     elif event.key == key_mode_2 and game_mode != 2:
                         game_mode = 2
                         games_player = [games_player[0]]
-                        games_player.append(Tetron(width_block, height_block, spacing_block, row_count, column_count))
+                        games_player.append(Tetron(len(games_player), width_block, height_block, spacing_block, row_count, column_count))
                     elif False: #event.key == key_mode_3 and game_mode != 3:
                         game_mode = 3
                     elif False: #event.key == key_mode_4 and game_mode != 4:
