@@ -1130,80 +1130,90 @@ while not done:
             if flag_playing:
                 # Move left.
                 if event.key in [key_move_left, key_left_move_left, key_right_move_left]:
+                    indices = []
                     if len(games_player) == 1:
                         if event.key == key_move_left:
-                            index = 0
+                            indices.append(0)
                     elif len(games_player) >= 2:
                         if event.key == key_left_move_left:
-                            index = 0
-                        elif event.key == key_right_move_left:
-                            index = 1
-                    games_player[index].move_left()
-                    # Record the current time used later to calculate how long this key is held.
-                    games_player[index].time_start_move_left = games_player[index].time_current + 0
-                    # Initialize the time at which the previous repeat occured.
-                    games_player[index].time_previous_move_left = 0
+                            indices.append(0)
+                        if event.key == key_right_move_left:
+                            indices.append(1)
+                    for index in indices:
+                        games_player[index].move_left()
+                        # Record the current time used later to calculate how long this key is held.
+                        games_player[index].time_start_move_left = games_player[index].time_current + 0
+                        # Initialize the time at which the previous repeat occured.
+                        games_player[index].time_previous_move_left = 0
                 # Move right.
                 elif event.key in [key_move_right, key_left_move_right, key_right_move_right]:
+                    indices = []
                     if len(games_player) == 1:
                         if event.key == key_move_right:
-                            index = 0
+                            indices.append(0)
                     elif len(games_player) >= 2:
                         if event.key == key_left_move_right:
-                            index = 0
-                        elif event.key == key_right_move_right:
-                            index = 1
-                    games_player[index].move_right()
-                    # Record the current time used later to calculate how long this key is held.
-                    games_player[index].time_start_move_right = games_player[index].time_current + 0
-                    # Initialize the time at which the previous repeat occured.
-                    games_player[index].time_previous_move_right = 0
+                            indices.append(0)
+                        if event.key == key_right_move_right:
+                            indices.append(1)
+                    for index in indices:
+                        games_player[index].move_right()
+                        # Record the current time used later to calculate how long this key is held.
+                        games_player[index].time_start_move_right = games_player[index].time_current + 0
+                        # Initialize the time at which the previous repeat occured.
+                        games_player[index].time_previous_move_right = 0
                 # Rotate counterclockwise or clockwise.
                 elif event.key in key_rotate_clockwise+[key_left_rotate_clockwise,key_right_rotate_clockwise] or event.key in key_rotate_counterclockwise:
+                    indices = []
                     if len(games_player) == 1:
                         if event.key in key_rotate_clockwise + key_rotate_counterclockwise:
-                            index = 0
+                            indices.append(0)
                     elif len(games_player) >= 2:
                         if event.key == key_left_rotate_clockwise:
-                            index = 0
-                        elif event.key == key_right_rotate_clockwise:
-                            index = 1
+                            indices.append(0)
+                        if event.key == key_right_rotate_clockwise:
+                            indices.append(1)
                     if event.key in key_rotate_clockwise+[key_left_rotate_clockwise,key_right_rotate_clockwise]:
                         direction = -1
                     elif event.key in key_rotate_counterclockwise:
                         direction = 1
-                    # Only rotate if not freebie.
-                    if not games_player[index].id_current == 899:
-                        games_player[index].rotate(direction)
+                    for index in indices:
+                        # Only rotate if not freebie.
+                        if not games_player[index].id_current == 899:
+                            games_player[index].rotate(direction)
                 # Hard drop.
                 elif event.key == key_harddrop:
                     for game in games_player:
                         game.harddrop()
                 # Start soft dropping.
                 elif event.key in [key_softdrop, key_left_softdrop, key_right_softdrop]:
+                    indices = []
                     if len(games_player) == 1:
                         if event.key == key_softdrop:
-                            index = 0
+                            indices.append(0)
                     elif len(games_player) >= 2:
                         if event.key == key_left_softdrop:
-                            index = 0
+                            indices.append(0)
                         elif event.key == key_right_softdrop:
-                            index = 1
-                    games_player[index].start_softdropping()
+                            indices.append(1)
+                    for index in indices:
+                        games_player[index].start_softdropping()
                 # Hold.
                 elif event.key in [key_hold, key_left_hold, key_right_hold]:
+                    indices = []
                     if len(games_player) == 1:
                         if event.key == key_hold:
-                            index = 0
+                            indices.append(0)
                     elif len(games_player) >= 2:
                         if event.key == key_left_hold:
-                            index = 0
+                            indices.append(0)
                         elif event.key == key_right_hold:
-                            index = 1
-                    if not games_player[index].flag_hold and not games_player[index].flag_ghost and not games_player[index].flag_heavy:
-                        games_player[index].hold()
+                            indices.append(1)
+                    for index in indices:
+                        if not games_player[index].flag_hold and not games_player[index].flag_ghost and not games_player[index].flag_heavy:
+                            games_player[index].hold()
             else:
-                if not any([game.flag_paused for game in games_player]):
+                if not flag_paused:
                     # Switch game modes.
                     if event.key == key_mode_1 and game_mode != 1:
                         game_mode = 1
@@ -1264,16 +1274,17 @@ while not done:
             if flag_playing:
                 # Stop soft dropping.
                 if event.key in [key_softdrop, key_left_softdrop, key_right_softdrop]:
+                    indices = []
                     if len(games_player) == 1:
                         if event.key == key_softdrop:
-                            index = 0
+                            indices.append(0)
                     elif len(games_player) >= 2:
                         if event.key == key_left_softdrop:
-                            index = 0
+                            indices.append(0)
                         elif event.key == key_right_softdrop:
-                            index = 1
-                    for game in games_player:
-                        game.stop_softdropping()
+                            indices.append(1)
+                    for index in indices:
+                        games_player[index].stop_softdropping()
         # Transition music ends.
         elif event.type == pygame.USEREVENT+1:
             if flag_playing:
