@@ -2,9 +2,37 @@
 Tetris with a twist.
 
 ## Gameplay
-Tetron features advanced blocks and special effects in addition to the seven blocks in Tetris. Win the game by reaching a score of 1,000.
+Tetron has the same blocks in Tetris but also features advanced blocks and special effects, which occur more frequently as the game progresses.
 
-### Controls
+### Advanced blocks
+* I block variations: I+, I-
+* J block variations: J+, J-
+* L block variations: L+, L-
+* O block variations: O+, O++, O ring
+* S block variations: S+
+* T block variations: T+1, T+2
+* Z block variations: Z+
+* Random block
+* Period block
+* Comma block
+* Colon block
+* Quotation block
+* Freebie block
+
+### Special effects
+* Ghost block: The current block passes through other blocks and through the walls. Locks in-place instead of dropping down.
+* Heavy block: The current block drops to the very bottom and destroys other blocks in the way instead of stacking.
+* Disoriented: The entire matrix is rotated temporarily.
+* Blind: Blocks are harder to distinguish from the background temporarily.
+
+### Game modes
+* Tetron (press 1): Reach a score of 1,000 to win.
+* Twin Tetron (press 2): Play two Tetron games at once.
+
+Toggle classic Tetris (press 0) to disable advanced blocks and special effects.
+
+
+## Controls
 | Action | Key |
 | :-- | --: |
 | Move Left | ← |
@@ -14,38 +42,24 @@ Tetron features advanced blocks and special effects in addition to the seven blo
 | Hard Drop | Space |
 | Soft Drop | ↓ |
 | Hold | C |
-| Start Game | Enter |
+| Start / Pause Game | Enter |
 | Stop Game | Escape |
 
-### Advanced blocks
-* Variations of the I block: I+, I-
-* Variations of the J block: J+, J-
-* Variations of the L block: L+, L-
-* Variations of the O block: O+, O++, O ring
-* Variations of the S block: S+
-* Variations of the T block: T+1, T+2
-* Variations of the Z block: Z+
-* Freebie block
-* Randomly generated block with 5 blocks
-* Period block
-* Comma block
-* Colon block
-* Quotation block
+### Twin Tetron
+| Action | Key (Left) | Key (Right) |
+| :-- | --: | --: |
+| Move Left | A | J |
+| Move Right | D | L |
+| Rotate Clockwise | W | I |
+| Hard Drop (Both) | Space | Space |
+| Soft Drop | S | K |
+| Swap (Both) | C (or E or U) | C (or E or U) |
 
-### Special effects
-* Ghost block: A block that passes through other blocks and through the walls. If hard dropped, a ghost block is locked in-place instead of dropping down.
-* Heavy block: A block that drops to the very bottom instead of stacking on top of other blocks.
-* Disoriented: The entire matrix is rotated.
-* Blind: The colors of all blocks become almost identical to the background, making them harder to see.
-
-### Game modes
-| Mode | Press to Start |
-| :-- | --: |
-| Tetron | Enter |
 
 ## Installation
 1. Open the [latest release](https://github.com/marsh92909/Tetron/releases/latest).
 2. Click on the `Tetron.exe` file to download it, and place it anywhere.
+
 
 ## Compilation
 Using PyInstaller 4.2 and Python 3.9.1 on Windows 10. PyInstaller can compile either a single .exe file or a folder containing an .exe file along with other files. The instructions below are for compiling a single .exe file.
@@ -73,6 +87,7 @@ Note: If compiling a folder, the generated .spec file will contain an instance o
 3. Open the `dist` folder to find the compiled program.
 
 Note: A .spec file is not required to compile a program, but it makes compilation easier by shortening the command that is typed in Command Prompt.
+
 
 ## Credits
 ### Programming
