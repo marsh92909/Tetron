@@ -1164,29 +1164,20 @@ while not done:
                             indices.append(0)
                     elif len(games_player) >= 2:
                         indices = [0, 1]
-                        # if event.key == key_left_hold:
-                        #     indices.append(0)
-                        # elif event.key == key_right_hold:
-                        #     indices.append(1)
                     # Check that no games currently holding, no games have a ghost block, and no games have a heavy block.
-                    if not any([any([game.flag_hold, game.flag_ghost, game.flag_heavy]) for game in games_player]):  # if not games_player[index].flag_hold and not games_player[index].flag_ghost and not games_player[index].flag_heavy:
+                    if not any([any([game.flag_hold, game.flag_ghost, game.flag_heavy]) for game in games_player]):
                         # Hold.
                         for index in indices:
                             games_player[index].hold()
                         # Swap.
-                        for index in indices:
-                            index_swap = np.roll(range(0,len(games_player)), 1)[index]
-                            games_player[index].swap(games_player[index_swap])
-                # # Swap.
-                # elif event.key in [key_left_hold, key_right_hold]:
-                #     if len(games_player) >= 2:
-                #         for index, game in enumerate(games_player):
-                #             index_swap = np.roll(range(0,len(games_player)), 1)[index]
-                #             game.swap((games_player[index_swap].tetrimino, games_player[index_swap].id_current, games_player[index_swap].rotation_current))
+                        if len(games_player) >= 2:
+                            for index in indices:
+                                index_swap = np.roll(range(0,len(games_player)), 1)[index]
+                                games_player[index].swap(games_player[index_swap])
             else:
                 if not flag_paused:
                     # Switch game modes.
-                    if False: #event.key == key_mode_1 and game_mode != 1:
+                    if event.key == key_mode_1 and game_mode != 1:
                         game_mode = 1
                         games_player = [games_player[0]]
                     elif event.key == key_mode_2 and game_mode != 2:
