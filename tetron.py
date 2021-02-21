@@ -772,12 +772,18 @@ class Tetron:
         # Calculate point multipliers.
         multipliers = []
         if self.combos > 1:
+            # Combo multiplier.
             if self.id_current != 899:
                 multipliers.append(self.combos)
                 print('combo multiplier: ', multipliers[-1])
         if cleared_perfect:
-            multipliers.append(cleared_increment)
-            print('perfect clear multiplier: ', multipliers[-1])
+            # Perfect clear multiplier.
+            if self.id_current != 899:
+                multipliers.append(cleared_increment)
+                print('perfect clear multiplier: ', multipliers[-1])
+        if self.game_mode == 2:
+            # Twin multiplier.
+            multipliers.append(2)
         # Increment the score.
         # score_previous = self.score + 0
         # self.score += int(score_increment * np.prod(multipliers))
@@ -931,25 +937,6 @@ class Tetron:
         else:
             self.weight_special = np.interp(self.score, [self.score_update_chance_special, self.score_thresholds[-2]], self.weights_special)
 
-    # DELETE THESE 3
-    # # Update the block fall speed.
-    # def update_speed_fall(self):
-    #     self.speed_fall = np.interp(self.score, [0, self.score_thresholds[-2]], self.speeds_fall)
-
-    # # Update the probability of getting an advanced tetrimino.
-    # def update_chance_advanced(self):
-    #     if self.flag_classic:
-    #         self.weight_advanced = 0
-    #     else:
-    #         self.weight_advanced = np.interp(self.score, [self.score_update_chance_advanced, self.score_thresholds[-2]], self.weights_advanced)
-    
-    # # Update the probability of getting a special effect.
-    # def update_chance_special(self):
-    #     if self.flag_classic:
-    #         self.weight_special = 0
-    #     else:
-    #         self.weight_special = np.interp(self.score, [self.score_update_chance_special, self.score_thresholds[-2]], self.weights_special)
-    
     # Advance to the next stage of the game.   # DELETE IF NOT USED
     # def stage_advance(self):
     #     # Win the game if the maximum score threshold is reached.
@@ -1112,7 +1099,7 @@ while not done:
         # Window is resized.
         elif event.type == pygame.VIDEORESIZE:
             # Get the new size of the window.
-            size_window = pygame.display.get_window_size()  # screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
+            size_window = pygame.display.get_window_size()
             
             # Redefine the sizes of elements.
             width_block = int(np.floor((size_window[1] - ((row_count+1)*spacing_block)) / (row_count+1)))
@@ -1382,7 +1369,7 @@ while not done:
             pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_win.ogg'))
             pygame.mixer.music.play(loops=0)
             # Play sound effect.
-            self.sound_game_win.play()
+            games_player[0].sound_game_win.play()
             # Stop each game.
             for game in games_player:
                 game.stop_game()
@@ -1538,8 +1525,8 @@ while not done:
         game.surface_main.blit(game.surface_matrix, game.rect_matrix)
         # Display the game in the window.
         screen.blit(game.surface_main, 
-        ((size_window[0] - sum([i.size_total[0] for i in games_player]) - index*spacing_large)//2 + sum([i.size_total[0] for i in games_player[:index]]) + index*spacing_large, height_panel)
-        ) # screen.blit(game.surface_matrix, game.rect_matrix)
+        ((size_window[0] - sum([i.size_total[0] for i in games_player]) - (len(games_player)-1)*spacing_large)//2 + sum([i.size_total[0] for i in games_player[:index]]) + index*spacing_large, height_panel)
+        )
     
     # Update the screen.
     pygame.display.flip()
