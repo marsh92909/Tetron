@@ -14,7 +14,7 @@ import pygame
 name_program = 'Tetron'
 version_program = '1.2.0'
 # Get the path to the folder containing the program.
-folder_program = getattr(sys, '_MEIPASS', os.path.abspath(os.path.dirname(__file__)))  # os.path.dirname(os.path.realpath(sys.argv[0]))
+folder_program = getattr(sys, '_MEIPASS', os.path.abspath(os.path.dirname(__file__)))
 folder_sounds = os.path.abspath(os.path.join(folder_program, 'Sounds'))
 folder_images = os.path.abspath(os.path.join(folder_program, 'Images'))
 # Initialize all pygame modules.
@@ -241,16 +241,14 @@ class Tetron:
         # Initialize the hold list.
         self.queue_hold = []
 
-        # Initialize the stage of the game as a number.
-        # self.stage = 0
+        # Initialize the score.
+        self.score = 0
+        # Initialize the score increment queue.
+        self.score_increment = []
         # Initialize the number of placed tetriminos.
         self.count = 0
         # Initialize the number of successive line clears.
         self.combos = 0
-        # Initialize the cleared lines counter.
-        self.score = 0
-        # Initialize the score increment queue.
-        self.score_increment = []
 
         # Initialize the block fall speed, the probability of getting an advanced tetrimino, and the probability of getting a special effect.
         self.update_difficulty()
@@ -784,12 +782,8 @@ class Tetron:
         if self.game_mode == 2:
             # Twin multiplier.
             multipliers.append(2)
-        # Increment the score.
-        # score_previous = self.score + 0
-        # self.score += int(score_increment * np.prod(multipliers))
+        # Put the score increment in the queue.
         self.score_increment.append(int(score_increment * np.prod(multipliers)))
-        # # Update the game difficulty.
-        # self.update_difficulty()
         
         # Play a sound corresponding to the number of lines cleared.
         if cleared_increment == 1:
@@ -806,10 +800,6 @@ class Tetron:
         # Play a sound for special line clears.
         if self.flag_tspin or self.flag_tspin_mini or cleared_increment >= 4:
             self.sound_game_special.play()
-        
-        # # Advance to the next stage of the game if a score threshold is passed.
-        # if score_previous < self.score_thresholds[self.stage] <= self.score:
-        #     self.stage_advance()
         
         # Reset the previous advance time.
         self.reset_time_advance()
@@ -937,36 +927,6 @@ class Tetron:
         else:
             self.weight_special = np.interp(self.score, [self.score_update_chance_special, self.score_thresholds[-2]], self.weights_special)
 
-    # Advance to the next stage of the game.   # DELETE IF NOT USED
-    # def stage_advance(self):
-    #     # Win the game if the maximum score threshold is reached.
-    #     if self.score >= self.score_thresholds[-1]:
-    #         self.win_game()
-    #     # Advance to the second or third stage.
-    #     elif self.stage == 0 or self.stage == 1:
-    #         # Stop and unload current music.
-    #         pygame.mixer.music.stop()
-    #         pygame.mixer.music.unload()
-    #         # Load transition music.
-    #         pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_transition_{}.ogg'.format(self.stage+1)))
-    #         # Set the music to send an event when done playing.
-    #         pygame.mixer.music.set_endevent(pygame.USEREVENT+1)
-    #         # Play the music once.
-    #         pygame.mixer.music.play(loops=0)
-
-    #     # Increment the stage value.
-    #     if self.stage < len(self.score_thresholds)-1:
-    #         self.stage += 1
-    #         print('Stage: ', self.stage)
-    
-    # Stop the game when the player wins.   # DELETE IF NOT USED
-    # def win_game(self):
-    #     self.stop_game()
-
-    # Stop the game when the player loses.   # DELETE IF NOT USED
-    # def lose_game(self):
-    #     self.stop_game()
-
     # Reset the value of the previous advance time to the current time.
     def reset_time_advance(self):
         self.time_start_advance = self.time_current + 0
@@ -1041,7 +1001,7 @@ stage = 0
 # Set the window size [width, height] in pixels.
 size_window = [
     column_count*width_block + (column_count+1)*spacing_block + (games_player[0].width_hold+games_player[0].spacing_small) + (games_player[0].width_next+games_player[0].spacing_small),
-    height_panel + row_count*height_block+(row_count+1)*spacing_block  # round(0.8 * pygame.display.Info().current_h)
+    height_panel + row_count*height_block+(row_count+1)*spacing_block
     ]
 # Set the window title and window icon.
 pygame.display.set_caption(name_program + ' ' + version_program)
@@ -1499,7 +1459,7 @@ while not done:
     rect_text_time_elapsed = text_time_elapsed.get_rect()
     rect_text_time_elapsed.right = size_window[0] - (
         size_window[0] - sum([game.size_total[0] for game in games_player]) - ((len(games_player)-1)*spacing_large)
-        )//2 - games_player[-1].width_next - games_player[-1].spacing_small   #(size_window[0]-game.size_matrix[0])//2 + game.size_matrix[0]
+        )//2 - games_player[-1].width_next - games_player[-1].spacing_small
     rect_text_time_elapsed.bottom = height_panel + 0
     screen.blit(text_time_elapsed, rect_text_time_elapsed)
 
