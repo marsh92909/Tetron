@@ -12,7 +12,7 @@ import pygame
 
 # Program information.
 name_program = 'Tetron'
-version_program = '1.2.0'
+version_program = '1.3.0'
 # Get the path to the folder containing the program.
 folder_program = getattr(sys, '_MEIPASS', os.path.abspath(os.path.dirname(__file__)))
 folder_sounds = os.path.abspath(os.path.join(folder_program, 'Sounds'))
@@ -104,8 +104,10 @@ def rgb(color, tint=0):
 # The main class containing all actions related to the game, such as moving and rotating blocks.
 class Tetron:
     # Initialize the attributes of the instance of of this class when it is first created.
-    def __init__(self, instance_number, width_block, height_block, spacing_block, row_count, column_count):
+    def __init__(self, is_player, instance_number, width_block, height_block, spacing_block, row_count, column_count):
+        self.is_player = is_player
         self.instance_number = instance_number
+
         # Define the width, height, and spacing of the blocks in pixels.
         self.width_block = width_block
         self.height_block = height_block
@@ -141,6 +143,10 @@ class Tetron:
         self.delay_softdrop = 50
         # Define the maximum duration (ms) for a tetrimino to remain landed before locking.
         self.duration_max_landed = 500
+
+        # Define the parameters of a normal distribution for the delay (ms) between deciding and performing a move for AI.
+        self.ai_delay_mean = 1500
+        self.ai_delay_std = 100
 
         # Define the IDs for classic tetriminos, advanced tetriminos, special effects.
         self.id_classic = [100, 200, 300, 400, 500, 600, 700]
@@ -226,6 +232,18 @@ class Tetron:
         self.flag_heavy = False
         self.flag_disoriented = False
         self.flag_blind = False
+
+        self.ai_flag_positioning = True
+        self.ai_flag_calculating = True
+
+        # Initialize a list containing effectiveness values of moves.
+        self.ai_evaluations = []
+        # Initialize the decided move.
+        self.ai_decision = None
+        # Initialize the decision time.
+        self.ai_time_evaluate = 0
+        # Initialize the decision duration.
+        self.ai_delay = 0
 
         # Initialize arrays for current tetrimino, dropped blocks, blocks displayed on screen, and highlighted blocks showing where tetriminos will be hard dropped.
         self.array_current = np.zeros([self.row_count, self.column_count])
@@ -321,7 +339,6 @@ class Tetron:
     def stop_game(self):
         self.flag_playing = False
         self.flag_paused = False
-        self.flag_lose = False
         self.flag_ghost = False
         self.flag_heavy = False
         self.flag_blind = False
@@ -358,23 +375,27 @@ class Tetron:
                 if effect_special == self.id_special[0]:
                     self.flag_ghost = True
                     self.flag_fast_fall = True
-                    self.sound_special_ghost.play()
+                    if self.is_player:
+                        self.sound_special_ghost.play()
                 elif effect_special == self.id_special[1]:
                     self.flag_heavy = True
                     self.flag_fast_fall = True
-                    self.sound_special_heavy.play()
+                    if self.is_player:
+                        self.sound_special_heavy.play()
                 elif effect_special == self.id_special[2]:
                     # Apply the effect only if it is not currently active.
                     if not self.flag_disoriented:
                         self.flag_disoriented = True
                         self.duration_disoriented = 0
-                        self.sound_special_disoriented.play()
+                        if self.is_player:
+                            self.sound_special_disoriented.play()
                 elif effect_special == self.id_special[3]:
                     # Apply the effect only if it is not currently active.
                     if not self.flag_blind:
                         self.flag_blind = True
                         self.duration_blind = 0
-                        self.sound_special_blind.play()
+                        if self.is_player:
+                            self.sound_special_blind.play()
             
             # Classic tetriminos.
             if self.id_current == self.id_classic[0]:  # I
@@ -508,6 +529,11 @@ class Tetron:
         # Update the displayed array.
         self.update()
 
+        # Record the time.
+        self.ai_time_evaluate = self.time_current + 0
+        # Select a delay before performing the move.
+        self.ai_delay = random.gauss(self.ai_delay_mean, self.ai_delay_std)
+
     # Advance one line.
     def advance(self):
         # Determine if at the bottom of the matrix.
@@ -526,8 +552,9 @@ class Tetron:
         # Update the displayed array.
         self.update()
 
-    # Move left one column.
+    # Move left. Return a Boolean indicating whether it was successful.
     def move_left(self):
+        success = False
         # Check if already in leftmost column.
         if self.flag_ghost or not np.any(self.array_current[:, 0] > 0):
             # Check if placed blocks are in the way.
@@ -539,10 +566,15 @@ class Tetron:
                 # Update the displayed array.
                 self.update()
                 # Play sound effect.
-                self.sound_game_move.play()
+                if self.is_player:
+                    self.sound_game_move.play()
+                # Update Boolean.
+                success = True
+        return success
     
-    # Move right one column.
+    # Move right. Return a Boolean indicating whether it was successful.
     def move_right(self):
+        success = False
         # Check if already in rightmost column.
         if self.flag_ghost or not np.any(self.array_current[:, -1] > 0):
             # Check if placed blocks are in the way.
@@ -554,10 +586,15 @@ class Tetron:
                 # Update the displayed array.
                 self.update()
                 # Play sound effect.
-                self.sound_game_move.play()
+                if self.is_player:
+                    self.sound_game_move.play()
+                # Update Boolean.
+                success = True
+        return success
 
-    # Rotate counterclockwise or clockwise by inputting 1 (default) or -1.
+    # Rotate counterclockwise or clockwise by inputting 1 (default) or -1. Return a Boolean indicating whether it was successful.
     def rotate(self, direction=1):
+        success = False
         # List of lists of tuples for all translation values (right, down) for each rotation, defined in the order they should be checked.
         translations_all = [
             # J, L, S, T, Z
@@ -691,7 +728,8 @@ class Tetron:
                 # Update the displayed array.
                 self.update()
                 # Play sound effect.
-                self.sound_game_rotate.play()
+                if self.is_player:
+                    self.sound_game_rotate.play()
                 # Reset the advance timer if the tetrimino has landed.
                 self.check_landed()
                 # Set flag if T-spin or mini T-spin.
@@ -704,8 +742,11 @@ class Tetron:
                     elif front_count >= 1 and back_count == 2:
                         self.flag_tspin_mini = True
                         self.flag_tspin = False
+                # Update Boolean.
+                success = True
                 # Exit the for loop.
                 break
+        return success
 
     # Hard drop.
     def harddrop(self):
@@ -723,7 +764,8 @@ class Tetron:
         self.flag_harddrop = True
         # Play sound effect.
         if self.instance_number == 0:
-            self.sound_game_harddrop.play()
+            if self.is_player:
+                self.sound_game_harddrop.play()
         self.update()
 
         # Increment the placed blocks counter.
@@ -751,65 +793,77 @@ class Tetron:
                 np.delete(self.array_dropped, obj=cleared_rows, axis=0)
                 ), axis=0)
         
-        # Check for a perfect clear.
-        cleared_perfect = not np.any(self.array_dropped)
-        # Increment the combo counter if a line was cleared.
-        if cleared_increment > 0:
-            self.combos += 1
-        else:
-            self.combos = 0
-        # Calculate points earned based on the type of line clear.
-        score_increment = 5 * cleared_increment
-        if cleared_increment >= 4:
-            score_increment = 10 * cleared_increment
-        # Calculate points for T-spins.
-        if self.flag_tspin:
-            score_increment = 20 * (cleared_increment + 1)
-            print('tspin points ', score_increment)
-        elif self.flag_tspin_mini:
-            score_increment = 5 * (2 ** cleared_increment)
-            print('mini tspin points ', score_increment)
-        # Calculate point multipliers.
-        multipliers = []
-        if self.combos > 1:
-            # Combo multiplier.
-            if self.id_current != 899:
-                multipliers.append(self.combos)
-                print('combo multiplier: ', multipliers[-1])
-        if cleared_perfect:
-            # Perfect clear multiplier.
-            if self.id_current != 899:
-                multipliers.append(cleared_increment)
-                print('perfect clear multiplier: ', multipliers[-1])
-        if self.game_mode == 2:
-            # Twin multiplier.
-            multipliers.append(1.6)
+        # # Check for a perfect clear.
+        # cleared_perfect = not np.any(self.array_dropped)
+        # # Increment the combo counter if a line was cleared.
+        # if cleared_increment > 0:
+        #     self.combos += 1
+        # else:
+        #     self.combos = 0
+        # # Calculate points earned based on the type of line clear.
+        # score_increment = 5 * cleared_increment
+        # if cleared_increment >= 4:
+        #     score_increment = 10 * cleared_increment
+        # # Calculate points for T-spins.
+        # if self.flag_tspin:
+        #     score_increment = 20 * (cleared_increment + 1)
+        #     print('tspin points ', score_increment)
+        # elif self.flag_tspin_mini:
+        #     score_increment = 5 * (2 ** cleared_increment)
+        #     print('mini tspin points ', score_increment)
+        # # Calculate point multipliers.
+        # multipliers = []
+        # if self.combos > 1:
+        #     # Combo multiplier.
+        #     if self.id_current != 899:
+        #         multipliers.append(self.combos)
+        #         print('combo multiplier: ', multipliers[-1])
+        # if cleared_perfect:
+        #     # Perfect clear multiplier.
+        #     if self.id_current != 899:
+        #         multipliers.append(cleared_increment)
+        #         print('perfect clear multiplier: ', multipliers[-1])
+        # if self.game_mode == 2:
+        #     # Twin multiplier.
+        #     multipliers.append(1.6)
+        # # Put the score increment in the queue.
+        # self.score_increment.append(int(score_increment * np.prod(multipliers)))
+
         # Put the score increment in the queue.
-        self.score_increment.append(int(score_increment * np.prod(multipliers)))
+        self.score_increment.append(self.calculate_score(cleared_increment))
         
-        # Play a sound corresponding to the number of lines cleared.
-        if cleared_increment == 1:
-            self.sound_game_single.play()
-        elif cleared_increment == 2:
-            self.sound_game_double.play()
-        elif cleared_increment == 3:
-            self.sound_game_triple.play()
-        elif cleared_increment >= 4:
-            self.sound_game_tetris.play()
-        # Play a sound for perfect clears.
-        if cleared_perfect:
-            self.sound_game_perfect.play()
-        # Play a sound for special line clears.
-        if self.flag_tspin or self.flag_tspin_mini or cleared_increment >= 4:
-            self.sound_game_special.play()
+        # # Play a sound corresponding to the number of lines cleared.
+        # if self.is_player:
+        #     if cleared_increment == 1:
+        #         self.sound_game_single.play()
+        #     elif cleared_increment == 2:
+        #         self.sound_game_double.play()
+        #     elif cleared_increment == 3:
+        #         self.sound_game_triple.play()
+        #     elif cleared_increment >= 4:
+        #         self.sound_game_tetris.play()
+        #     # Play a sound for perfect clears.
+        #     if cleared_perfect:
+        #         self.sound_game_perfect.play()
+        #     # Play a sound for special line clears.
+        #     if self.flag_tspin or self.flag_tspin_mini or cleared_increment >= 4:
+        #         self.sound_game_special.play()
         
         # Reset the previous advance time.
         self.reset_time_advance()
+        # Reset attributes for AI.
+        self.ai_evaluations = []
+        self.ai_decision = None
+        self.ai_time_evaluate = 0
+        self.ai_flag_positioning = True
+        self.ai_flag_calculating = True
         
         if self.flag_playing:
             # Stop the game if the top row is occupied.
             if np.any(self.array_dropped[0, :] > 0):
                 self.flag_lose = True
+                if not self.is_player:
+                    self.stop_game()
             # Create a new tetrimino otherwise.
             else:
                 self.create_new()
@@ -827,7 +881,8 @@ class Tetron:
         # Initialize the time at which the previous repeat occured.
         self.time_previous_softdrop = 0
         # Play sound effect.
-        self.sound_game_softdrop.play()
+        if self.is_player:
+            self.sound_game_softdrop.play()
 
     # Stop soft dropping.
     def stop_softdropping(self):
@@ -852,7 +907,8 @@ class Tetron:
                 self.create_new(self.queue_hold.pop(0))
         # Play sound effect.
         if self.instance_number == 0:
-            self.sound_game_hold.play()
+            if self.is_player:
+                self.sound_game_hold.play()
     
     # Swap.
     def swap(self, game):
@@ -874,9 +930,67 @@ class Tetron:
                 self.reset_time_advance()
             # Play sound effect.
             if not self.flag_ghost:
-                self.sound_game_landing.play()
+                if self.is_player:
+                    self.sound_game_landing.play()
         else:
             self.flag_landed = False
+    
+    # Return the points to add to the score by inputting how many lines were cleared.
+    def calculate_score(self, cleared_increment):
+        # Check for a perfect clear.
+        cleared_perfect = not np.any(self.array_dropped)
+        # Increment the combo counter if a line was cleared.
+        if cleared_increment > 0:
+            self.combos += 1
+        else:
+            self.combos = 0
+        
+        # Calculate points earned based on the type of line clear.
+        score_increment = 5 * cleared_increment
+        if cleared_increment >= 4:
+            score_increment = 10 * cleared_increment
+        # Calculate points for T-spins.
+        if self.flag_tspin:
+            score_increment = 20 * (cleared_increment + 1)
+            print('tspin points ', score_increment)
+        elif self.flag_tspin_mini:
+            score_increment = 5 * (2 ** cleared_increment)
+            print('mini tspin points ', score_increment)
+        
+        # Calculate point multipliers.
+        multipliers = []
+        if self.combos > 1:
+            # Combo multiplier.
+            if self.id_current != 899:
+                multipliers.append(self.combos)
+                print('combo multiplier: ', multipliers[-1])
+        if cleared_perfect:
+            # Perfect clear multiplier.
+            if self.id_current != 899:
+                multipliers.append(cleared_increment)
+                print('perfect clear multiplier: ', multipliers[-1])
+        if self.game_mode == 2:
+            # Twin multiplier.
+            multipliers.append(1.6)
+        
+        # Play a sound corresponding to the number of lines cleared.
+        if self.is_player:
+            if cleared_increment == 1:
+                self.sound_game_single.play()
+            elif cleared_increment == 2:
+                self.sound_game_double.play()
+            elif cleared_increment == 3:
+                self.sound_game_triple.play()
+            elif cleared_increment >= 4:
+                self.sound_game_tetris.play()
+            # Play a sound for perfect clears.
+            if cleared_perfect:
+                self.sound_game_perfect.play()
+            # Play a sound for special line clears.
+            if self.flag_tspin or self.flag_tspin_mini or cleared_increment >= 4:
+                self.sound_game_special.play()
+        
+        return int(score_increment * np.prod(multipliers))
 
     # Update the displayed array.
     def update(self):
@@ -951,13 +1065,19 @@ class Tetron:
                 number = self.array_display[row, column]
                 tint = 0
                 if number != 0:
-                    if self.flag_blind:
-                        color = 0.28  # Color of placed blocks in blind mode
+                    if self.is_player:
+                        if self.flag_blind:
+                            color = 0.28  # Color of placed blocks in blind mode
+                        else:
+                            if number < 0:
+                                color = 0.35  # Color of highlighted blocks
+                            else:
+                                color = number + 0  # Color of placed blocks
                     else:
                         if number < 0:
-                            color = 0.35  # Color of highlighted blocks
+                            color = 0.35
                         else:
-                            color = number + 0  # Color of placed blocks
+                            color = 0.5
                 else:
                     color = 0.25  # Color of blank blocks
                 pygame.draw.rect(surface=self.surface_matrix, color=rgb(color, tint=tint), rect=[(self.spacing_block+self.width_block)*column+self.spacing_block, (self.spacing_block+self.height_block)*row+self.spacing_block, self.width_block, self.height_block])
@@ -980,6 +1100,91 @@ class Tetron:
             # Display the hold queue and text.
             self.surface_main.blit(self.surface_hold, self.rect_hold)
             self.surface_main.blit(self.text_hold, self.rect_text_hold)
+    
+    # Calculate effectiveness of every move, decide on a move, or perform a move.
+    def ai_evaluate(self):
+        evaluation = []
+        if (self.time_current - self.ai_time_evaluate) >= self.ai_delay:
+            self.ai_flag_calculating = False
+
+        # Calculate.
+        if self.ai_flag_calculating:
+            # Move all the way left until the wall is reached.
+            if self.ai_flag_positioning:
+                if not self.move_left():
+                    self.ai_flag_positioning = False
+            # Calculate effectiveness value.
+            else:
+                # Create a copy of the array.
+                array = np.copy(self.array_dropped)
+                # Calculate the number of holes.
+                rows_highest = np.where(np.any(array > 0, axis=0), np.argmax(array > 0, axis=0), row_count * np.ones(column_count, dtype=int))
+                array_holes = np.copy(array)
+                for column, row in enumerate(rows_highest):
+                    array_holes[:row, column] = 1
+                holes_before = np.sum(array_holes == 0)
+                
+                # Hard drop the current tetrimino and calculate the number of cleared lines.
+                array[self.array_highlight < 0] = -self.array_highlight[self.array_highlight < 0]
+                cleared_increment = len(np.argwhere(np.all(array > 0, axis=1)))
+                # Calculate the number of holes.
+                rows_highest = np.where(np.any(array > 0, axis=0), np.argmax(array > 0, axis=0), row_count * np.ones(column_count, dtype=int))
+                array_holes = np.copy(array)
+                for column, row in enumerate(rows_highest):
+                    array_holes[:row, column] = 1
+                holes_after = np.sum(array_holes == 0)
+                
+                # Initialize the effectiveness value.
+                effectiveness = 0
+                # Add points for cleared lines.
+                effectiveness += self.calculate_score(cleared_increment)
+                # Subtract points for height of placed tetrimino.
+                effectiveness -= 1 * abs(row_count - np.argmax(np.any(self.array_highlight < 0, axis=1)))
+                # Subtract points for occupying the top row.
+                if any(array[0, :] > 0):
+                    effectiveness -= 100
+                # Subtract points for creating holes.
+                if holes_after > holes_before:
+                    effectiveness -= 5 * abs(holes_after - holes_before)
+                
+                # Record the effectiveness value with its corresponding position and rotation.
+                evaluation = [
+                    np.nonzero(np.any(self.array_current > 0, axis=0))[0],
+                    self.rotation_current,
+                    effectiveness,
+                    ]
+                self.ai_evaluations.append(evaluation)
+
+                # Move the tetrimino right for the next iteration.
+                if not self.move_right():
+                    self.ai_flag_positioning = True
+                    self.rotate(1)
+                    # Set the flag to stop calculating if all 4 rotations have been evaluated.
+                    if len(np.unique([i[1] for i in self.ai_evaluations])) >= 4:
+                        self.ai_flag_calculating = False
+        # Decide.
+        elif self.ai_decision is None:
+            # Delete moves with effectiveness values less than the maximum.
+            effectiveness = [i[2] for i in self.ai_evaluations]
+            self.ai_evaluations = [i for i in self.ai_evaluations if i[2] == max(effectiveness)]
+            # Select a move randomly if multiple options exist.
+            if len(self.ai_evaluations) > 1:
+                index = random.choice(range(len(self.ai_evaluations)))
+                self.ai_evaluations = [self.ai_evaluations[index]]
+            # Record the selected move.
+            self.ai_decision = self.ai_evaluations[0]
+        # Perform.
+        else:
+            if self.ai_decision[1] != self.rotation_current:
+                self.rotate(1)
+            elif any(self.ai_decision[0] != np.nonzero(np.any(self.array_current > 0, axis=0))[0]):
+                if np.nonzero(np.any(self.array_current > 0, axis=0))[0][0] > self.ai_decision[0][0]:
+                    self.move_left()
+                elif np.nonzero(np.any(self.array_current > 0, axis=0))[0][0] < self.ai_decision[0][0]:
+                    self.move_right()
+            else:
+                if (self.time_current - self.ai_time_evaluate) >= self.ai_delay:
+                    self.harddrop()
 
 
 # =============================================================================
@@ -1004,7 +1209,7 @@ spacing_large = width_block + 0
 games_player = []
 games_ai = []
 # Create a player instance of the game.
-games_player.append(Tetron(len(games_player), width_block, height_block, spacing_block, row_count, column_count))
+games_player.append(Tetron(True, len(games_player), width_block, height_block, spacing_block, row_count, column_count))
 # Initialize the score and stage number.
 score = 0
 stage = 0
@@ -1035,7 +1240,7 @@ text_mode_1_suffix = font_normal.render('', True, rgb(1))
 text_mode_2_prefix = font_normal.render('Twin ', True, rgb(1))
 text_mode_2_suffix = font_normal.render('', True, rgb(1))
 text_mode_3_prefix = font_normal.render('', True, rgb(1))
-text_mode_3_suffix = font_normal.render(' Vs.', True, rgb(1))
+text_mode_3_suffix = font_normal.render(' 1v1', True, rgb(1))
 text_mode_4_prefix = font_normal.render('', True, rgb(1))
 text_mode_4_suffix = font_normal.render(' 99', True, rgb(1))
 # Initialize the game mode surface.
@@ -1049,10 +1254,10 @@ fps = 60
 # Loop until the window is closed.
 done = False
 while not done:
-    flag_playing = all([game.flag_playing for game in games_player])
-    flag_paused = all([game.flag_paused for game in games_player])
+    flag_playing = any([game.flag_playing for game in games_player+games_ai])
+    flag_paused = all([game.flag_paused for game in games_player+games_ai])
     
-    for game in games_player:
+    for game in games_player+games_ai:
         # Record the time of the previous frame.
         game.time_previous = game.time_current + 0
         # Calculate current time and elapsed time.
@@ -1078,7 +1283,7 @@ while not done:
             height_panel = height_block + 0
             spacing_large = width_block + 0
             # Resize and reposition the elements of each game.
-            for game in games_player:
+            for game in games_player + games_ai:
                 game.resize_display(width_block=width_block, height_block=height_block)
 
             # Resize the logo.
@@ -1180,21 +1385,25 @@ while not done:
                     if event.key == key_mode_1 and game_mode != 1:
                         game_mode = 1
                         games_player = [games_player[0]]
+                        games_ai = []
                     elif event.key == key_mode_2 and game_mode != 2:
                         game_mode = 2
                         games_player = [games_player[0]]
-                        games_player.append(Tetron(len(games_player), width_block, height_block, spacing_block, row_count, column_count))
-                    elif False: #event.key == key_mode_3 and game_mode != 3:
+                        games_player.append(Tetron(True, len(games_player), width_block, height_block, spacing_block, row_count, column_count))
+                        games_ai = []
+                    elif event.key == key_mode_3 and game_mode != 3:
                         game_mode = 3
+                        games_player = [games_player[0]]
+                        games_ai.append(Tetron(False, len(games_player)+len(games_ai), width_block, height_block, spacing_block, row_count, column_count))
                     elif False: #event.key == key_mode_4 and game_mode != 4:
                         game_mode = 4
                     # Toggle classic Tetris.
                     elif event.key == key_toggle_classic:
                         flag_classic = not flag_classic
-                        for game in games_player:
+                        for game in games_player + games_ai:
                             game.flag_classic = flag_classic
                     # Update the classic flag for all games in case toggling was performed before a game mode switch.
-                    for game in games_player:
+                    for game in games_player + games_ai:
                         game.flag_classic = flag_classic
                         game.game_mode = game_mode
         # Key releases.
@@ -1337,7 +1546,7 @@ while not done:
     # Advance to the next stage of the game if a score threshold is passed.
     if score_previous < games_player[0].score_thresholds[stage] <= score:
         # Win the game if the maximum score threshold is reached.
-        if score >= games_player[0].score_thresholds[-1]:
+        if score >= games_player[0].score_thresholds[-1] or all([game.flag_lose for game in games_ai]):
             # Play music.
             pygame.mixer.music.stop()
             pygame.mixer.music.unload()
@@ -1345,8 +1554,8 @@ while not done:
             pygame.mixer.music.play(loops=0)
             # Play sound effect.
             games_player[0].sound_game_win.play()
-            # Stop each game.
-            for game in games_player:
+            # Stop all games.
+            for game in games_player + games_ai:
                 game.stop_game()
         # Play transition music once.
         elif stage == 0 or stage == 1:
@@ -1373,6 +1582,7 @@ while not done:
         pygame.mixer.music.play(loops=0)
         # Stop each game.
         for game in games_player:
+            game.flag_lose = False
             game.stop_game()
 
 
@@ -1385,8 +1595,8 @@ while not done:
             if not game.flag_harddrop:
                 game.harddrop()
             game.flag_harddrop = False
-    # Advance current tetriminos.
-    for game in games_player:
+    # Advance lines.
+    for game in games_player + games_ai:
         if game.flag_playing:
             if game.flag_advancing:
                 if (
@@ -1400,17 +1610,26 @@ while not done:
             else:
                 game.reset_time_advance()
     
+
+    # =============================================================================
+    # AI.
+    # =============================================================================
+    for game in games_ai:
+        if game.flag_playing:
+            game.ai_evaluate()
+
+    
     # =============================================================================
     # Draw Screen.
     # =============================================================================
     # Erase all surfaces.
     screen.fill(rgb(0))
     surface_mode.fill(rgb(0))
-    for game in games_player:
+    for game in games_player + games_ai:
         game.surface_main.fill(rgb(0))
         game.surface_hold.fill(rgb(0))
     # Draw the game mode if not playing.
-    if not any([game.flag_playing for game in games_player]):
+    if not flag_playing:
         # Get the width of the logo or text.
         if flag_classic:
             width_name = text_classic.get_width()
@@ -1456,7 +1675,7 @@ while not done:
         rect_mode.bottom = height_panel + 0
         rect_mode.centerx = size_window[0]//2
         screen.blit(surface_mode, rect_mode)
-    for game in games_player:
+    for game in games_player + games_ai:
         # Draw each block inside the matrix.
         game.draw_matrix()
         # Draw hold queue.
@@ -1478,7 +1697,7 @@ while not done:
     rect_text_time_elapsed.bottom = height_panel + 0
     screen.blit(text_time_elapsed, rect_text_time_elapsed)
 
-    for index, game in enumerate(games_player):
+    for index, game in enumerate(games_player + games_ai):
         # Stop the disoriented effect if it has lasted longer than the maximum duration.
         if game.flag_disoriented:
             if game.duration_disoriented > game.duration_max_disoriented:
@@ -1500,7 +1719,7 @@ while not done:
         game.surface_main.blit(game.surface_matrix, game.rect_matrix)
         # Display the game in the window.
         screen.blit(game.surface_main, 
-        ((size_window[0] - sum([i.size_total[0] for i in games_player]) - (len(games_player)-1)*spacing_large)//2 + sum([i.size_total[0] for i in games_player[:index]]) + index*spacing_large, height_panel)
+        ((size_window[0] - sum([i.size_total[0] for i in (games_player+games_ai)]) - (len(games_player+games_ai)-1)*spacing_large)//2 + sum([i.size_total[0] for i in (games_player+games_ai)[:index]]) + index*spacing_large, height_panel)
         )
     
     # Update the screen.
