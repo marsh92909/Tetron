@@ -107,6 +107,7 @@ class Tetron:
     def __init__(self, is_player, instance_number, width_block, height_block, spacing_block, row_count, column_count):
         self.is_player = is_player
         self.instance_number = instance_number
+        self.games = []
 
         # Define the width, height, and spacing of the blocks in pixels.
         self.width_block = width_block
@@ -257,8 +258,10 @@ class Tetron:
         self.used_special = [False] * len(self.id_special)
         # Initialize the current tetrimino ID.
         self.id_current = 0
-        # Initialize the hold list.
+        # Initialize the hold queue.
         self.queue_hold = []
+        # Initialize the garbage queue.
+        self.queue_garbage = []
 
         # Initialize the score.
         self.score = 0
@@ -268,6 +271,9 @@ class Tetron:
         self.count = 0
         # Initialize the number of successive line clears.
         self.combos = 0
+
+        # Select a target.
+        self.select_target()
 
         # Initialize the block fall speed, the probability of getting an advanced tetrimino, and the probability of getting a special effect.
         self.update_difficulty()
@@ -792,6 +798,12 @@ class Tetron:
                 np.zeros([cleared_increment,self.column_count]),
                 np.delete(self.array_dropped, obj=cleared_rows, axis=0)
                 ), axis=0)
+
+        # Send garbage lines.
+        # if self.instance_target is not None:
+        #     self.games[self.instance_target].add_garbage(cleared_increment)
+        # Delete pending garbage lines.
+        self.subtract_garbage(cleared_increment)
         
         # # Check for a perfect clear.
         # cleared_perfect = not np.any(self.array_dropped)
@@ -858,15 +870,20 @@ class Tetron:
         self.ai_flag_positioning = True
         self.ai_flag_calculating = True
         
+        # Stop the game or create a new tetrimino.
         if self.flag_playing:
-            # Stop the game if the top row is occupied.
-            if np.any(self.array_dropped[0, :] > 0):
-                self.flag_lose = True
-                if not self.is_player:
-                    self.stop_game()
-            # Create a new tetrimino otherwise.
-            else:
+            self.check_lose()
+            if not self.flag_lose:
                 self.create_new()
+            
+            # Stop the game if the top row is occupied.
+            # if np.any(self.array_dropped[0, :] > 0):
+            #     self.flag_lose = True
+            #     if not self.is_player:
+            #         self.stop_game()
+            # Create a new tetrimino otherwise.
+            # else:
+            #     self.create_new()
 
     # Start soft dropping.
     def start_softdropping(self):
@@ -935,6 +952,99 @@ class Tetron:
         else:
             self.flag_landed = False
     
+    # Set the flag and stop the game if the top row is occupied.
+    def check_lose(self):
+        if np.any(self.array_dropped[0, :] > 0):
+            self.flag_lose = True
+            if not self.is_player:
+                self.stop_game()
+    
+    # Randomly select a target.
+    def select_target(self):
+        games = [game for game in self.games if game.flag_playing and game.instance_number != self.instance_number]
+        if len(games) > 0:
+            self.instance_target = games[random.choice(range(len(games)))].instance_number
+        else:
+            self.instance_target = 0
+    
+    # Calculate the number of garbage lines to send by inputting the number of lines cleared.
+    def calculate_garbage(self, lines):
+        count = 0
+        if lines == 1:
+            if self.flag_tspin:
+                count = 2
+            elif self.flag_tspin_mini:
+                count = 0
+            else:
+                count = 0
+        elif lines == 2:
+            if self.flag_tspin:
+                count = 4
+            elif self.flag_tspin_mini:
+                count = 1
+            else:
+                count = 1
+        elif lines == 3:
+            if self.flag_tspin:
+                count = 6
+            else:
+                count = 2
+        elif lines >= 4:
+            count = 4
+        # Perfect clear.
+        if False:
+            count += 4
+        # Combos.
+        if self.combos in [2, 3]:
+            count += 1
+        elif self.combos in [4, 5]:
+            count += 2
+        elif self.combos in [6, 7]:
+            count += 3
+        elif self.combos in [8, 9, 10]:
+            count += 4
+        elif self.combos >= 11:
+            count += 5
+        return count
+
+    # Add garbage to the queue.
+    def add_garbage(self, lines):
+        count = self.calculate_garbage(lines)
+        total = sum(self.queue_garbage)
+        max = 12
+        if total + count >= max:
+            self.queue_garbage.append(max-total)
+        else:
+            self.queue_garbage.append(count)
+    
+    # Subtract garbage from the queue.
+    def subtract_garbage(self, lines):
+        count = self.calculate_garbage(lines)
+        total = sum(self.queue_garbage)
+        if count >= total:
+            self.queue_garbage = []
+        else:
+            while count > 0:
+                if count < self.queue_garbage[0]:
+                    self.queue_garbage[0] -= count
+                    count = 0
+                else:
+                    self.queue_garbage.pop(0)
+                    count -= self.queue_garbage[0]
+    
+    # Add garbage lines to the matrix and subtract the corresponding value from the queue.
+    def put_garbage(self):
+        if len(self.queue_garbage) > 0:
+            count = self.queue_garbage.pop(0)
+            array_garbage = 900 * np.ones([count, column_count])
+            array_garbage[:, random.choice(range(column_count))] = 0
+            self.array_dropped = np.concatenate((
+                self.array_dropped[count:, :],
+                array_garbage
+                ), axis=0)
+            self.check_lose()
+            
+
     # Return the points to add to the score by inputting how many lines were cleared.
     def calculate_score(self, cleared_increment):
         # Check for a perfect clear.
@@ -1186,6 +1296,20 @@ class Tetron:
                 if (self.time_current - self.ai_time_evaluate) >= self.ai_delay:
                     self.harddrop()
 
+# A class that manages game instances.
+class Games:
+    def __init__(self):
+        self.player = []
+        self.ai = []
+        self.all = []
+    
+    def add_game(self, game):
+        if game.is_player:
+            self.player.append(game)
+        else:
+            self.ai.append(game)
+        self.all.append(game)
+
 
 # =============================================================================
 # Main Program Loop.
@@ -1208,6 +1332,8 @@ spacing_large = width_block + 0
 # Create lists to store multiple instances of the game.
 games_player = []
 games_ai = []
+# Create an object to contain lists of player games and AI games.
+games = Games()
 # Create a player instance of the game.
 games_player.append(Tetron(True, len(games_player), width_block, height_block, spacing_block, row_count, column_count))
 # Initialize the score and stage number.
@@ -1546,7 +1672,7 @@ while not done:
     # Advance to the next stage of the game if a score threshold is passed.
     if score_previous < games_player[0].score_thresholds[stage] <= score:
         # Win the game if the maximum score threshold is reached.
-        if score >= games_player[0].score_thresholds[-1] or all([game.flag_lose for game in games_ai]):
+        if score >= games_player[0].score_thresholds[-1] or (game_mode in [3, 4] and all([game.flag_lose for game in games_ai])):
             # Play music.
             pygame.mixer.music.stop()
             pygame.mixer.music.unload()
@@ -1573,14 +1699,14 @@ while not done:
             stage += 1
             print('Stage: ', stage)
     
-    # Stop the game if a game has been lost.
+    # Stop the game if the player has been lost.
     if any([game.flag_lose for game in games_player]):
          # Play music.
         pygame.mixer.music.stop()
         pygame.mixer.music.unload()
         pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_lose.ogg'))
         pygame.mixer.music.play(loops=0)
-        # Stop each game.
+        # Stop player games.
         for game in games_player:
             game.flag_lose = False
             game.stop_game()
