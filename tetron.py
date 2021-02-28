@@ -104,10 +104,10 @@ def rgb(color, tint=0):
 # The main class containing all actions related to the game, such as moving and rotating blocks.
 class Tetron:
     # Initialize the attributes of the instance of of this class when it is first created.
-    def __init__(self, is_player, instance_number, width_block, height_block, spacing_block, row_count, column_count):
+    def __init__(self, is_player, instance_number, games, width_block, height_block, spacing_block, row_count, column_count):
         self.is_player = is_player
         self.instance_number = instance_number
-        self.games = []
+        self.games = games
 
         # Define the width, height, and spacing of the blocks in pixels.
         self.width_block = width_block
@@ -316,7 +316,12 @@ class Tetron:
         # Create the surface and rect object used to display the hold queue.
         self.surface_hold = pygame.Surface((self.width_hold, self.width_hold))
         self.rect_hold = self.surface_hold.get_rect()
-        self.rect_hold.top = self.rect_text_hold.height
+        self.rect_hold.top = self.rect_text_hold.height + 0
+        # Create the surface and rect object used to display the garbage queue.
+        self.surface_garbage = pygame.Surface((self.width_block, self.size_total[1]))
+        self.rect_garbage = self.surface_garbage.get_rect()
+        self.rect_garbage.bottom = self.size_total[1] + 0
+        self.rect_garbage.right = self.width_hold + 0
 
     # Start the game.
     def start_game(self):
@@ -799,11 +804,14 @@ class Tetron:
                 np.delete(self.array_dropped, obj=cleared_rows, axis=0)
                 ), axis=0)
 
+        # Calculate number of garbage lines.
+        garbage_count = self.calculate_garbage(cleared_increment)
         # Send garbage lines.
+        self.send_garbage(garbage_count)
         # if self.instance_target is not None:
-        #     self.games[self.instance_target].add_garbage(cleared_increment)
+        #     self.games.all[self.instance_target].add_garbage(garbage_count)
         # Delete pending garbage lines.
-        self.subtract_garbage(cleared_increment)
+        self.subtract_garbage(garbage_count)
         
         # # Check for a perfect clear.
         # cleared_perfect = not np.any(self.array_dropped)
@@ -961,11 +969,12 @@ class Tetron:
     
     # Randomly select a target.
     def select_target(self):
-        games = [game for game in self.games if game.flag_playing and game.instance_number != self.instance_number]
+        # Get all games other than this game that are still playing.
+        games = [game for game in self.games.all if game.flag_playing and game.instance_number != self.instance_number]
         if len(games) > 0:
             self.instance_target = games[random.choice(range(len(games)))].instance_number
         else:
-            self.instance_target = 0
+            self.instance_target = None
     
     # Calculate the number of garbage lines to send by inputting the number of lines cleared.
     def calculate_garbage(self, lines):
@@ -1008,8 +1017,7 @@ class Tetron:
         return count
 
     # Add garbage to the queue.
-    def add_garbage(self, lines):
-        count = self.calculate_garbage(lines)
+    def add_garbage(self, count):
         total = sum(self.queue_garbage)
         max = 12
         if total + count >= max:
@@ -1018,8 +1026,7 @@ class Tetron:
             self.queue_garbage.append(count)
     
     # Subtract garbage from the queue.
-    def subtract_garbage(self, lines):
-        count = self.calculate_garbage(lines)
+    def subtract_garbage(self, count):
         total = sum(self.queue_garbage)
         if count >= total:
             self.queue_garbage = []
@@ -1031,7 +1038,13 @@ class Tetron:
                 else:
                     self.queue_garbage.pop(0)
                     count -= self.queue_garbage[0]
-    
+
+    # Send garbage to another game.    
+    def send_garbage(self, count):
+        if count > 0:
+            if self.instance_target is not None:
+                self.games.all[self.instance_target].add_garbage(count)
+
     # Add garbage lines to the matrix and subtract the corresponding value from the queue.
     def put_garbage(self):
         if len(self.queue_garbage) > 0:
@@ -1043,7 +1056,6 @@ class Tetron:
                 array_garbage
                 ), axis=0)
             self.check_lose()
-            
 
     # Return the points to add to the score by inputting how many lines were cleared.
     def calculate_score(self, cleared_increment):
@@ -1169,7 +1181,6 @@ class Tetron:
     
     # Draw each block in the matrix.
     def draw_matrix(self):
-        # Draw each block inside the matrix.
         for row in range(self.row_count):
             for column in range(self.column_count):
                 number = self.array_display[row, column]
@@ -1211,6 +1222,23 @@ class Tetron:
             self.surface_main.blit(self.surface_hold, self.rect_hold)
             self.surface_main.blit(self.text_hold, self.rect_text_hold)
     
+    # Draw the garbage queue.
+    def draw_garbage(self):
+        if len(self.queue_garbage) > 0:
+            for index, count in enumerate(self.queue_garbage):
+                # if index == 0:
+                if True:  # self.count - self.count_start_garbage > ---
+                    color = 0.5 #400
+                elif True:  # going to apply garbage next
+                    color = 700
+                else:
+                    color = 0.5
+                for block in range(count):
+                    position_vertical = (self.spacing_block+self.height_block)*(sum(self.queue_garbage[:index])+block+1) + self.spacing_block + (self.spacing_block*3)*index
+                    position_vertical = self.rect_garbage.height - position_vertical
+                    pygame.draw.rect(surface=self.surface_garbage, color=rgb(color), rect=[0, position_vertical, self.width_block, self.height_block])
+                self.surface_main.blit(self.surface_garbage, self.rect_garbage)
+
     # Calculate effectiveness of every move, decide on a move, or perform a move.
     def ai_evaluate(self):
         evaluation = []
@@ -1309,6 +1337,16 @@ class Games:
         else:
             self.ai.append(game)
         self.all.append(game)
+    
+    # Delete all player games except the first game.
+    def remove_games_player(self):
+        self.player = [self.player[0]]
+        self.all = [game for game in self.all if game.is_player and game.instance_number == 0]
+    
+    # Delete all AI games.
+    def remove_games_ai(self):
+        self.ai = []
+        self.all = [game for game in self.all if game.is_player]
 
 
 # =============================================================================
@@ -1330,19 +1368,21 @@ height_panel = height_block + 0
 spacing_large = width_block + 0
 
 # Create lists to store multiple instances of the game.
-games_player = []
-games_ai = []
+# games_player = []
+# games_ai = []
+
 # Create an object to contain lists of player games and AI games.
 games = Games()
 # Create a player instance of the game.
-games_player.append(Tetron(True, len(games_player), width_block, height_block, spacing_block, row_count, column_count))
+# games_player.append(Tetron(True, len(games_player), width_block, height_block, spacing_block, row_count, column_count))
+games.add_game(Tetron(True, len(games.player), games, width_block, height_block, spacing_block, row_count, column_count))
 # Initialize the score and stage number.
 score = 0
 stage = 0
 
 # Set the window size [width, height] in pixels.
 size_window = [
-    column_count*width_block + (column_count+1)*spacing_block + (games_player[0].width_hold+games_player[0].spacing_small) + (games_player[0].width_next+games_player[0].spacing_small),
+    column_count*width_block + (column_count+1)*spacing_block + (games.player[0].width_hold+games.player[0].spacing_small) + (games.player[0].width_next+games.player[0].spacing_small),
     height_panel + row_count*height_block+(row_count+1)*spacing_block
     ]
 # Set the window title and window icon.
@@ -1380,10 +1420,10 @@ fps = 60
 # Loop until the window is closed.
 done = False
 while not done:
-    flag_playing = any([game.flag_playing for game in games_player+games_ai])
-    flag_paused = all([game.flag_paused for game in games_player+games_ai])
+    flag_playing = any([game.flag_playing for game in games.all])
+    flag_paused = all([game.flag_paused for game in games.all])
     
-    for game in games_player+games_ai:
+    for game in games.all:
         # Record the time of the previous frame.
         game.time_previous = game.time_current + 0
         # Calculate current time and elapsed time.
@@ -1409,7 +1449,7 @@ while not done:
             height_panel = height_block + 0
             spacing_large = width_block + 0
             # Resize and reposition the elements of each game.
-            for game in games_player + games_ai:
+            for game in games.all:
                 game.resize_display(width_block=width_block, height_block=height_block)
 
             # Resize the logo.
@@ -1420,44 +1460,44 @@ while not done:
                 # Move left.
                 if event.key in [key_move_left, key_left_move_left, key_right_move_left]:
                     indices = []
-                    if len(games_player) == 1:
+                    if len(games.player) == 1:
                         if event.key == key_move_left:
                             indices.append(0)
-                    elif len(games_player) >= 2:
+                    elif len(games.player) >= 2:
                         if event.key == key_left_move_left:
                             indices.append(0)
                         if event.key == key_right_move_left:
                             indices.append(1)
                     for index in indices:
-                        games_player[index].move_left()
+                        games.player[index].move_left()
                         # Record the current time used later to calculate how long this key is held.
-                        games_player[index].time_start_move_left = games_player[index].time_current + 0
+                        games.player[index].time_start_move_left = games.player[index].time_current + 0
                         # Initialize the time at which the previous repeat occured.
-                        games_player[index].time_previous_move_left = 0
+                        games.player[index].time_previous_move_left = 0
                 # Move right.
                 elif event.key in [key_move_right, key_left_move_right, key_right_move_right]:
                     indices = []
-                    if len(games_player) == 1:
+                    if len(games.player) == 1:
                         if event.key == key_move_right:
                             indices.append(0)
-                    elif len(games_player) >= 2:
+                    elif len(games.player) >= 2:
                         if event.key == key_left_move_right:
                             indices.append(0)
                         if event.key == key_right_move_right:
                             indices.append(1)
                     for index in indices:
-                        games_player[index].move_right()
+                        games.player[index].move_right()
                         # Record the current time used later to calculate how long this key is held.
-                        games_player[index].time_start_move_right = games_player[index].time_current + 0
+                        games.player[index].time_start_move_right = games.player[index].time_current + 0
                         # Initialize the time at which the previous repeat occured.
-                        games_player[index].time_previous_move_right = 0
+                        games.player[index].time_previous_move_right = 0
                 # Rotate counterclockwise or clockwise.
                 elif event.key in key_rotate_clockwise+[key_left_rotate_clockwise,key_right_rotate_clockwise] or event.key in key_rotate_counterclockwise:
                     indices = []
-                    if len(games_player) == 1:
+                    if len(games.player) == 1:
                         if event.key in key_rotate_clockwise + key_rotate_counterclockwise:
                             indices.append(0)
-                    elif len(games_player) >= 2:
+                    elif len(games.player) >= 2:
                         if event.key == key_left_rotate_clockwise:
                             indices.append(0)
                         if event.key == key_right_rotate_clockwise:
@@ -1468,68 +1508,68 @@ while not done:
                         direction = 1
                     for index in indices:
                         # Only rotate if not freebie.
-                        if not games_player[index].id_current == 899:
-                            games_player[index].rotate(direction)
+                        if not games.player[index].id_current == 899:
+                            games.player[index].rotate(direction)
                 # Hard drop.
                 elif event.key == key_harddrop:
-                    for game in games_player:
+                    for game in games.player:
                         game.harddrop()
                 # Start soft dropping.
                 elif event.key in [key_softdrop, key_left_softdrop, key_right_softdrop]:
                     indices = []
-                    if len(games_player) == 1:
+                    if len(games.player) == 1:
                         if event.key == key_softdrop:
                             indices.append(0)
-                    elif len(games_player) >= 2:
+                    elif len(games.player) >= 2:
                         if event.key == key_left_softdrop:
                             indices.append(0)
                         elif event.key == key_right_softdrop:
                             indices.append(1)
                     for index in indices:
-                        games_player[index].start_softdropping()
+                        games.player[index].start_softdropping()
                 # Hold / Swap.
                 elif event.key in [key_hold, key_left_hold, key_right_hold]:
                     indices = []
-                    if len(games_player) == 1:
+                    if len(games.player) == 1:
                         if event.key == key_hold:
                             indices.append(0)
-                    elif len(games_player) >= 2:
+                    elif len(games.player) >= 2:
                         indices = [0, 1]
                     # Check that no games currently holding, no games have a ghost block, and no games have a heavy block.
-                    if not any([any([game.flag_hold, game.flag_ghost, game.flag_heavy]) for game in games_player]):
+                    if not any([any([game.flag_hold, game.flag_ghost, game.flag_heavy]) for game in games.player]):
                         # Hold.
                         for index in indices:
-                            games_player[index].hold()
+                            games.player[index].hold()
                         # Swap.
-                        if len(games_player) >= 2:
+                        if len(games.player) >= 2:
                             for index in indices:
-                                index_swap = np.roll(range(0,len(games_player)), 1)[index]
-                                games_player[index].swap(games_player[index_swap])
+                                index_swap = np.roll(range(0,len(games.player)), 1)[index]
+                                games.player[index].swap(games.player[index_swap])
             else:
                 if not flag_paused:
                     # Switch game modes.
                     if event.key == key_mode_1 and game_mode != 1:
                         game_mode = 1
-                        games_player = [games_player[0]]
-                        games_ai = []
+                        games.remove_games_player() # games.player = [games.player[0]]
+                        games.remove_games_ai() # games.ai = []
                     elif event.key == key_mode_2 and game_mode != 2:
                         game_mode = 2
-                        games_player = [games_player[0]]
-                        games_player.append(Tetron(True, len(games_player), width_block, height_block, spacing_block, row_count, column_count))
-                        games_ai = []
+                        games.remove_games_player() # games.player = [games.player[0]]
+                        games.add_game(Tetron(True, len(games.player), games, width_block, height_block, spacing_block, row_count, column_count))
+                        games.remove_games_ai() # games.ai = []
                     elif event.key == key_mode_3 and game_mode != 3:
                         game_mode = 3
-                        games_player = [games_player[0]]
-                        games_ai.append(Tetron(False, len(games_player)+len(games_ai), width_block, height_block, spacing_block, row_count, column_count))
+                        games.remove_games_player() # games.player = [games.player[0]]
+                        games.add_game(Tetron(False, len(games.all), games, width_block, height_block, spacing_block, row_count, column_count))
                     elif False: #event.key == key_mode_4 and game_mode != 4:
                         game_mode = 4
                     # Toggle classic Tetris.
                     elif event.key == key_toggle_classic:
                         flag_classic = not flag_classic
-                        for game in games_player + games_ai:
+                        for game in games.all:
                             game.flag_classic = flag_classic
                     # Update the classic flag for all games in case toggling was performed before a game mode switch.
-                    for game in games_player + games_ai:
+                    for game in games.all:
                         game.flag_classic = flag_classic
                         game.game_mode = game_mode
         # Key releases.
@@ -1539,7 +1579,7 @@ while not done:
                     # Resume game.
                     if flag_paused:
                         pygame.mixer.music.unpause()
-                        for game in games_player + games_ai:
+                        for game in games.all:
                             game.pause_game()
                     # Start game.
                     else:
@@ -1550,13 +1590,13 @@ while not done:
                         pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_{}.ogg'.format(stage+1)))
                         pygame.mixer.music.play(loops=-1)
                         # Start each game.
-                        for game in games_player + games_ai:
+                        for game in games.all:
                             game.start_game()
                 # Pause game.
                 else:
                     pygame.mixer.music.pause()
                     # Pause each game.
-                    for game in games_player + games_ai:
+                    for game in games.all:
                         game.pause_game()
             # Stop game.
             elif event.key == key_stop:
@@ -1565,23 +1605,23 @@ while not done:
                     pygame.mixer.music.stop()
                     pygame.mixer.music.unload()
                     # Stop each game.
-                    for game in games_player + games_ai:
+                    for game in games.all:
                         game.stop_game()
 
             if flag_playing:
                 # Stop soft dropping.
                 if event.key in [key_softdrop, key_left_softdrop, key_right_softdrop]:
                     indices = []
-                    if len(games_player) == 1:
+                    if len(games.player) == 1:
                         if event.key == key_softdrop:
                             indices.append(0)
-                    elif len(games_player) >= 2:
+                    elif len(games.player) >= 2:
                         if event.key == key_left_softdrop:
                             indices.append(0)
                         elif event.key == key_right_softdrop:
                             indices.append(1)
                     for index in indices:
-                        games_player[index].stop_softdropping()
+                        games.player[index].stop_softdropping()
         # Transition music ends.
         elif event.type == pygame.USEREVENT+1:
             if flag_playing:
@@ -1603,85 +1643,85 @@ while not done:
         # Soft drop.
         if keys_pressed[key_softdrop] or keys_pressed[key_left_softdrop] or keys_pressed[key_right_softdrop]:
             indices = []
-            if len(games_player) == 1:
+            if len(games.player) == 1:
                 if keys_pressed[key_softdrop]:
                     indices.append(0)
-            elif len(games_player) >= 2:
+            elif len(games.player) >= 2:
                 if keys_pressed[key_left_softdrop]:
                     indices.append(0)
                 if keys_pressed[key_right_softdrop]:
                     indices.append(1)
             # Check if the key has been held longer than the required initial delay.
             for index in indices:
-                if (games_player[index].time_current - games_player[index].time_start_softdrop) > games_player[index].delay_softdrop:
+                if (games.player[index].time_current - games.player[index].time_start_softdrop) > games.player[index].delay_softdrop:
                     # Check if the key has been held longer than the key repeat interval.
-                    if (games_player[index].time_current - games_player[index].time_previous_softdrop) > games_player[index].speed_softdrop:
-                        if games_player[index].flag_softdropping:  # Check whether soft dropping to prevent advancing line immediately after landing
-                            games_player[index].advance()
+                    if (games.player[index].time_current - games.player[index].time_previous_softdrop) > games.player[index].speed_softdrop:
+                        if games.player[index].flag_softdropping:  # Check whether soft dropping to prevent advancing line immediately after landing
+                            games.player[index].advance()
                             # Play sound effect.
-                            games_player[index].sound_game_softdrop.play()
-                        games_player[index].time_previous_softdrop = games_player[index].time_current + 0
+                            games.player[index].sound_game_softdrop.play()
+                        games.player[index].time_previous_softdrop = games.player[index].time_current + 0
         # Move left.
         if keys_pressed[key_move_left] or keys_pressed[key_left_move_left] or keys_pressed[key_right_move_left]:
             indices = []
-            if len(games_player) == 1:
+            if len(games.player) == 1:
                 if keys_pressed[key_move_left]:
                     indices.append(0)
-            elif len(games_player) >= 2:
+            elif len(games.player) >= 2:
                 if keys_pressed[key_left_move_left]:
                     indices.append(0)
                 if keys_pressed[key_right_move_left]:
                     indices.append(1)
             # Check if the key has been held longer than the required initial delay.
             for index in indices:
-                if (games_player[index].time_current - games_player[index].time_start_move_left) > games_player[index].delay_move:
+                if (games.player[index].time_current - games.player[index].time_start_move_left) > games.player[index].delay_move:
                     # Check if the key has been held longer than the key repeat interval.
-                    if (games_player[index].time_current - games_player[index].time_previous_move_left) > games_player[index].speed_move:
-                        games_player[index].move_left()
-                        games_player[index].time_previous_move_left = games_player[index].time_current + 0
+                    if (games.player[index].time_current - games.player[index].time_previous_move_left) > games.player[index].speed_move:
+                        games.player[index].move_left()
+                        games.player[index].time_previous_move_left = games.player[index].time_current + 0
         # Move right.
         if keys_pressed[key_move_right] or keys_pressed[key_left_move_right] or keys_pressed[key_right_move_right]:
             indices = []
-            if len(games_player) == 1:
+            if len(games.player) == 1:
                 if keys_pressed[key_move_right]:
                     indices.append(0)
-            elif len(games_player) >= 2:
+            elif len(games.player) >= 2:
                 if keys_pressed[key_left_move_right]:
                     indices.append(0)
                 if keys_pressed[key_right_move_right]:
                     indices.append(1)
             # Check if the key has been held longer than the required initial delay.
             for index in indices:
-                if (games_player[index].time_current - games_player[index].time_start_move_right) > games_player[index].delay_move:
+                if (games.player[index].time_current - games.player[index].time_start_move_right) > games.player[index].delay_move:
                     # Check if the key has been held longer than the key repeat interval.
-                    if (games_player[index].time_current - games_player[index].time_previous_move_right) > games_player[index].speed_move:
-                        games_player[index].move_right()
-                        games_player[index].time_previous_move_right = games_player[index].time_current + 0
+                    if (games.player[index].time_current - games.player[index].time_previous_move_right) > games.player[index].speed_move:
+                        games.player[index].move_right()
+                        games.player[index].time_previous_move_right = games.player[index].time_current + 0
     
     # =============================================================================
     # Score, Stage Transitions, Win/Lose.
     # =============================================================================
     # Calculate score.
     score_previous = score + 0
-    score += sum([game.score_increment.pop(0) for game in games_player if len(game.score_increment) > 0])
-    for game in games_player:
+    score += sum([game.score_increment.pop(0) for game in games.player if len(game.score_increment) > 0])
+    for game in games.player:
         game.score = score
         # Update the block fall speed, the probability of getting an advanced tetrimino, and the probability of getting a special effect.
         game.update_difficulty()
     
     # Advance to the next stage of the game if a score threshold is passed.
-    if score_previous < games_player[0].score_thresholds[stage] <= score:
+    if score_previous < games.player[0].score_thresholds[stage] <= score:
         # Win the game if the maximum score threshold is reached.
-        if score >= games_player[0].score_thresholds[-1] or (game_mode in [3, 4] and all([game.flag_lose for game in games_ai])):
+        if score >= games.player[0].score_thresholds[-1] or (game_mode in [3, 4] and all([game.flag_lose for game in games.ai])):
             # Play music.
             pygame.mixer.music.stop()
             pygame.mixer.music.unload()
             pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_win.ogg'))
             pygame.mixer.music.play(loops=0)
             # Play sound effect.
-            games_player[0].sound_game_win.play()
+            games.player[0].sound_game_win.play()
             # Stop all games.
-            for game in games_player + games_ai:
+            for game in games.all:
                 game.stop_game()
         # Play transition music once.
         elif stage == 0 or stage == 1:
@@ -1695,19 +1735,19 @@ while not done:
             # Play the music once.
             pygame.mixer.music.play(loops=0)
         # Increment the stage value.
-        if stage < len(games_player[0].score_thresholds)-1:
+        if stage < len(games.player[0].score_thresholds)-1:
             stage += 1
             print('Stage: ', stage)
     
     # Stop the game if the player has been lost.
-    if any([game.flag_lose for game in games_player]):
+    if any([game.flag_lose for game in games.player]):
          # Play music.
         pygame.mixer.music.stop()
         pygame.mixer.music.unload()
         pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_lose.ogg'))
         pygame.mixer.music.play(loops=0)
         # Stop player games.
-        for game in games_player:
+        for game in games.player:
             game.flag_lose = False
             game.stop_game()
 
@@ -1716,13 +1756,13 @@ while not done:
     # Line Advancements.
     # =============================================================================
     # Hard drop all games if one game has hard dropped.
-    if any([game.flag_harddrop for game in games_player]):
-        for game in games_player:
+    if any([game.flag_harddrop for game in games.player]):
+        for game in games.player:
             if not game.flag_harddrop:
                 game.harddrop()
             game.flag_harddrop = False
     # Advance lines.
-    for game in games_player + games_ai:
+    for game in games.all:
         if game.flag_playing:
             if game.flag_advancing:
                 if (
@@ -1740,7 +1780,7 @@ while not done:
     # =============================================================================
     # AI.
     # =============================================================================
-    for game in games_ai:
+    for game in games.ai:
         if game.flag_playing:
             game.ai_evaluate()
 
@@ -1751,9 +1791,10 @@ while not done:
     # Erase all surfaces.
     screen.fill(rgb(0))
     surface_mode.fill(rgb(0))
-    for game in games_player + games_ai:
+    for game in games.all:
         game.surface_main.fill(rgb(0))
         game.surface_hold.fill(rgb(0))
+        game.surface_garbage.fill(rgb(0))
     # Draw the game mode if not playing.
     if not flag_playing:
         # Get the width of the logo or text.
@@ -1801,29 +1842,29 @@ while not done:
         rect_mode.bottom = height_panel + 0
         rect_mode.centerx = size_window[0]//2
         screen.blit(surface_mode, rect_mode)
-    for game in games_player + games_ai:
-        # Draw each block inside the matrix.
-        game.draw_matrix()
-        # Draw hold queue.
+    # Draw elements of each game.
+    for game in games.all:
+        game.draw_garbage()
         game.draw_hold()
+        game.draw_matrix()
     # Display score text.
     text_score = font_normal.render('{}'.format(score), True, rgb(1))
     rect_text_score = text_score.get_rect()
     rect_text_score.left = (
-        size_window[0] - sum([game.size_total[0] for game in games_player]) - ((len(games_player)-1)*spacing_large)
-        )//2 + games_player[0].width_hold + games_player[0].spacing_small
+        size_window[0] - sum([game.size_total[0] for game in games.player]) - ((len(games.player)-1)*spacing_large)
+        )//2 + games.player[0].width_hold + games.player[0].spacing_small
     rect_text_score.bottom = height_panel + 0
     screen.blit(text_score, rect_text_score)
     # Display elapsed time text.
-    text_time_elapsed = font_normal.render('{:02d}:{:02d}'.format(games_player[0].time_elapsed//60000, int((games_player[0].time_elapsed/1000)%60)), True, rgb(1))
+    text_time_elapsed = font_normal.render('{:02d}:{:02d}'.format(games.player[0].time_elapsed//60000, int((games.player[0].time_elapsed/1000)%60)), True, rgb(1))
     rect_text_time_elapsed = text_time_elapsed.get_rect()
     rect_text_time_elapsed.right = size_window[0] - (
-        size_window[0] - sum([game.size_total[0] for game in games_player]) - ((len(games_player)-1)*spacing_large)
-        )//2 - games_player[-1].width_next - games_player[-1].spacing_small
+        size_window[0] - sum([game.size_total[0] for game in games.player]) - ((len(games.player)-1)*spacing_large)
+        )//2 - games.player[-1].width_next - games.player[-1].spacing_small
     rect_text_time_elapsed.bottom = height_panel + 0
     screen.blit(text_time_elapsed, rect_text_time_elapsed)
 
-    for index, game in enumerate(games_player + games_ai):
+    for index, game in enumerate(games.all):
         # Stop the disoriented effect if it has lasted longer than the maximum duration.
         if game.flag_disoriented:
             if game.duration_disoriented > game.duration_max_disoriented:
@@ -1845,7 +1886,7 @@ while not done:
         game.surface_main.blit(game.surface_matrix, game.rect_matrix)
         # Display the game in the window.
         screen.blit(game.surface_main, 
-        ((size_window[0] - sum([i.size_total[0] for i in (games_player+games_ai)]) - (len(games_player+games_ai)-1)*spacing_large)//2 + sum([i.size_total[0] for i in (games_player+games_ai)[:index]]) + index*spacing_large, height_panel)
+        ((size_window[0] - sum([i.size_total[0] for i in (games.all)]) - (len(games.all)-1)*spacing_large)//2 + sum([i.size_total[0] for i in (games.all)[:index]]) + index*spacing_large, height_panel)
         )
     
     # Update the screen.
