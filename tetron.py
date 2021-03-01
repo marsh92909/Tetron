@@ -25,6 +25,80 @@ time_garbage_warning = 8000
 # Define the fraction of the above time used to show an initial warning.
 fraction_garbage_warning_initial = 2/3
 
+# Define the scores needed to move to the next stage. The last value is the score needed to win the game.
+score_thresholds = [400, 800, 1000]
+# Define the range of block fall speeds (ms) from the start to end of the game.
+speeds_fall = [1000, 200]
+# Define the block fall speed multiplier for some special effects (values below 1 result in faster speeds).
+speed_fall_multiplier = 1/2
+# Define the block move speed (ms) and initial delay for key repeats (ms).
+speed_move = 25
+delay_move = 150
+# Define the soft drop speed (ms) and initial delay for key repeats (ms).
+speed_softdrop = 50
+delay_softdrop = 50
+# Define the maximum duration (ms) for a tetrimino to remain landed before locking.
+duration_max_landed = 500
+
+# Define the parameters of a normal distribution for the delay (ms) between deciding and performing a move for AI.
+ai_delay_mean = 1500
+ai_delay_std = 100
+
+# Define the IDs for classic tetriminos, advanced tetriminos, special effects.
+id_classic = [100, 200, 300, 400, 500, 600, 700]
+id_advanced = [101, 102, 201, 202, 301, 302, 401, 402, 403, 501, 601, 602, 701, 801, 811, 812, 813, 814, 899]
+id_special = ['ghost', 'heavy', 'disoriented', 'blind']
+
+# Define the range of probabilities (between 0 and 1) of getting an advanced tetrimino.
+weights_advanced = [0, 1/3]
+# Define the score needed to begin increasing the probability of getting an advanced tetrimino.
+score_update_chance_advanced = 100
+# Define the range of probabilities (between 0 and 1) of getting a special effect.
+weights_special = [0, 1/20]
+# Define the score needed to begin increasing the probability of getting a special effect.
+score_update_chance_special = score_thresholds[0]
+# Define durations for special effects (ms).
+duration_max_disoriented = 20000
+duration_max_blind = 20000
+
+# Load sound effects.
+# sound_game_advance = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_advance.wav'))
+sound_game_move = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_move.wav'))
+sound_game_rotate = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_rotate.wav'))
+sound_game_harddrop = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_harddrop.wav'))
+sound_game_softdrop = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_softdrop.wav'))
+sound_game_hold = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_hold.wav'))
+sound_game_landing = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_landing.wav'))
+sound_game_single = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_single.wav'))
+sound_game_double = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_double.wav'))
+sound_game_triple = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_triple.wav'))
+sound_game_tetris = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_tetris.wav'))
+sound_game_special = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_special.wav'))
+sound_game_perfect = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_perfect.wav'))
+sound_game_win = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_win.wav'))
+sound_special_ghost = pygame.mixer.Sound(os.path.join(folder_sounds, 'special_ghost.wav'))
+sound_special_heavy = pygame.mixer.Sound(os.path.join(folder_sounds, 'special_heavy.wav'))
+sound_special_disoriented = pygame.mixer.Sound(os.path.join(folder_sounds, 'special_disoriented.wav'))
+sound_special_blind = pygame.mixer.Sound(os.path.join(folder_sounds, 'special_blind.wav'))
+# Set volume for some sound effects.
+sound_game_move.set_volume(0.1)
+sound_game_rotate.set_volume(0.1)
+sound_game_harddrop.set_volume(0.1)
+sound_game_softdrop.set_volume(0.1)
+sound_game_hold.set_volume(0.1)
+sound_game_landing.set_volume(0.1)
+sound_game_single.set_volume(0.1)
+sound_game_double.set_volume(0.1)
+sound_game_triple.set_volume(0.1)
+sound_game_tetris.set_volume(0.1)
+sound_game_special.set_volume(0.1)
+sound_game_perfect.set_volume(0.1)
+sound_game_win.set_volume(0.25)
+sound_special_ghost.set_volume(0.25)
+sound_special_heavy.set_volume(0.25)
+sound_special_disoriented.set_volume(0.25)
+sound_special_blind.set_volume(0.5)
+
 # Create font objects used to create text.
 font_normal = pygame.font.SysFont('Segoe UI Semibold', 24)
 font_small = pygame.font.SysFont('Segoe UI Semibold', 18)
@@ -135,86 +209,13 @@ class Tetron:
         # Initialize the time elapsed since the start time.
         self.time_elapsed = 0
 
-        # Define the scores needed to move to the next stage. The last value is the score needed to win the game.
-        self.score_thresholds = [400, 800, 1000]
-        # Define the range of block fall speeds (ms) from the start to end of the game.
-        self.speeds_fall = [1000, 200]
-        # Define the block fall speed multiplier for some special effects (values below 1 result in faster speeds).
-        self.speed_fall_multiplier = 1/2
-        # Define the block move speed (ms) and initial delay for key repeats (ms).
-        self.speed_move = 25
-        self.delay_move = 150
-        # Define the soft drop speed (ms) and initial delay for key repeats (ms).
-        self.speed_softdrop = 50
-        self.delay_softdrop = 50
-        # Define the maximum duration (ms) for a tetrimino to remain landed before locking.
-        self.duration_max_landed = 500
-
-        # Define the parameters of a normal distribution for the delay (ms) between deciding and performing a move for AI.
-        self.ai_delay_mean = 1500
-        self.ai_delay_std = 100
-
-        # Define the IDs for classic tetriminos, advanced tetriminos, special effects.
-        self.id_classic = [100, 200, 300, 400, 500, 600, 700]
-        self.id_advanced = [101, 102, 201, 202, 301, 302, 401, 402, 403, 501, 601, 602, 701, 801, 811, 812, 813, 814, 899]
-        self.id_special = ['ghost', 'heavy', 'disoriented', 'blind']
-        # Initialize the classic flag. Define this attribute here to prevent resetting its value on game restarts.
-        self.flag_classic = False
         # Initialize the game mode. Define this attribute here to prevent resetting its value on game restarts.
         self.game_mode = 1
-        
-        # Define the range of probabilities (between 0 and 1) of getting an advanced tetrimino.
-        self.weights_advanced = [0, 1/3]
-        # Define the score needed to begin increasing the probability of getting an advanced tetrimino.
-        self.score_update_chance_advanced = 100
-        # Define the range of probabilities (between 0 and 1) of getting a special effect.
-        self.weights_special = [0, 1/20]
-        # Define the score needed to begin increasing the probability of getting a special effect.
-        self.score_update_chance_special = self.score_thresholds[0]
-        # Define durations for special effects (ms).
-        self.duration_max_disoriented = 20000
-        self.duration_max_blind = 20000
+        # Initialize the classic flag. Define this attribute here to prevent resetting its value on game restarts.
+        self.flag_classic = False
 
         # Create and set the sizes of the surfaces used to display each element of the game.
         self.resize_display()
-        
-        # Load sound effects.
-        # self.sound_game_advance = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_advance.wav'))
-        self.sound_game_move = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_move.wav'))
-        self.sound_game_rotate = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_rotate.wav'))
-        self.sound_game_harddrop = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_harddrop.wav'))
-        self.sound_game_softdrop = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_softdrop.wav'))
-        self.sound_game_hold = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_hold.wav'))
-        self.sound_game_landing = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_landing.wav'))
-        self.sound_game_single = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_single.wav'))
-        self.sound_game_double = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_double.wav'))
-        self.sound_game_triple = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_triple.wav'))
-        self.sound_game_tetris = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_tetris.wav'))
-        self.sound_game_special = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_special.wav'))
-        self.sound_game_perfect = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_perfect.wav'))
-        self.sound_game_win = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_win.wav'))
-        self.sound_special_ghost = pygame.mixer.Sound(os.path.join(folder_sounds, 'special_ghost.wav'))
-        self.sound_special_heavy = pygame.mixer.Sound(os.path.join(folder_sounds, 'special_heavy.wav'))
-        self.sound_special_disoriented = pygame.mixer.Sound(os.path.join(folder_sounds, 'special_disoriented.wav'))
-        self.sound_special_blind = pygame.mixer.Sound(os.path.join(folder_sounds, 'special_blind.wav'))
-        # Set volume for some sound effects.
-        self.sound_game_move.set_volume(0.1)
-        self.sound_game_rotate.set_volume(0.1)
-        self.sound_game_harddrop.set_volume(0.1)
-        self.sound_game_softdrop.set_volume(0.1)
-        self.sound_game_hold.set_volume(0.1)
-        self.sound_game_landing.set_volume(0.1)
-        self.sound_game_single.set_volume(0.1)
-        self.sound_game_double.set_volume(0.1)
-        self.sound_game_triple.set_volume(0.1)
-        self.sound_game_tetris.set_volume(0.1)
-        self.sound_game_special.set_volume(0.1)
-        self.sound_game_perfect.set_volume(0.1)
-        self.sound_game_win.set_volume(0.25)
-        self.sound_special_ghost.set_volume(0.25)
-        self.sound_special_heavy.set_volume(0.25)
-        self.sound_special_disoriented.set_volume(0.25)
-        self.sound_special_blind.set_volume(0.5)
 
         # Initialize all other attributes.
         self.initialize()
@@ -242,6 +243,7 @@ class Tetron:
         self.flag_put_garbage = False
 
         self.ai_flag_positioning = True
+        self.ai_flag_positioning_left = True
         self.ai_flag_calculating = True
 
         # Initialize a list containing effectiveness values of moves.
@@ -260,15 +262,15 @@ class Tetron:
         self.array_highlight = np.zeros([self.row_count, self.column_count])
 
         # Initialize lists with Booleans indicating which tetriminos or special effects have been used to prevent duplicates.
-        self.used_classic = [False] * len(self.id_classic)
-        self.used_advanced = [False] * len(self.id_advanced)
-        self.used_special = [False] * len(self.id_special)
+        self.used_classic = [False] * len(id_classic)
+        self.used_advanced = [False] * len(id_advanced)
+        self.used_special = [False] * len(id_special)
         # Initialize the current tetrimino ID.
         self.id_current = 0
         # Initialize the hold queue.
         self.queue_hold = []
         # Initialize the garbage queue.
-        self.queue_garbage = [2, 3] #[]
+        self.queue_garbage = []
         # Initialize time when current garbage was received.
         self.time_receive_garbage = self.time_current + 0
 
@@ -339,7 +341,7 @@ class Tetron:
         # Set flags.
         self.flag_playing = True
         # Select a target.
-        self.select_target(True)
+        self.select_target()
         # Create a new tetrimino.
         self.create_new()
     
@@ -369,78 +371,78 @@ class Tetron:
         if hold_data is None:
             # Randomly select a category to choose from, then randomly select a tetrimino within the category with each tetrimino having an equal probability.
             if random.choices([True, False], [self.weight_advanced, 1-self.weight_advanced], k=1)[0]:
-                id = random.choice([self.id_advanced[i] for i in range(len(self.id_advanced)) if not self.used_advanced[i]])
+                id = random.choice([id_advanced[i] for i in range(len(id_advanced)) if not self.used_advanced[i]])
                 self.id_current = id
-                self.used_advanced[self.id_advanced.index(id)] = True
+                self.used_advanced[id_advanced.index(id)] = True
                 # Reset all values in the list to False.
                 if all(self.used_advanced):
                     self.used_advanced = [False] * len(self.used_advanced)
             else:
-                id = random.choice([self.id_classic[i] for i in range(len(self.id_classic)) if not self.used_classic[i]])
+                id = random.choice([id_classic[i] for i in range(len(id_classic)) if not self.used_classic[i]])
                 self.id_current = id
-                self.used_classic[self.id_classic.index(id)] = True
+                self.used_classic[id_classic.index(id)] = True
                 # Reset all values in the list to False.
                 if all(self.used_classic):
                     self.used_classic = [False] * len(self.used_classic)
             
             # Randomly determine if a special property is applied.
             if random.choices([True, False], [self.weight_special, 1-self.weight_special], k=1)[0]:
-                effect_special = random.choice([self.id_special[i] for i in range(len(self.id_special)) if not self.used_special[i]])
-                self.used_special[self.id_special.index(effect_special)] = True
+                effect_special = random.choice([id_special[i] for i in range(len(id_special)) if not self.used_special[i]])
+                self.used_special[id_special.index(effect_special)] = True
                 # Reset all values in the list to False.
                 if all(self.used_special):
                     self.used_special = [False] * len(self.used_special)
 
-                if effect_special == self.id_special[0]:
+                if effect_special == id_special[0]:
                     self.flag_ghost = True
                     self.flag_fast_fall = True
                     if self.is_player:
-                        self.sound_special_ghost.play()
-                elif effect_special == self.id_special[1]:
+                        sound_special_ghost.play()
+                elif effect_special == id_special[1]:
                     self.flag_heavy = True
                     self.flag_fast_fall = True
                     if self.is_player:
-                        self.sound_special_heavy.play()
-                elif effect_special == self.id_special[2]:
+                        sound_special_heavy.play()
+                elif effect_special == id_special[2]:
                     # Apply the effect only if it is not currently active.
                     if not self.flag_disoriented:
                         self.flag_disoriented = True
                         self.duration_disoriented = 0
                         if self.is_player:
-                            self.sound_special_disoriented.play()
-                elif effect_special == self.id_special[3]:
+                            sound_special_disoriented.play()
+                elif effect_special == id_special[3]:
                     # Apply the effect only if it is not currently active.
                     if not self.flag_blind:
                         self.flag_blind = True
                         self.duration_blind = 0
                         if self.is_player:
-                            self.sound_special_blind.play()
+                            sound_special_blind.play()
             
             # Classic tetriminos.
-            if self.id_current == self.id_classic[0]:  # I
+            if self.id_current == id_classic[0]:  # I
                 tetrimino = self.id_current * np.ones([4, 4])
                 tetrimino[[0,2,3],:] = -1
-            elif self.id_current == self.id_classic[1]:  # J
+            elif self.id_current == id_classic[1]:  # J
                 tetrimino = self.id_current * np.ones([3, 3])
                 tetrimino[0, 1:] = -1
                 tetrimino[2, :] = -1
-            elif self.id_current == self.id_classic[2]:  # L
+            elif self.id_current == id_classic[2]:  # L
                 tetrimino = self.id_current * np.ones([3, 3])
                 tetrimino[0, 0:2] = -1
                 tetrimino[2, :] = -1
-            elif self.id_current == self.id_classic[3]:  # O
+            elif self.id_current == id_classic[3]:  # O
                 tetrimino = self.id_current * np.ones([2, 2])
-            elif self.id_current == self.id_classic[4]:  # S
+            elif self.id_current == id_classic[4]:  # S
                 tetrimino = self.id_current * np.ones([3, 3])
                 tetrimino[0, 0] = -1
                 tetrimino[1, 2] = -1
                 tetrimino[2, :] = -1
-            elif self.id_current == self.id_classic[5]:  # T
+            elif self.id_current == id_classic[5]:  # T
                 tetrimino = self.id_current * np.ones([3, 3])
                 tetrimino[0, [0,2]] = -2
                 tetrimino[2, [0,2]] = -3
                 tetrimino[2, 1] = -1
-            elif self.id_current == self.id_classic[6]:  # Z
+            elif self.id_current == id_classic[6]:  # Z
                 tetrimino = self.id_current * np.ones([3, 3])
                 tetrimino[0, 2] = -1
                 tetrimino[1, 0] = -1
@@ -551,7 +553,7 @@ class Tetron:
         # Record the time.
         self.ai_time_evaluate = self.time_current + 0
         # Select a delay before performing the move.
-        self.ai_delay = random.gauss(self.ai_delay_mean, self.ai_delay_std)
+        self.ai_delay = random.gauss(ai_delay_mean, ai_delay_std)
 
     # Advance one line.
     def advance(self):
@@ -586,7 +588,7 @@ class Tetron:
                 self.update()
                 # Play sound effect.
                 if self.is_player:
-                    self.sound_game_move.play()
+                    sound_game_move.play()
                 # Update Boolean.
                 success = True
         return success
@@ -606,7 +608,7 @@ class Tetron:
                 self.update()
                 # Play sound effect.
                 if self.is_player:
-                    self.sound_game_move.play()
+                    sound_game_move.play()
                 # Update Boolean.
                 success = True
         return success
@@ -638,7 +640,7 @@ class Tetron:
             [( 0, 0),],
             ]
         # Assign the corresponding translation values.
-        if self.id_current in np.array(self.id_classic)[[1, 2, 4, 5, 6]]:
+        if self.id_current in np.array(id_classic)[[1, 2, 4, 5, 6]]:
             if self.rotation_current == 0 and direction == -1:
                 translations = translations_all[0]
             elif self.rotation_current == 0 and direction == 1:
@@ -655,7 +657,7 @@ class Tetron:
                 translations = translations_all[2]
             elif self.rotation_current == 270 and direction == 1:
                 translations = translations_all[1]
-        elif self.id_current == self.id_classic[0]:
+        elif self.id_current == id_classic[0]:
             if self.rotation_current == 0 and direction == -1:
                 translations = translations_all[8]
             elif self.rotation_current == 0 and direction == 1:
@@ -748,11 +750,11 @@ class Tetron:
                 self.update()
                 # Play sound effect.
                 if self.is_player:
-                    self.sound_game_rotate.play()
+                    sound_game_rotate.play()
                 # Reset the advance timer if the tetrimino has landed.
                 self.check_landed()
                 # Set flag if T-spin or mini T-spin.
-                if self.id_current == self.id_classic[5]:
+                if self.id_current == id_classic[5]:
                     front_count = np.sum(self.array_dropped[self.array_current == -2] > 0)
                     back_count = np.sum(self.array_dropped[self.array_current == -3] > 0)
                     if front_count == 2 and back_count >= 1:
@@ -784,7 +786,7 @@ class Tetron:
         # Play sound effect.
         if self.instance_number == 0:
             if self.is_player:
-                self.sound_game_harddrop.play()
+                sound_game_harddrop.play()
         self.update()
 
         # Increment the placed blocks counter.
@@ -839,6 +841,7 @@ class Tetron:
         self.ai_decision = None
         self.ai_time_evaluate = 0
         self.ai_flag_positioning = True
+        self.ai_flag_positioning_left = True
         self.ai_flag_calculating = True
         
         # Stop the game or create a new tetrimino.
@@ -861,7 +864,7 @@ class Tetron:
         self.time_previous_softdrop = 0
         # Play sound effect.
         if self.is_player:
-            self.sound_game_softdrop.play()
+            sound_game_softdrop.play()
 
     # Stop soft dropping.
     def stop_softdropping(self):
@@ -887,7 +890,7 @@ class Tetron:
         # Play sound effect.
         if self.instance_number == 0:
             if self.is_player:
-                self.sound_game_hold.play()
+                sound_game_hold.play()
     
     # Swap.
     def swap(self, game):
@@ -910,7 +913,7 @@ class Tetron:
             # Play sound effect.
             if not self.flag_ghost:
                 if self.is_player:
-                    self.sound_game_landing.play()
+                    sound_game_landing.play()
         else:
             self.flag_landed = False
     
@@ -921,15 +924,10 @@ class Tetron:
             if not self.is_player:
                 self.stop_game()
     
-    # Randomly select a target.
-    def select_target(self, select_from_all=False):
-        # Get all games other than this game.
-        if select_from_all:
-            games = [game for game in self.games.all if game.instance_number != self.instance_number]
-        # Get all games other than this game that are still playing.
-        else:
-            games = [game for game in self.games.all if game.flag_playing and game.instance_number != self.instance_number]
-        if len(games) > 0:
+    # Randomly select a target if playing with AI.
+    def select_target(self):
+        games = [game for game in self.games.all if not game.flag_lose and game.instance_number != self.instance_number]
+        if len(games) > 0 and len(self.games.ai) > 0:
             self.instance_target = games[random.choice(range(len(games)))].instance_number
         else:
             self.instance_target = None
@@ -1057,19 +1055,19 @@ class Tetron:
         # Play a sound corresponding to the number of lines cleared.
         if self.is_player:
             if cleared_increment == 1:
-                self.sound_game_single.play()
+                sound_game_single.play()
             elif cleared_increment == 2:
-                self.sound_game_double.play()
+                sound_game_double.play()
             elif cleared_increment == 3:
-                self.sound_game_triple.play()
+                sound_game_triple.play()
             elif cleared_increment >= 4:
-                self.sound_game_tetris.play()
+                sound_game_tetris.play()
             # Play a sound for perfect clears.
             if cleared_perfect:
-                self.sound_game_perfect.play()
+                sound_game_perfect.play()
             # Play a sound for special line clears.
             if self.flag_tspin or self.flag_tspin_mini or cleared_increment >= 4:
-                self.sound_game_special.play()
+                sound_game_special.play()
         
         return int(score_increment * np.prod(multipliers))
 
@@ -1119,17 +1117,17 @@ class Tetron:
     # Update the game difficulty.
     def update_difficulty(self):
         # Update the block fall speed.
-        self.speed_fall = np.interp(self.score, [0, self.score_thresholds[-2]], self.speeds_fall)
+        self.speed_fall = np.interp(self.score, [0, score_thresholds[-2]], speeds_fall)
         # Update the probability of getting an advanced tetrimino.
         if self.flag_classic:
             self.weight_advanced = 0
         else:
-            self.weight_advanced = np.interp(self.score, [self.score_update_chance_advanced, self.score_thresholds[-2]], self.weights_advanced)
+            self.weight_advanced = np.interp(self.score, [score_update_chance_advanced, score_thresholds[-2]], weights_advanced)
         # Update the probability of getting a special effect.
         if self.flag_classic:
             self.weight_special = 0
         else:
-            self.weight_special = np.interp(self.score, [self.score_update_chance_special, self.score_thresholds[-2]], self.weights_special)
+            self.weight_special = np.interp(self.score, [score_update_chance_special, score_thresholds[-2]], weights_special)
 
     # Reset the value of the previous advance time to the current time.
     def reset_time_advance(self):
@@ -1201,7 +1199,7 @@ class Tetron:
                 else:
                     color = 0.5
                 for block in range(count):
-                    position_vertical = (self.spacing_block+self.height_block)*(sum(self.queue_garbage[:index])+block+1) + self.spacing_block + (self.spacing_block*3)*index
+                    position_vertical = (self.spacing_block+self.height_block)*(sum(self.queue_garbage[:index])+block+1) + self.spacing_block + (self.spacing_block*4)*index
                     position_vertical = self.rect_garbage.height - position_vertical
                     pygame.draw.rect(surface=self.surface_garbage, color=rgb(color), rect=[0, position_vertical, self.width_block, self.height_block])
                 self.surface_main.blit(self.surface_garbage, self.rect_garbage)
@@ -1214,10 +1212,16 @@ class Tetron:
 
         # Calculate.
         if self.ai_flag_calculating:
-            # Move all the way left until the wall is reached.
+            # Move left or right to the closest wall.
             if self.ai_flag_positioning:
-                if not self.move_left():
-                    self.ai_flag_positioning = False
+                if self.ai_flag_positioning_left:
+                    if not self.move_left():
+                        self.ai_flag_positioning = False
+                        self.ai_flag_positioning_left = not self.ai_flag_positioning_left
+                else:
+                    if not self.move_right():
+                        self.ai_flag_positioning = False
+                        self.ai_flag_positioning_left = not self.ai_flag_positioning_left
             # Calculate effectiveness value.
             else:
                 # Create a copy of the array.
@@ -1260,8 +1264,12 @@ class Tetron:
                     ]
                 self.ai_evaluations.append(evaluation)
 
-                # Move the tetrimino right for the next iteration.
-                if not self.move_right():
+                # Move the tetrimino for the next iteration.
+                if self.ai_flag_positioning_left:
+                    moved = self.move_left()
+                else:
+                    moved = self.move_right()
+                if not moved:
                     self.ai_flag_positioning = True
                     self.rotate(1)
                     # Set the flag to stop calculating if all 4 rotations have been evaluated.
@@ -1620,13 +1628,13 @@ while not done:
                     indices.append(1)
             # Check if the key has been held longer than the required initial delay.
             for index in indices:
-                if (games.player[index].time_current - games.player[index].time_start_softdrop) > games.player[index].delay_softdrop:
+                if (games.player[index].time_current - games.player[index].time_start_softdrop) > delay_softdrop:
                     # Check if the key has been held longer than the key repeat interval.
-                    if (games.player[index].time_current - games.player[index].time_previous_softdrop) > games.player[index].speed_softdrop:
+                    if (games.player[index].time_current - games.player[index].time_previous_softdrop) > speed_softdrop:
                         if games.player[index].flag_softdropping:  # Check whether soft dropping to prevent advancing line immediately after landing
                             games.player[index].advance()
                             # Play sound effect.
-                            games.player[index].sound_game_softdrop.play()
+                            sound_game_softdrop.play()
                         games.player[index].time_previous_softdrop = games.player[index].time_current + 0
         # Move left.
         if keys_pressed[key_move_left] or keys_pressed[key_left_move_left] or keys_pressed[key_right_move_left]:
@@ -1641,9 +1649,9 @@ while not done:
                     indices.append(1)
             # Check if the key has been held longer than the required initial delay.
             for index in indices:
-                if (games.player[index].time_current - games.player[index].time_start_move_left) > games.player[index].delay_move:
+                if (games.player[index].time_current - games.player[index].time_start_move_left) > delay_move:
                     # Check if the key has been held longer than the key repeat interval.
-                    if (games.player[index].time_current - games.player[index].time_previous_move_left) > games.player[index].speed_move:
+                    if (games.player[index].time_current - games.player[index].time_previous_move_left) > speed_move:
                         games.player[index].move_left()
                         games.player[index].time_previous_move_left = games.player[index].time_current + 0
         # Move right.
@@ -1659,9 +1667,9 @@ while not done:
                     indices.append(1)
             # Check if the key has been held longer than the required initial delay.
             for index in indices:
-                if (games.player[index].time_current - games.player[index].time_start_move_right) > games.player[index].delay_move:
+                if (games.player[index].time_current - games.player[index].time_start_move_right) > delay_move:
                     # Check if the key has been held longer than the key repeat interval.
-                    if (games.player[index].time_current - games.player[index].time_previous_move_right) > games.player[index].speed_move:
+                    if (games.player[index].time_current - games.player[index].time_previous_move_right) > speed_move:
                         games.player[index].move_right()
                         games.player[index].time_previous_move_right = games.player[index].time_current + 0
     
@@ -1677,16 +1685,16 @@ while not done:
         game.update_difficulty()
     
     # Advance to the next stage of the game if a score threshold is passed.
-    if score_previous < games.player[0].score_thresholds[stage] <= score:
+    if score_previous < score_thresholds[stage] <= score:
         # Win the game if the maximum score threshold is reached.
-        if score >= games.player[0].score_thresholds[-1] or (game_mode in [3, 4] and all([game.flag_lose for game in games.ai])):
+        if score >= score_thresholds[-1] or (game_mode in [3, 4] and all([game.flag_lose for game in games.ai])):
             # Play music.
             pygame.mixer.music.stop()
             pygame.mixer.music.unload()
             pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_win.ogg'))
             pygame.mixer.music.play(loops=0)
             # Play sound effect.
-            games.player[0].sound_game_win.play()
+            sound_game_win.play()
             # Stop all games.
             for game in games.all:
                 game.stop_game()
@@ -1702,11 +1710,11 @@ while not done:
             # Play the music once.
             pygame.mixer.music.play(loops=0)
         # Increment the stage value.
-        if stage < len(games.player[0].score_thresholds)-1:
+        if stage < len(score_thresholds)-1:
             stage += 1
             print('Stage: ', stage)
     
-    # Stop the game if the player has been lost.
+    # Stop the game if the player has lost.
     if any([game.flag_lose for game in games.player]):
          # Play music.
         pygame.mixer.music.stop()
@@ -1735,9 +1743,9 @@ while not done:
             if game.flag_advancing:
                 if (
                     # Check if the required time for automatic advancing has elapsed.
-                    (not game.flag_landed and (game.time_current - game.time_start_advance) >= (game.speed_fall * (game.speed_fall_multiplier ** game.flag_fast_fall))) or
+                    (not game.flag_landed and (game.time_current - game.time_start_advance) >= (game.speed_fall * (speed_fall_multiplier ** game.flag_fast_fall))) or
                     # If tetrimino is landed, check if the maximum time has elapsed.
-                    (game.flag_landed and (game.time_current - game.time_landed >= game.duration_max_landed))
+                    (game.flag_landed and (game.time_current - game.time_landed >= duration_max_landed))
                     ):
                         game.advance()
                         game.reset_time_advance()
@@ -1841,7 +1849,7 @@ while not done:
     for index, game in enumerate(games.all):
         # Stop the disoriented effect if it has lasted longer than the maximum duration.
         if game.flag_disoriented:
-            if game.duration_disoriented > game.duration_max_disoriented:
+            if game.duration_disoriented > duration_max_disoriented:
                 game.flag_disoriented = False
                 game.duration_disoriented = 0
             else:
@@ -1850,7 +1858,7 @@ while not done:
             game.surface_matrix.blit(pygame.transform.rotate(game.surface_matrix, 180), (0,0))
         # Stop the blind effect if it has lasted longer than the maximum duration.
         if game.flag_blind:
-            if game.duration_blind > game.duration_max_blind:
+            if game.duration_blind > duration_max_blind:
                 game.flag_blind = False
                 game.duration_blind = 0
             else:
