@@ -20,6 +20,11 @@ folder_images = os.path.abspath(os.path.join(folder_program, 'Images'))
 # Initialize all pygame modules.
 pygame.init()
 
+# Define the time (ms) between receiving garbage and putting garbage in the matrix on the next hard drop.
+time_garbage_warning = 8000
+# Define the fraction of the above time used to show an initial warning.
+fraction_garbage_warning_initial = 2/3
+
 # Create font objects used to create text.
 font_normal = pygame.font.SysFont('Segoe UI Semibold', 24)
 font_small = pygame.font.SysFont('Segoe UI Semibold', 18)
@@ -233,6 +238,8 @@ class Tetron:
         self.flag_heavy = False
         self.flag_disoriented = False
         self.flag_blind = False
+        
+        self.flag_put_garbage = False
 
         self.ai_flag_positioning = True
         self.ai_flag_calculating = True
@@ -261,7 +268,9 @@ class Tetron:
         # Initialize the hold queue.
         self.queue_hold = []
         # Initialize the garbage queue.
-        self.queue_garbage = []
+        self.queue_garbage = [2, 3] #[]
+        # Initialize time when current garbage was received.
+        self.time_receive_garbage = self.time_current + 0
 
         # Initialize the score.
         self.score = 0
@@ -271,9 +280,6 @@ class Tetron:
         self.count = 0
         # Initialize the number of successive line clears.
         self.combos = 0
-
-        # Select a target.
-        self.select_target()
 
         # Initialize the block fall speed, the probability of getting an advanced tetrimino, and the probability of getting a special effect.
         self.update_difficulty()
@@ -332,6 +338,8 @@ class Tetron:
         self.reset_time_advance()
         # Set flags.
         self.flag_playing = True
+        # Select a target.
+        self.select_target(True)
         # Create a new tetrimino.
         self.create_new()
     
@@ -803,71 +811,26 @@ class Tetron:
                 np.zeros([cleared_increment,self.column_count]),
                 np.delete(self.array_dropped, obj=cleared_rows, axis=0)
                 ), axis=0)
+        # Increment the combo counter if a line was cleared.
+        if cleared_increment > 0:
+            self.combos += 1
+        else:
+            self.combos = 0
 
         # Calculate number of garbage lines.
         garbage_count = self.calculate_garbage(cleared_increment)
+        # Clear garbage lines.
+        if len(self.queue_garbage) > 0:
+            self.subtract_garbage(garbage_count)
         # Send garbage lines.
-        self.send_garbage(garbage_count)
-        # if self.instance_target is not None:
-        #     self.games.all[self.instance_target].add_garbage(garbage_count)
-        # Delete pending garbage lines.
-        self.subtract_garbage(garbage_count)
-        
-        # # Check for a perfect clear.
-        # cleared_perfect = not np.any(self.array_dropped)
-        # # Increment the combo counter if a line was cleared.
-        # if cleared_increment > 0:
-        #     self.combos += 1
-        # else:
-        #     self.combos = 0
-        # # Calculate points earned based on the type of line clear.
-        # score_increment = 5 * cleared_increment
-        # if cleared_increment >= 4:
-        #     score_increment = 10 * cleared_increment
-        # # Calculate points for T-spins.
-        # if self.flag_tspin:
-        #     score_increment = 20 * (cleared_increment + 1)
-        #     print('tspin points ', score_increment)
-        # elif self.flag_tspin_mini:
-        #     score_increment = 5 * (2 ** cleared_increment)
-        #     print('mini tspin points ', score_increment)
-        # # Calculate point multipliers.
-        # multipliers = []
-        # if self.combos > 1:
-        #     # Combo multiplier.
-        #     if self.id_current != 899:
-        #         multipliers.append(self.combos)
-        #         print('combo multiplier: ', multipliers[-1])
-        # if cleared_perfect:
-        #     # Perfect clear multiplier.
-        #     if self.id_current != 899:
-        #         multipliers.append(cleared_increment)
-        #         print('perfect clear multiplier: ', multipliers[-1])
-        # if self.game_mode == 2:
-        #     # Twin multiplier.
-        #     multipliers.append(1.6)
-        # # Put the score increment in the queue.
-        # self.score_increment.append(int(score_increment * np.prod(multipliers)))
+        else:
+            self.send_garbage(garbage_count)
+        # Put garbage in the matrix.
+        if self.flag_put_garbage and garbage_count == 0:
+            self.put_garbage()
 
         # Put the score increment in the queue.
         self.score_increment.append(self.calculate_score(cleared_increment))
-        
-        # # Play a sound corresponding to the number of lines cleared.
-        # if self.is_player:
-        #     if cleared_increment == 1:
-        #         self.sound_game_single.play()
-        #     elif cleared_increment == 2:
-        #         self.sound_game_double.play()
-        #     elif cleared_increment == 3:
-        #         self.sound_game_triple.play()
-        #     elif cleared_increment >= 4:
-        #         self.sound_game_tetris.play()
-        #     # Play a sound for perfect clears.
-        #     if cleared_perfect:
-        #         self.sound_game_perfect.play()
-        #     # Play a sound for special line clears.
-        #     if self.flag_tspin or self.flag_tspin_mini or cleared_increment >= 4:
-        #         self.sound_game_special.play()
         
         # Reset the previous advance time.
         self.reset_time_advance()
@@ -883,15 +846,6 @@ class Tetron:
             self.check_lose()
             if not self.flag_lose:
                 self.create_new()
-            
-            # Stop the game if the top row is occupied.
-            # if np.any(self.array_dropped[0, :] > 0):
-            #     self.flag_lose = True
-            #     if not self.is_player:
-            #         self.stop_game()
-            # Create a new tetrimino otherwise.
-            # else:
-            #     self.create_new()
 
     # Start soft dropping.
     def start_softdropping(self):
@@ -968,9 +922,13 @@ class Tetron:
                 self.stop_game()
     
     # Randomly select a target.
-    def select_target(self):
+    def select_target(self, select_from_all=False):
+        # Get all games other than this game.
+        if select_from_all:
+            games = [game for game in self.games.all if game.instance_number != self.instance_number]
         # Get all games other than this game that are still playing.
-        games = [game for game in self.games.all if game.flag_playing and game.instance_number != self.instance_number]
+        else:
+            games = [game for game in self.games.all if game.flag_playing and game.instance_number != self.instance_number]
         if len(games) > 0:
             self.instance_target = games[random.choice(range(len(games)))].instance_number
         else:
@@ -1020,24 +978,27 @@ class Tetron:
     def add_garbage(self, count):
         total = sum(self.queue_garbage)
         max = 12
-        if total + count >= max:
-            self.queue_garbage.append(max-total)
-        else:
-            self.queue_garbage.append(count)
+        if count > 0:
+            if total == 0:
+                self.time_receive_garbage = self.time_current + 0
+            if total + count >= max:
+                self.queue_garbage.append(max-total)
+            else:
+                self.queue_garbage.append(count)
     
     # Subtract garbage from the queue.
     def subtract_garbage(self, count):
         total = sum(self.queue_garbage)
-        if count >= total:
-            self.queue_garbage = []
-        else:
-            while count > 0:
-                if count < self.queue_garbage[0]:
-                    self.queue_garbage[0] -= count
-                    count = 0
-                else:
-                    self.queue_garbage.pop(0)
-                    count -= self.queue_garbage[0]
+        if count > 0:
+            if count >= total:
+                self.queue_garbage = []
+            else:
+                while count > 0:
+                    if count < self.queue_garbage[0]:
+                        self.queue_garbage[0] -= count
+                        count = 0
+                    else:
+                        count -= self.queue_garbage.pop(0)
 
     # Send garbage to another game.    
     def send_garbage(self, count):
@@ -1048,6 +1009,9 @@ class Tetron:
     # Add garbage lines to the matrix and subtract the corresponding value from the queue.
     def put_garbage(self):
         if len(self.queue_garbage) > 0:
+            self.flag_put_garbage = False
+            self.time_receive_garbage = self.time_current + 0
+
             count = self.queue_garbage.pop(0)
             array_garbage = 900 * np.ones([count, column_count])
             array_garbage[:, random.choice(range(column_count))] = 0
@@ -1061,11 +1025,6 @@ class Tetron:
     def calculate_score(self, cleared_increment):
         # Check for a perfect clear.
         cleared_perfect = not np.any(self.array_dropped)
-        # Increment the combo counter if a line was cleared.
-        if cleared_increment > 0:
-            self.combos += 1
-        else:
-            self.combos = 0
         
         # Calculate points earned based on the type of line clear.
         score_increment = 5 * cleared_increment
@@ -1085,12 +1044,12 @@ class Tetron:
             # Combo multiplier.
             if self.id_current != 899:
                 multipliers.append(self.combos)
-                print('combo multiplier: ', multipliers[-1])
+                # print('combo multiplier: ', multipliers[-1])
         if cleared_perfect:
             # Perfect clear multiplier.
             if self.id_current != 899:
                 multipliers.append(cleared_increment)
-                print('perfect clear multiplier: ', multipliers[-1])
+                # print('perfect clear multiplier: ', multipliers[-1])
         if self.game_mode == 2:
             # Twin multiplier.
             multipliers.append(1.6)
@@ -1226,11 +1185,19 @@ class Tetron:
     def draw_garbage(self):
         if len(self.queue_garbage) > 0:
             for index, count in enumerate(self.queue_garbage):
-                # if index == 0:
-                if True:  # self.count - self.count_start_garbage > ---
-                    color = 0.5 #400
-                elif True:  # going to apply garbage next
-                    color = 700
+                if index == 0:
+                    if self.flag_put_garbage:
+                        # Final warning.
+                        if self.is_player:
+                            color = 700
+                        else:
+                            color = 0.75
+                    else:
+                        # Initial warning.
+                        if self.is_player:
+                            color = 400
+                        else:
+                            color = 0.5
                 else:
                     color = 0.5
                 for block in range(count):
@@ -1755,15 +1722,16 @@ while not done:
     # =============================================================================
     # Line Advancements.
     # =============================================================================
-    # Hard drop all games if one game has hard dropped.
+    # Hard drop all player games if one game has hard dropped.
     if any([game.flag_harddrop for game in games.player]):
         for game in games.player:
             if not game.flag_harddrop:
                 game.harddrop()
             game.flag_harddrop = False
-    # Advance lines.
+    
     for game in games.all:
         if game.flag_playing:
+            # Advance lines.
             if game.flag_advancing:
                 if (
                     # Check if the required time for automatic advancing has elapsed.
@@ -1775,6 +1743,12 @@ while not done:
                         game.reset_time_advance()
             else:
                 game.reset_time_advance()
+            
+            # Garbage queue.
+            if game.time_current - game.time_receive_garbage >= time_garbage_warning:
+                game.flag_put_garbage = True
+            else:
+                game.flag_put_garbage = False
     
 
     # =============================================================================
