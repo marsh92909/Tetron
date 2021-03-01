@@ -20,10 +20,13 @@ folder_images = os.path.abspath(os.path.join(folder_program, 'Images'))
 # Initialize all pygame modules.
 pygame.init()
 
-# Define the time (ms) between receiving garbage and putting garbage in the matrix on the next hard drop.
-time_garbage_warning = 8000
-# Define the fraction of the above time used to show an initial warning.
-fraction_garbage_warning_initial = 2/3
+# =============================================================================
+# Game Settings.
+# =============================================================================
+# Define the frames per second of the game.
+fps = 60
+# Create a clock that manages how fast the screen updates.
+clock = pygame.time.Clock()
 
 # Define the scores needed to move to the next stage. The last value is the score needed to win the game.
 score_thresholds = [400, 800, 1000]
@@ -39,6 +42,8 @@ speed_softdrop = 50
 delay_softdrop = 50
 # Define the maximum duration (ms) for a tetrimino to remain landed before locking.
 duration_max_landed = 500
+# Define the time (ms) between receiving garbage and putting garbage in the matrix on the next hard drop.
+time_garbage_warning = 8000
 
 # Define the parameters of a normal distribution for the delay (ms) between deciding and performing a move for AI.
 ai_delay_mean = 1500
@@ -61,6 +66,9 @@ score_update_chance_special = score_thresholds[0]
 duration_max_disoriented = 20000
 duration_max_blind = 20000
 
+# =============================================================================
+# Sounds.
+# =============================================================================
 # Load sound effects.
 # sound_game_advance = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_advance.wav'))
 sound_game_move = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_move.wav'))
@@ -80,7 +88,7 @@ sound_special_ghost = pygame.mixer.Sound(os.path.join(folder_sounds, 'special_gh
 sound_special_heavy = pygame.mixer.Sound(os.path.join(folder_sounds, 'special_heavy.wav'))
 sound_special_disoriented = pygame.mixer.Sound(os.path.join(folder_sounds, 'special_disoriented.wav'))
 sound_special_blind = pygame.mixer.Sound(os.path.join(folder_sounds, 'special_blind.wav'))
-# Set volume for some sound effects.
+# Set volume for sound effects.
 sound_game_move.set_volume(0.1)
 sound_game_rotate.set_volume(0.1)
 sound_game_harddrop.set_volume(0.1)
@@ -103,7 +111,10 @@ sound_special_blind.set_volume(0.5)
 font_normal = pygame.font.SysFont('Segoe UI Semibold', 24)
 font_small = pygame.font.SysFont('Segoe UI Semibold', 18)
 
-# Define key controls.
+# =============================================================================
+# Controls.
+# =============================================================================
+# Main controls.
 key_start = pygame.K_RETURN
 key_stop = pygame.K_ESCAPE
 key_mode_1 = pygame.K_1
@@ -116,7 +127,6 @@ key_mode_7 = pygame.K_7
 key_mode_8 = pygame.K_8
 key_mode_9 = pygame.K_9
 key_toggle_classic = pygame.K_0
-# Define key controls for game modes with one instance of the game.
 key_move_left = pygame.K_LEFT
 key_move_right = pygame.K_RIGHT
 key_rotate_clockwise = [pygame.K_UP, pygame.K_x]
@@ -124,7 +134,7 @@ key_rotate_counterclockwise = [pygame.K_z]
 key_harddrop = pygame.K_SPACE
 key_softdrop = pygame.K_DOWN
 key_hold = pygame.K_c
-# Define key controls for game modes with multiple instances of the game.
+# Controls for game modes with multiple player games.
 key_left_move_left = pygame.K_a
 key_left_move_right = pygame.K_d
 key_left_rotate_clockwise = pygame.K_w
@@ -180,7 +190,7 @@ def rgb(color, tint=0):
 # =============================================================================
 # Classes.
 # =============================================================================
-# The main class containing all actions related to the game, such as moving and rotating blocks.
+# The main class containing all gameplay actions (such as moving and rotating blocks).
 class Tetron:
     # Initialize the attributes of the instance of of this class when it is first created.
     def __init__(self, is_player, instance_number, games, width_block, height_block, spacing_block, row_count, column_count):
@@ -271,6 +281,8 @@ class Tetron:
         self.queue_hold = []
         # Initialize the garbage queue.
         self.queue_garbage = []
+        if not self.is_player:
+            self.queue_garbage = [12]
         # Initialize time when current garbage was received.
         self.time_receive_garbage = self.time_current + 0
 
@@ -1155,7 +1167,7 @@ class Tetron:
                         if number < 0:
                             color = 0.35
                         else:
-                            color = 0.5
+                            color = 900
                 else:
                     color = 0.25  # Color of blank blocks
                 pygame.draw.rect(surface=self.surface_matrix, color=rgb(color, tint=tint), rect=[(self.spacing_block+self.width_block)*column+self.spacing_block, (self.spacing_block+self.height_block)*row+self.spacing_block, self.width_block, self.height_block])
@@ -1189,15 +1201,15 @@ class Tetron:
                         if self.is_player:
                             color = 700
                         else:
-                            color = 0.75
+                            color = 900
                     else:
                         # Initial warning.
                         if self.is_player:
                             color = 400
                         else:
-                            color = 0.5
+                            color = 900
                 else:
-                    color = 0.5
+                    color = 900
                 for block in range(count):
                     position_vertical = (self.spacing_block+self.height_block)*(sum(self.queue_garbage[:index])+block+1) + self.spacing_block + (self.spacing_block*4)*index
                     position_vertical = self.rect_garbage.height - position_vertical
@@ -1285,7 +1297,8 @@ class Tetron:
                 index = random.choice(range(len(self.ai_evaluations)))
                 self.ai_evaluations = [self.ai_evaluations[index]]
             # Record the selected move.
-            self.ai_decision = self.ai_evaluations[0]
+            if len(self.ai_evaluations) > 0:
+                self.ai_decision = self.ai_evaluations[0]
         # Perform.
         else:
             if self.ai_decision[1] != self.rotation_current:
@@ -1299,13 +1312,14 @@ class Tetron:
                 if (self.time_current - self.ai_time_evaluate) >= self.ai_delay:
                     self.harddrop()
 
-# A class that manages game instances.
+# A class that stores and manages game instances.
 class Games:
     def __init__(self):
         self.player = []
         self.ai = []
         self.all = []
     
+    # Add a game to the corresponding list.
     def add_game(self, game):
         if game.is_player:
             self.player.append(game)
@@ -1342,20 +1356,15 @@ height_panel = height_block + 0
 # Define the width of spacing between elements.
 spacing_large = width_block + 0
 
-# Create lists to store multiple instances of the game.
-# games_player = []
-# games_ai = []
-
 # Create an object to contain lists of player games and AI games.
 games = Games()
 # Create a player instance of the game.
-# games_player.append(Tetron(True, len(games_player), width_block, height_block, spacing_block, row_count, column_count))
 games.add_game(Tetron(True, len(games.player), games, width_block, height_block, spacing_block, row_count, column_count))
 # Initialize the score and stage number.
 score = 0
 stage = 0
 
-# Set the window size [width, height] in pixels.
+# Initialize the window size [width, height] in pixels.
 size_window = [
     column_count*width_block + (column_count+1)*spacing_block + (games.player[0].width_hold+games.player[0].spacing_small) + (games.player[0].width_next+games.player[0].spacing_small),
     height_panel + row_count*height_block+(row_count+1)*spacing_block
@@ -1370,12 +1379,12 @@ screen = pygame.display.set_mode(size_window, pygame.RESIZABLE)
 # Initialize the game mode and the classic Tetris flag.
 game_mode = 1
 flag_classic = False
-# Load the Tetron logo.
+# Load the logo.
 logo_full = pygame.image.load(os.path.join(folder_program, 'logo.png'))
 logo = pygame.transform.smoothscale(logo_full, [int(height_panel*(logo_full.get_width()/logo_full.get_height())), height_panel])
 # Create text for classic Tetris.
 text_classic = font_normal.render('Tetris', True, rgb(1))
-# Create prefix text for other game modes.
+# Create text for other game modes.
 text_mode_1_prefix = font_normal.render('', True, rgb(1))
 text_mode_1_suffix = font_normal.render('', True, rgb(1))
 text_mode_2_prefix = font_normal.render('Twin ', True, rgb(1))
@@ -1386,11 +1395,6 @@ text_mode_4_prefix = font_normal.render('', True, rgb(1))
 text_mode_4_suffix = font_normal.render(' 99', True, rgb(1))
 # Initialize the game mode surface.
 surface_mode = pygame.Surface((0,0))
-
-# Create a clock that manages how fast the screen updates.
-clock = pygame.time.Clock()
-# Define the frames per second of the game.
-fps = 60
 
 # Loop until the window is closed.
 done = False
@@ -1525,16 +1529,16 @@ while not done:
                     # Switch game modes.
                     if event.key == key_mode_1 and game_mode != 1:
                         game_mode = 1
-                        games.remove_games_player() # games.player = [games.player[0]]
-                        games.remove_games_ai() # games.ai = []
+                        games.remove_games_player()
+                        games.remove_games_ai()
                     elif event.key == key_mode_2 and game_mode != 2:
                         game_mode = 2
-                        games.remove_games_player() # games.player = [games.player[0]]
+                        games.remove_games_player()
                         games.add_game(Tetron(True, len(games.player), games, width_block, height_block, spacing_block, row_count, column_count))
-                        games.remove_games_ai() # games.ai = []
+                        games.remove_games_ai()
                     elif event.key == key_mode_3 and game_mode != 3:
                         game_mode = 3
-                        games.remove_games_player() # games.player = [games.player[0]]
+                        games.remove_games_player()
                         games.add_game(Tetron(False, len(games.all), games, width_block, height_block, spacing_block, row_count, column_count))
                     elif False: #event.key == key_mode_4 and game_mode != 4:
                         game_mode = 4
@@ -1674,7 +1678,7 @@ while not done:
                         games.player[index].time_previous_move_right = games.player[index].time_current + 0
     
     # =============================================================================
-    # Score, Stage Transitions, Win/Lose.
+    # Game Progress.
     # =============================================================================
     # Calculate score.
     score_previous = score + 0
@@ -1728,7 +1732,7 @@ while not done:
 
 
     # =============================================================================
-    # Line Advancements.
+    # Game Actions.
     # =============================================================================
     # Hard drop all player games if one game has hard dropped.
     if any([game.flag_harddrop for game in games.player]):
@@ -1757,14 +1761,10 @@ while not done:
                 game.flag_put_garbage = True
             else:
                 game.flag_put_garbage = False
-    
-
-    # =============================================================================
-    # AI.
-    # =============================================================================
-    for game in games.ai:
-        if game.flag_playing:
-            game.ai_evaluate()
+            
+            # Process AI games.
+            if not game.is_player:
+                game.ai_evaluate()
 
     
     # =============================================================================
