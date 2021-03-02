@@ -30,6 +30,8 @@ clock = pygame.time.Clock()
 
 # Define the scores needed to move to the next stage. The last value is the score needed to win the game.
 score_thresholds = [400, 800, 1000]
+# Define the numbers of remaining players needed to move to the next stage. The last value is the number needed to win the game.
+remaining_thresholds = [50, 10, 1]
 # Define the range of block fall speeds (ms) from the start to end of the game.
 speeds_fall = [1000, 200]
 # Define the block fall speed multiplier for some special effects (values below 1 result in faster speeds).
@@ -281,8 +283,6 @@ class Tetron:
         self.queue_hold = []
         # Initialize the garbage queue.
         self.queue_garbage = []
-        if not self.is_player:
-            self.queue_garbage = [12]
         # Initialize time when current garbage was received.
         self.time_receive_garbage = self.time_current + 0
 
@@ -1360,8 +1360,9 @@ spacing_large = width_block + 0
 games = Games()
 # Create a player instance of the game.
 games.add_game(Tetron(True, len(games.player), games, width_block, height_block, spacing_block, row_count, column_count))
-# Initialize the score and stage number.
+# Initialize the score, players remaining, and stage number.
 score = 0
+remaining = 0
 stage = 0
 
 # Initialize the window size [width, height] in pixels.
@@ -1677,42 +1678,56 @@ while not done:
                         games.player[index].move_right()
                         games.player[index].time_previous_move_right = games.player[index].time_current + 0
     
+
     # =============================================================================
     # Game Progress.
     # =============================================================================
     # Calculate score.
     score_previous = score + 0
-    score += sum([game.score_increment.pop(0) for game in games.player if len(game.score_increment) > 0])
-    for game in games.player:
+    if game_mode in [1, 2]:
+        score += sum([game.score_increment.pop(0) for game in games.player if len(game.score_increment) > 0])
+    elif game_mode in [3]:
+        score += max([0] + [game.score_increment.pop(0) for game in games.all if len(game.score_increment) > 0])
+    # Calculate number of players left.
+    remaining_previous = remaining + 0
+    remaining = sum([not game.flag_lose for game in games.all])
+    # Update scores and difficulty for all games.
+    for game in games.all:
         game.score = score
-        # Update the block fall speed, the probability of getting an advanced tetrimino, and the probability of getting a special effect.
         game.update_difficulty()
     
-    # Advance to the next stage of the game if a score threshold is passed.
-    if score_previous < score_thresholds[stage] <= score:
-        # Win the game if the maximum score threshold is reached.
-        if score >= score_thresholds[-1] or (game_mode in [3, 4] and all([game.flag_lose for game in games.ai])):
-            # Play music.
+    # if game_mode in [1, 2, 3] and (score_previous < score_thresholds[stage] <= score) or \
+    #     game_mode in [4] and False:
+    
+    # Win the game.
+    if game_mode in [1, 2] and score_previous < score_thresholds[-1] <= score or \
+        game_mode in [3, 4] and remaining <= remaining_thresholds[-1] < remaining_previous:
+        # Play music and sound effect only if the player won.
+        if all([game.flag_lose for game in games.ai]):
             pygame.mixer.music.stop()
             pygame.mixer.music.unload()
             pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_win.ogg'))
             pygame.mixer.music.play(loops=0)
             # Play sound effect.
             sound_game_win.play()
-            # Stop all games.
-            for game in games.all:
-                game.stop_game()
+        # Stop all games.
+        for game in games.all:
+            game.stop_game()
+    # Advance to the next stage of the game.
+    elif game_mode in [1, 2, 3] and score_previous < score_thresholds[stage] <= score or \
+        game_mode in [4] and remaining <= remaining_thresholds[stage] < remaining_previous:
         # Play transition music once.
-        elif stage == 0 or stage == 1:
-            # Stop and unload current music.
-            pygame.mixer.music.stop()
-            pygame.mixer.music.unload()
-            # Load transition music.
-            pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_transition_{}.ogg'.format(stage+1)))
-            # Set the music to send an event when done playing.
-            pygame.mixer.music.set_endevent(pygame.USEREVENT+1)
-            # Play the music once.
-            pygame.mixer.music.play(loops=0)
+        # elif stage == 0 or stage == 1:
+
+        # Stop and unload current music.
+        pygame.mixer.music.stop()
+        pygame.mixer.music.unload()
+        # Load transition music.
+        pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_transition_{}.ogg'.format(stage+1)))
+        # Set the music to send an event when done playing.
+        pygame.mixer.music.set_endevent(pygame.USEREVENT+1)
+        # Play the music once.
+        pygame.mixer.music.play(loops=0)
         # Increment the stage value.
         if stage < len(score_thresholds)-1:
             stage += 1
@@ -1720,7 +1735,7 @@ while not done:
     
     # Stop the game if the player has lost.
     if any([game.flag_lose for game in games.player]):
-         # Play music.
+        # Play music.
         pygame.mixer.music.stop()
         pygame.mixer.music.unload()
         pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_lose.ogg'))
