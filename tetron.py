@@ -526,17 +526,18 @@ class Tetron:
                 # Index of lowest row that can fit this tetrimino.
                 index_lowest = max(np.argmax(self.array_dropped, axis=0))
                 # Get the top rows of the dropped blocks.
-                number_rows = index_lowest-index_highest + 1
-                array_dropped_top = np.copy(self.array_dropped[index_highest:index_highest+number_rows, :]) > 0
+                array_dropped_top = np.copy(self.array_dropped[index_highest:index_lowest+1, :]) > 0
                 # Get the row indices of the highest blocks in each column of the dropped blocks array, with values of -1 for empty columns.
                 rows_highest = np.argmax(array_dropped_top, axis=0)
                 rows_highest[np.all(array_dropped_top == 0, axis=0)] = -1
                 # Fill the blocks below the highest blocks in each column.
-                for column in range(len(rows_highest)):
-                    if rows_highest[column] >= 0:
-                        array_dropped_top[rows_highest[column]:, column] = 1
+                for column, row in enumerate(rows_highest): #range(len(rows_highest)):
+                    if row >= 0:  #if rows_highest[column] >= 0:
+                        array_dropped_top[row:, column] = 1  #array_dropped_top[rows_highest[column]:, column] = 1
                 # Create the tetrimino by inverting the dropped blocks.
                 tetrimino = self.id_current * (1 - array_dropped_top)
+                # Replace all values of 0 with -1.
+                tetrimino[tetrimino == 0] = -1
 
             # Reset the current rotation value (degrees).
             self.rotation_current = 0
@@ -1487,9 +1488,7 @@ while not done:
                     elif event.key in key_rotate_counterclockwise:
                         direction = 1
                     for index in indices:
-                        # Only rotate if not freebie.
-                        if not games.player[index].id_current == 899:
-                            games.player[index].rotate(direction)
+                        games.player[index].rotate(direction)
                 # Hard drop.
                 elif event.key == key_harddrop:
                     for game in games.player:
@@ -1696,9 +1695,6 @@ while not done:
         game.score = score
         game.update_difficulty()
     
-    # if game_mode in [1, 2, 3] and (score_previous < score_thresholds[stage] <= score) or \
-    #     game_mode in [4] and False:
-    
     # Win the game.
     if game_mode in [1, 2] and score_previous < score_thresholds[-1] <= score or \
         game_mode in [3, 4] and remaining <= remaining_thresholds[-1] < remaining_previous:
@@ -1716,9 +1712,6 @@ while not done:
     # Advance to the next stage of the game.
     elif game_mode in [1, 2, 3] and score_previous < score_thresholds[stage] <= score or \
         game_mode in [4] and remaining <= remaining_thresholds[stage] < remaining_previous:
-        # Play transition music once.
-        # elif stage == 0 or stage == 1:
-
         # Stop and unload current music.
         pygame.mixer.music.stop()
         pygame.mixer.music.unload()
