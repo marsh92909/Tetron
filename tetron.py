@@ -333,6 +333,7 @@ class Tetron:
         self.text_hold = font_small.render('HOLD', True, rgb(0.5))
         self.rect_text_hold = self.text_hold.get_rect()
         self.rect_text_hold.top = 0
+        self.rect_text_hold.centerx = self.width_hold // 2
         # Create the surface and rect object used to display the hold queue.
         self.surface_hold = pygame.Surface((self.width_hold, self.width_hold))
         self.rect_hold = self.surface_hold.get_rect()
@@ -342,6 +343,11 @@ class Tetron:
         self.rect_garbage = self.surface_garbage.get_rect()
         self.rect_garbage.bottom = self.size_total[1] + 0
         self.rect_garbage.right = self.width_hold + 0
+        # Create the surface and rect object used to display multiplayer information.
+        self.surface_information = pygame.Surface((self.width_next, self.size_total[1]))
+        self.rect_information = self.surface_information.get_rect()
+        self.rect_information.bottom = self.size_total[1] + 0
+        self.rect_information.right = self.size_total[0] + 0
 
     # Start the game.
     def start_game(self):
@@ -531,9 +537,9 @@ class Tetron:
                 rows_highest = np.argmax(array_dropped_top, axis=0)
                 rows_highest[np.all(array_dropped_top == 0, axis=0)] = -1
                 # Fill the blocks below the highest blocks in each column.
-                for column, row in enumerate(rows_highest): #range(len(rows_highest)):
-                    if row >= 0:  #if rows_highest[column] >= 0:
-                        array_dropped_top[row:, column] = 1  #array_dropped_top[rows_highest[column]:, column] = 1
+                for column, row in enumerate(rows_highest):
+                    if row >= 0:
+                        array_dropped_top[row:, column] = 1
                 # Create the tetrimino by inverting the dropped blocks.
                 tetrimino = self.id_current * (1 - array_dropped_top)
                 # Replace all values of 0 with -1.
@@ -1151,6 +1157,7 @@ class Tetron:
     
     # Draw each block in the matrix.
     def draw_matrix(self):
+        self.surface_matrix.fill(rgb(0))
         for row in range(self.row_count):
             for column in range(self.column_count):
                 number = self.array_display[row, column]
@@ -1175,6 +1182,7 @@ class Tetron:
 
     # Draw the block in the hold queue.
     def draw_hold(self):
+        self.surface_hold.fill(rgb(0))
         if len(self.queue_hold) > 0:
             # Create a copy of the current tetrimino array and properly pad it for displaying in the hold queue.
             tetrimino_mini = np.copy(self.queue_hold[0][0])
@@ -1194,6 +1202,7 @@ class Tetron:
     
     # Draw the garbage queue.
     def draw_garbage(self):
+        self.surface_garbage.fill(rgb(0))
         if len(self.queue_garbage) > 0:
             for index, count in enumerate(self.queue_garbage):
                 if index == 0:
@@ -1216,6 +1225,41 @@ class Tetron:
                     position_vertical = self.rect_garbage.height - position_vertical
                     pygame.draw.rect(surface=self.surface_garbage, color=rgb(color), rect=[0, position_vertical, self.width_block, self.height_block])
                 self.surface_main.blit(self.surface_garbage, self.rect_garbage)
+    
+    # Draw the information text.
+    def draw_information(self):
+        self.surface_information.fill(rgb(0))
+        if self.game_mode in [4] and self.is_player and self.flag_playing:
+            if self.instance_target == self.instance_number:
+                target = 'Self'
+            else:
+                target = 'AI {}'.format(self.instance_target)
+            text_targeting_value = font_normal.render(target, True, rgb(1))
+            rect_targeting_value = text_targeting_value.get_rect()
+            rect_targeting_value.bottom = self.rect_information.bottom + 0
+            rect_targeting_value.right = self.rect_information.width + 0
+
+            text_targeting = font_small.render('Targeting: ', True, rgb(0.5))
+            rect_targeting = text_targeting.get_rect()
+            rect_targeting.bottom = rect_targeting_value.top + 0
+            rect_targeting.left = 0
+            
+            text_ko_value = font_normal.render('5', True, rgb(1))
+            rect_ko_value = text_ko_value.get_rect()
+            rect_ko_value.bottom = rect_targeting.top - rect_ko_value.height
+            rect_ko_value.right = self.rect_information.width + 0
+
+            text_ko = font_small.render('KOs: ', True, rgb(0.5))
+            rect_ko = text_ko.get_rect()
+            rect_ko.bottom = rect_ko_value.top + 0
+            rect_ko.left = 0
+
+            self.surface_information.blit(text_targeting_value, rect_targeting_value)
+            self.surface_information.blit(text_targeting, rect_targeting)
+            self.surface_information.blit(text_ko_value, rect_ko_value)
+            self.surface_information.blit(text_ko, rect_ko)
+            
+            self.surface_main.blit(self.surface_information, self.rect_information)
 
     # Calculate effectiveness of every move, decide on a move, or perform a move.
     def ai_evaluate(self):
@@ -1783,8 +1827,7 @@ while not done:
     surface_mode.fill(rgb(0))
     for game in games.all:
         game.surface_main.fill(rgb(0))
-        game.surface_hold.fill(rgb(0))
-        game.surface_garbage.fill(rgb(0))
+
     # Draw the game mode if not playing.
     if not flag_playing:
         # Get the width of the logo or text.
@@ -1836,6 +1879,7 @@ while not done:
     for game in games.all:
         game.draw_garbage()
         game.draw_hold()
+        game.draw_information()
         game.draw_matrix()
     # Display score text.
     text_score = font_normal.render('{}'.format(score), True, rgb(1))
@@ -1854,6 +1898,7 @@ while not done:
     rect_text_time_elapsed.bottom = height_panel + 0
     screen.blit(text_time_elapsed, rect_text_time_elapsed)
 
+    # Draw each game.
     for index, game in enumerate(games.all):
         # Stop the disoriented effect if it has lasted longer than the maximum duration.
         if game.flag_disoriented:
