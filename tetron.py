@@ -152,7 +152,7 @@ key_right_hold = pygame.K_u
 
 
 # =============================================================================
-# Helper Functions.
+# Colors.
 # =============================================================================
 # Return a 3-tuple with RGB values. For grayscale colors, pass a number between 0 (black) and 1 (white). For block-specific color, pass its corresponding number value.
 def rgb(color, tint=0):
@@ -189,6 +189,25 @@ def rgb(color, tint=0):
         elif tint < 0:
             color = np.array([0,0,0])*abs(tint) + np.array(color)*(1-abs(tint))
     return tuple(color)
+
+# Store 3-tuples of RGB colors in a dictionary.
+colors = {
+    100: (0,175,191),  # Cyan
+    200: (0,149,255),  # Blue
+    300: (255,128,0),  # Orange
+    400: (255,191,0),  # Yellow
+    500: (0,191,96),  # Green
+    600: (140,102,255),  # Purple
+    700: (255,64,64),  # Red
+    800: (255,77,136),  # Pink
+    900: rgb(0.618),  # Garbage / AI
+    901: (255,255,255),  # White
+    902: (0,0,0),  # Black
+    903: rgb(0.25),  # Empty
+    904: rgb(0.35),  # Highlighting
+    905: rgb(0.28),  # Blind mode
+    906: rgb(0.50),  # Gray text
+    }
 
 
 # =============================================================================
@@ -334,7 +353,7 @@ class Tetron:
         self.rect_matrix = self.surface_matrix.get_rect()
         self.rect_matrix.left = self.width_hold + self.spacing_small
         # Create the text and rect object for the hold queue.
-        self.text_hold = font_small.render('HOLD', True, rgb(0.5))
+        self.text_hold = font_small.render('HOLD', True, colors[906])
         self.rect_text_hold = self.text_hold.get_rect()
         self.rect_text_hold.top = 0
         self.rect_text_hold.centerx = self.width_hold // 2
@@ -343,7 +362,7 @@ class Tetron:
         self.rect_hold = self.surface_hold.get_rect()
         self.rect_hold.top = self.rect_text_hold.height + 0
         # Create the text and rect object for the next queue.
-        self.text_next = font_small.render('NEXT', True, rgb(0.5))
+        self.text_next = font_small.render('NEXT', True, colors[906])
         self.rect_text_next = self.text_next.get_rect()
         self.rect_text_next.top = 0
         self.rect_text_next.centerx = self.size_total[0] - self.width_next // 2
@@ -1400,49 +1419,50 @@ class Tetron:
     
     # Draw each block in the matrix.
     def draw_matrix(self):
-        self.surface_matrix.fill(rgb(0))
+        self.surface_matrix.fill(colors[902])
         for row in range(self.row_count):
             for column in range(self.column_count):
                 number = self.array_display[row, column]
-                tint = 0
                 if number != 0:
                     if self.is_player:
                         if self.flag_blind:
-                            color = 0.28  # Color of placed blocks in blind mode
+                            color = colors[905]  #0.28  # Color of placed blocks in blind mode
                         else:
                             if number < 0:
-                                color = 0.35  # Color of highlighted blocks
+                                color = colors[904]  #0.35  # Color of highlighted blocks
                             else:
-                                color = number + 0  # Color of placed blocks
+                                color = colors[int(np.floor(number/100)*100)]  #number + 0  # Color of placed blocks
                     else:
                         if number < 0:
-                            color = 0.35
+                            color = colors[904]  #0.35
                         else:
-                            color = 900
+                            color = colors[900]  #900
                 else:
-                    color = 0.25  # Color of blank blocks
-                pygame.draw.rect(surface=self.surface_matrix, color=rgb(color, tint=tint), rect=[(self.spacing_block+self.width_block)*column+self.spacing_block, (self.spacing_block+self.height_block)*row+self.spacing_block, self.width_block, self.height_block])
+                    color = colors[903]  #0.25  # Color of empty blocks
+                pygame.draw.rect(surface=self.surface_matrix, color=color, rect=[(self.spacing_block+self.width_block)*column+self.spacing_block, (self.spacing_block+self.height_block)*row+self.spacing_block, self.width_block, self.height_block])
 
     # Draw the block in the hold queue.
     def draw_hold(self):
-        self.surface_hold.fill(rgb(0))
+        self.surface_hold.fill(colors[902])
         if len(self.queue_hold) > 0:
             tetrimino_mini = self.create_tetrimino_mini(self.queue_hold[0][0])
             size = int(min(np.floor([self.width_hold/tetrimino_mini.shape[0], self.width_hold/tetrimino_mini.shape[1]])))
             for row in range(tetrimino_mini.shape[0]):
                 for column in range(tetrimino_mini.shape[1]):
-                    color = tetrimino_mini[row, column]
-                    if color > 0:
-                        if not self.is_player:
-                            color = 900
-                        pygame.draw.rect(surface=self.surface_hold, color=rgb(color), rect=[size*column, size*row, size, size])
+                    number = tetrimino_mini[row, column]
+                    if number > 0:
+                        if self.is_player:
+                            color = colors[int(np.floor(number/100)*100)]
+                        else:
+                            color = colors[900]
+                        pygame.draw.rect(surface=self.surface_hold, color=color, rect=[size*column, size*row, size, size])
             # Display the hold queue and text.
             self.surface_main.blit(self.surface_hold, self.rect_hold)
             self.surface_main.blit(self.text_hold, self.rect_text_hold)
     
     # Draw the blocks in the next queue.
     def draw_next(self):
-        self.surface_next.fill(rgb(0))
+        self.surface_next.fill(colors[902])
         if len(self.queue_next) > 0:
             # Create the single array containing all blocks in the queue.
             array_next = np.zeros([0, self.column_count])
@@ -1461,65 +1481,67 @@ class Tetron:
             size = int(np.floor(self.width_next/array_next.shape[1]))
             for row in range(array_next.shape[0]):
                 for column in range(array_next.shape[1]):
-                    color = array_next[row, column]
-                    if color > 0:
-                        if not self.is_player:
-                            color = 900
-                        pygame.draw.rect(surface=self.surface_next, color=rgb(color), rect=[size*column, size*row, size, size])
+                    number = array_next[row, column]
+                    if number > 0:
+                        if self.is_player:
+                            color = colors[int(np.floor(number/100)*100)]
+                        else:
+                            color = colors[900]
+                        pygame.draw.rect(surface=self.surface_next, color=color, rect=[size*column, size*row, size, size])
             # Display the next queue and text.
             self.surface_main.blit(self.surface_next, self.rect_next)
             self.surface_main.blit(self.text_next, self.rect_text_next)
     
     # Draw the garbage queue.
     def draw_garbage(self):
-        self.surface_garbage.fill(rgb(0))
+        self.surface_garbage.fill(colors[902])
         if len(self.queue_garbage) > 0:
             for index, count in enumerate(self.queue_garbage):
                 if index == 0:
                     if self.flag_put_garbage:
                         # Final warning.
                         if self.is_player:
-                            color = 700
+                            color = colors[700]
                         else:
-                            color = 900
+                            color = colors[900]
                     else:
                         # Initial warning.
                         if self.is_player:
-                            color = 400
+                            color = colors[400]
                         else:
-                            color = 900
+                            color = colors[900]
                 else:
-                    color = 900
+                    color = colors[900]
                 for block in range(count):
                     position_vertical = (self.spacing_block+self.height_block)*(sum(self.queue_garbage[:index])+block+1) + self.spacing_block + (self.spacing_block*4)*index
                     position_vertical = self.rect_garbage.height - position_vertical
-                    pygame.draw.rect(surface=self.surface_garbage, color=rgb(color), rect=[0, position_vertical, self.width_block, self.height_block])
+                    pygame.draw.rect(surface=self.surface_garbage, color=color, rect=[0, position_vertical, self.width_block, self.height_block])
                 self.surface_main.blit(self.surface_garbage, self.rect_garbage)
     
     # Draw the information text.
     def draw_information(self):
-        self.surface_information.fill(rgb(0))
+        self.surface_information.fill(colors[902])
         if self.game_mode in [4] and self.is_player and self.flag_playing:
             if self.instance_target == self.instance_self:
                 target = 'Self'
             else:
                 target = 'AI {}'.format(self.instance_target)
-            text_targeting_value = font_normal.render(target, True, rgb(1))
+            text_targeting_value = font_normal.render(target, True, colors[901])
             rect_targeting_value = text_targeting_value.get_rect()
             rect_targeting_value.bottom = self.rect_information.bottom + 0
             rect_targeting_value.right = self.rect_information.width + 0
 
-            text_targeting = font_small.render('Targeting: ', True, rgb(0.5))
+            text_targeting = font_small.render('Targeting: ', True, colors[906])
             rect_targeting = text_targeting.get_rect()
             rect_targeting.bottom = rect_targeting_value.top + 0
             rect_targeting.left = 0
             
-            text_ko_value = font_normal.render('5', True, rgb(1))
+            text_ko_value = font_normal.render('', True, colors[901])
             rect_ko_value = text_ko_value.get_rect()
             rect_ko_value.bottom = rect_targeting.top - rect_ko_value.height
             rect_ko_value.right = self.rect_information.width + 0
 
-            text_ko = font_small.render('KOs: ', True, rgb(0.5))
+            text_ko = font_small.render('KOs: ', True, colors[906])
             rect_ko = text_ko.get_rect()
             rect_ko.bottom = rect_ko_value.top + 0
             rect_ko.left = 0
@@ -1699,19 +1721,20 @@ flag_classic = False
 logo_full = pygame.image.load(os.path.join(folder_program, 'logo.png'))
 logo = pygame.transform.smoothscale(logo_full, [int(height_panel*(logo_full.get_width()/logo_full.get_height())), height_panel])
 # Create text for classic Tetris.
-text_classic = font_normal.render('Tetris', True, rgb(1))
+text_classic = font_normal.render('Tetris', True, colors[901])
 # Create text for other game modes.
-text_mode_1_prefix = font_normal.render('', True, rgb(1))
-text_mode_1_suffix = font_normal.render('', True, rgb(1))
-text_mode_2_prefix = font_normal.render('Twin ', True, rgb(1))
-text_mode_2_suffix = font_normal.render('', True, rgb(1))
-text_mode_3_prefix = font_normal.render('', True, rgb(1))
-text_mode_3_suffix = font_normal.render(' 1v1', True, rgb(1))
-text_mode_4_prefix = font_normal.render('', True, rgb(1))
-text_mode_4_suffix = font_normal.render(' 99', True, rgb(1))
+text_mode_1_prefix = font_normal.render('', True, colors[901])
+text_mode_1_suffix = font_normal.render('', True, colors[901])
+text_mode_2_prefix = font_normal.render('Twin ', True, colors[901])
+text_mode_2_suffix = font_normal.render('', True, colors[901])
+text_mode_3_prefix = font_normal.render('', True, colors[901])
+text_mode_3_suffix = font_normal.render(' 1v1', True, colors[901])
+text_mode_4_prefix = font_normal.render('', True, colors[901])
+text_mode_4_suffix = font_normal.render(' 99', True, colors[901])
 # Initialize the game mode surface.
 surface_mode = pygame.Surface((0,0))
 
+ms = []
 # Loop until the window is closed.
 done = False
 while not done:
@@ -2093,10 +2116,10 @@ while not done:
     # Draw Screen.
     # =============================================================================
     # Erase all surfaces.
-    screen.fill(rgb(0))
-    surface_mode.fill(rgb(0))
+    screen.fill(colors[902])
+    surface_mode.fill(colors[902])
     for game in games.all:
-        game.surface_main.fill(rgb(0))
+        game.surface_main.fill(colors[902])
 
     # Draw the game mode if not playing.
     if not flag_playing:
@@ -2154,7 +2177,7 @@ while not done:
         game.draw_information()
         game.draw_matrix()
     # Display score text.
-    text_score = font_normal.render('{}'.format(score), True, rgb(1))
+    text_score = font_normal.render('{}'.format(score), True, colors[901])
     rect_text_score = text_score.get_rect()
     rect_text_score.left = (
         size_window[0] - sum([game.size_total[0] for game in games.all]) - ((len(games.all)-1)*spacing_large)
@@ -2162,7 +2185,7 @@ while not done:
     rect_text_score.bottom = height_panel + 0
     screen.blit(text_score, rect_text_score)
     # Display elapsed time text.
-    text_time_elapsed = font_normal.render('{:02d}:{:02d}'.format(games.player[0].time_elapsed//60000, int((games.player[0].time_elapsed/1000)%60)), True, rgb(1))
+    text_time_elapsed = font_normal.render('{:02d}:{:02d}'.format(games.player[0].time_elapsed//60000, int((games.player[0].time_elapsed/1000)%60)), True, colors[901])
     rect_text_time_elapsed = text_time_elapsed.get_rect()
     rect_text_time_elapsed.right = size_window[0] - (
         size_window[0] - sum([game.size_total[0] for game in games.all]) - ((len(games.all)-1)*spacing_large)
@@ -2201,6 +2224,11 @@ while not done:
 
     # Limit the game to 60 frames per second by delaying every iteration of this loop.
     clock.tick(fps)
- 
+
+# START = time.time()
+# END = time.time()
+# ms.append((END-START)*1000)
+# print(np.mean(ms), np.max(ms))
+
 # Close the window and quit.
 pygame.quit()
