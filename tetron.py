@@ -236,7 +236,7 @@ class Tetron:
         # Initialize the current time, measured from the time pygame.init() was called.
         self.time_current = 0
         # Initialize the time at the previous frame.
-        self.time_previous = 0
+        # self.time_previous = 0
         # Initialize the time when the game is started.
         self.time_start = 0
         # Initialize the time elapsed since the start time.
@@ -606,14 +606,14 @@ class Tetron:
                 # Apply the effect only if it is not currently active.
                 if not self.flag_disoriented:
                     self.flag_disoriented = True
-                    self.duration_disoriented = 0
+                    self.time_start_disoriented = self.time_current + 0  #self.duration_disoriented = 0
                     if self.is_player:
                         sound_special_disoriented.play()
             elif effect_special == id_special[3]:
                 # Apply the effect only if it is not currently active.
                 if not self.flag_blind:
                     self.flag_blind = True
-                    self.duration_blind = 0
+                    self.time_start_blind = self.time_current + 0  #self.duration_blind = 0
                     if self.is_player:
                         sound_special_blind.play()
         # Apply any special effects to tetrimino.
@@ -684,14 +684,14 @@ class Tetron:
                     # Apply the effect only if it is not currently active.
                     if not self.flag_disoriented:
                         self.flag_disoriented = True
-                        self.duration_disoriented = 0
+                        self.time_start_disoriented = self.time_current + 0 # self.duration_disoriented = 0
                         if self.is_player:
                             sound_special_disoriented.play()
                 elif effect_special == id_special[3]:
                     # Apply the effect only if it is not currently active.
                     if not self.flag_blind:
                         self.flag_blind = True
-                        self.duration_blind = 0
+                        self.time_start_blind = self.time_current + 0 # self.duration_blind = 0
                         if self.is_player:
                             sound_special_blind.play()
             
@@ -1426,19 +1426,22 @@ class Tetron:
                 if number != 0:
                     if self.is_player:
                         if self.flag_blind:
-                            color = colors[905]  #0.28  # Color of placed blocks in blind mode
+                            color = colors[905]  # Color of placed blocks in blind mode
                         else:
                             if number < 0:
-                                color = colors[904]  #0.35  # Color of highlighted blocks
+                                color = colors[904]  # Color of highlighted blocks
                             else:
-                                color = colors[int(np.floor(number/100)*100)]  #number + 0  # Color of placed blocks
+                                if number < 900:
+                                    color = colors[int(np.floor(number/100)*100)]  # Color of placed blocks
+                                else:
+                                    color = colors[number]
                     else:
                         if number < 0:
-                            color = colors[904]  #0.35
+                            color = colors[904]
                         else:
-                            color = colors[900]  #900
+                            color = colors[900]
                 else:
-                    color = colors[903]  #0.25  # Color of empty blocks
+                    color = colors[903]  # Color of empty blocks
                 pygame.draw.rect(surface=self.surface_matrix, color=color, rect=[(self.spacing_block+self.width_block)*column+self.spacing_block, (self.spacing_block+self.height_block)*row+self.spacing_block, self.width_block, self.height_block])
 
     # Draw the block in the hold queue.
@@ -1452,7 +1455,10 @@ class Tetron:
                     number = tetrimino_mini[row, column]
                     if number > 0:
                         if self.is_player:
-                            color = colors[int(np.floor(number/100)*100)]
+                            if number < 900:
+                                color = colors[int(np.floor(number/100)*100)]
+                            else:
+                                color = colors[number]
                         else:
                             color = colors[900]
                         pygame.draw.rect(surface=self.surface_hold, color=color, rect=[size*column, size*row, size, size])
@@ -1484,7 +1490,10 @@ class Tetron:
                     number = array_next[row, column]
                     if number > 0:
                         if self.is_player:
-                            color = colors[int(np.floor(number/100)*100)]
+                            if number < 900:
+                                color = colors[int(np.floor(number/100)*100)]
+                            else:
+                                color = colors[number]
                         else:
                             color = colors[900]
                         pygame.draw.rect(surface=self.surface_next, color=color, rect=[size*column, size*row, size, size])
@@ -1734,16 +1743,17 @@ text_mode_4_suffix = font_normal.render(' 99', True, colors[901])
 # Initialize the game mode surface.
 surface_mode = pygame.Surface((0,0))
 
-ms = []
+ms = []  # Debug
 # Loop until the window is closed.
 done = False
 while not done:
+    START = time.time()
     flag_playing = any([game.flag_playing for game in games.all])
     flag_paused = all([game.flag_paused for game in games.all])
     
     for game in games.all:
         # Record the time of the previous frame.
-        game.time_previous = game.time_current + 0
+        # game.time_previous = game.time_current + 0
         # Calculate current time and elapsed time.
         game.time_current = pygame.time.get_ticks()
         if game.flag_playing:
@@ -2197,20 +2207,20 @@ while not done:
     for index, game in enumerate(games.all):
         # Stop the disoriented effect if it has lasted longer than the maximum duration.
         if game.flag_disoriented:
-            if game.duration_disoriented > duration_max_disoriented:
+            if game.time_current - game.time_start_disoriented > duration_max_disoriented:
                 game.flag_disoriented = False
-                game.duration_disoriented = 0
-            else:
-                game.duration_disoriented += (game.time_current - game.time_previous)
+            #     game.duration_disoriented = 0
+            # else:
+            #     game.duration_disoriented += (game.time_current - game.time_previous)
             # Rotate the matrix.
             game.surface_matrix.blit(pygame.transform.rotate(game.surface_matrix, 180), (0,0))
         # Stop the blind effect if it has lasted longer than the maximum duration.
         if game.flag_blind:
-            if game.duration_blind > duration_max_blind:
+            if game.time_current - game.time_start_blind > duration_max_blind:
                 game.flag_blind = False
-                game.duration_blind = 0
-            else:
-                game.duration_blind += (game.time_current - game.time_previous)
+            #     game.duration_blind = 0
+            # else:
+            #     game.duration_blind += (game.time_current - game.time_previous)
         
         # Draw the matrix inside the main surface.
         game.surface_main.blit(game.surface_matrix, game.rect_matrix)
@@ -2221,14 +2231,13 @@ while not done:
     
     # Update the screen.
     pygame.display.flip()
-
     # Limit the game to 60 frames per second by delaying every iteration of this loop.
-    clock.tick(fps)
+    dt = clock.tick(fps)
+    END = time.time()
+    ms.append((END-START)*1000)
 
-# START = time.time()
-# END = time.time()
-# ms.append((END-START)*1000)
-# print(np.mean(ms), np.max(ms))
+
+print(np.mean(ms), np.max(ms))
 
 # Close the window and quit.
 pygame.quit()
