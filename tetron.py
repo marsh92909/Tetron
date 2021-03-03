@@ -197,9 +197,9 @@ def rgb(color, tint=0):
 # The main class containing all gameplay actions (such as moving and rotating blocks).
 class Tetron:
     # Initialize the attributes of the instance of of this class when it is first created.
-    def __init__(self, is_player, instance_number, games, width_block, height_block, spacing_block, row_count, column_count):
+    def __init__(self, is_player, instance_self, games, width_block, height_block, spacing_block, row_count, column_count):
         self.is_player = is_player
-        self.instance_number = instance_number
+        self.instance_self = instance_self
         self.games = games
 
         # Define the width, height, and spacing of the blocks in pixels.
@@ -1043,7 +1043,7 @@ class Tetron:
         # Set flag to hard drop other game instances.
         self.flag_harddrop = True
         # Play sound effect.
-        if self.instance_number == 0:
+        if self.instance_self == 0:
             if self.is_player:
                 sound_game_harddrop.play()
         self.update()
@@ -1150,7 +1150,7 @@ class Tetron:
                 self.set_tetrimino(self.queue_hold.pop(0))
                 # self.create_new(self.queue_hold.pop(0))
         # Play sound effect.
-        if self.instance_number == 0:
+        if self.instance_self == 0:
             if self.is_player:
                 sound_game_hold.play()
     
@@ -1188,9 +1188,9 @@ class Tetron:
     
     # Randomly select a target if playing with AI.
     def select_target(self):
-        games = [game for game in self.games.all if not game.flag_lose and game.instance_number != self.instance_number]
+        games = [game for game in self.games.all if not game.flag_lose and game.instance_self != self.instance_self]
         if len(games) > 0 and len(self.games.ai) > 0:
-            self.instance_target = games[random.choice(range(len(games)))].instance_number
+            self.instance_target = games[random.choice(range(len(games)))].instance_self
         else:
             self.instance_target = None
     
@@ -1371,7 +1371,7 @@ class Tetron:
         else:
             self.array_current[:] = 0
         # Add the highlighted blocks, dropped blocks, and current tetrimino to the displayed array.
-        if not self.flag_ghost and not self.flag_blind:
+        if not self.flag_ghost and not self.flag_blind and self.is_player:
             self.array_display[self.array_highlight < 0] = self.array_highlight[self.array_highlight < 0]
         self.array_display[self.array_dropped > 0] = self.array_dropped[self.array_dropped > 0]
         self.array_display[self.array_current > 0] = self.array_current[self.array_current > 0]
@@ -1428,17 +1428,13 @@ class Tetron:
         self.surface_hold.fill(rgb(0))
         if len(self.queue_hold) > 0:
             tetrimino_mini = self.create_tetrimino_mini(self.queue_hold[0][0])
-            # # Create a copy of the current tetrimino array and properly pad it for displaying in the hold queue.
-            # tetrimino_mini = np.copy(self.queue_hold[0][0])
-            # if tetrimino_mini.shape[0] <= 2:
-            #     tetrimino_mini = np.pad(tetrimino_mini, ((1,1), (0,0)), mode='constant', constant_values=0)
-            # if tetrimino_mini.shape[1] <= 2:
-            #     tetrimino_mini = np.pad(tetrimino_mini, ((0,0), (1,1)), mode='constant', constant_values=0)
             size = int(min(np.floor([self.width_hold/tetrimino_mini.shape[0], self.width_hold/tetrimino_mini.shape[1]])))
             for row in range(tetrimino_mini.shape[0]):
                 for column in range(tetrimino_mini.shape[1]):
                     color = tetrimino_mini[row, column]
                     if color > 0:
+                        if not self.is_player:
+                            color = 900
                         pygame.draw.rect(surface=self.surface_hold, color=rgb(color), rect=[size*column, size*row, size, size])
             # Display the hold queue and text.
             self.surface_main.blit(self.surface_hold, self.rect_hold)
@@ -1467,6 +1463,8 @@ class Tetron:
                 for column in range(array_next.shape[1]):
                     color = array_next[row, column]
                     if color > 0:
+                        if not self.is_player:
+                            color = 900
                         pygame.draw.rect(surface=self.surface_next, color=rgb(color), rect=[size*column, size*row, size, size])
             # Display the next queue and text.
             self.surface_main.blit(self.surface_next, self.rect_next)
@@ -1502,7 +1500,7 @@ class Tetron:
     def draw_information(self):
         self.surface_information.fill(rgb(0))
         if self.game_mode in [4] and self.is_player and self.flag_playing:
-            if self.instance_target == self.instance_number:
+            if self.instance_target == self.instance_self:
                 target = 'Self'
             else:
                 target = 'AI {}'.format(self.instance_target)
@@ -1647,7 +1645,7 @@ class Games:
     # Delete all player games except the first game.
     def remove_games_player(self):
         self.player = [self.player[0]]
-        self.all = [game for game in self.all if game.is_player and game.instance_number == 0]
+        self.all = [game for game in self.all if game.is_player and game.instance_self == 0]
     
     # Delete all AI games.
     def remove_games_ai(self):
@@ -2159,16 +2157,16 @@ while not done:
     text_score = font_normal.render('{}'.format(score), True, rgb(1))
     rect_text_score = text_score.get_rect()
     rect_text_score.left = (
-        size_window[0] - sum([game.size_total[0] for game in games.player]) - ((len(games.player)-1)*spacing_large)
-        )//2 + games.player[0].width_hold + games.player[0].spacing_small
+        size_window[0] - sum([game.size_total[0] for game in games.all]) - ((len(games.all)-1)*spacing_large)
+        )//2 + games.all[0].width_hold + games.all[0].spacing_small
     rect_text_score.bottom = height_panel + 0
     screen.blit(text_score, rect_text_score)
     # Display elapsed time text.
     text_time_elapsed = font_normal.render('{:02d}:{:02d}'.format(games.player[0].time_elapsed//60000, int((games.player[0].time_elapsed/1000)%60)), True, rgb(1))
     rect_text_time_elapsed = text_time_elapsed.get_rect()
     rect_text_time_elapsed.right = size_window[0] - (
-        size_window[0] - sum([game.size_total[0] for game in games.player]) - ((len(games.player)-1)*spacing_large)
-        )//2 - games.player[-1].width_next - games.player[-1].spacing_small
+        size_window[0] - sum([game.size_total[0] for game in games.all]) - ((len(games.all)-1)*spacing_large)
+        )//2 - games.all[-1].width_next - games.all[-1].spacing_small
     rect_text_time_elapsed.bottom = height_panel + 0
     screen.blit(text_time_elapsed, rect_text_time_elapsed)
 
