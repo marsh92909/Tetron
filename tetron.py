@@ -51,6 +51,8 @@ time_garbage_warning = 8000
 ai_delay_mean = 1500
 ai_delay_std = 100
 
+# Define how many blocks to show in the next queue.
+next_count = 5
 # Define the IDs for classic tetriminos, advanced tetriminos, special effects.
 id_classic = [100, 200, 300, 400, 500, 600, 700]
 id_advanced = [101, 102, 201, 202, 301, 302, 401, 402, 403, 501, 601, 602, 701, 801, 811, 812, 813, 814, 899]
@@ -281,6 +283,8 @@ class Tetron:
         self.id_current = 0
         # Initialize the hold queue.
         self.queue_hold = []
+        # Initialize the next queue.
+        self.queue_next = []
         # Initialize the garbage queue.
         self.queue_garbage = []
         # Initialize time when current garbage was received.
@@ -338,6 +342,16 @@ class Tetron:
         self.surface_hold = pygame.Surface((self.width_hold, self.width_hold))
         self.rect_hold = self.surface_hold.get_rect()
         self.rect_hold.top = self.rect_text_hold.height + 0
+        # Create the text and rect object for the next queue.
+        self.text_next = font_small.render('NEXT', True, rgb(0.5))
+        self.rect_text_next = self.text_next.get_rect()
+        self.rect_text_next.top = 0
+        self.rect_text_next.centerx = self.size_total[0] - self.width_next // 2
+        # Create the surface and rect object used to display the next queue.
+        self.surface_next = pygame.Surface((self.width_next, self.size_total[1]))
+        self.rect_next = self.surface_next.get_rect()
+        self.rect_next.top = self.rect_text_next.height + 0
+        self.rect_next.right = self.size_total[0] + 0
         # Create the surface and rect object used to display the garbage queue.
         self.surface_garbage = pygame.Surface((self.width_block, self.size_total[1]))
         self.rect_garbage = self.surface_garbage.get_rect()
@@ -360,8 +374,11 @@ class Tetron:
         self.flag_playing = True
         # Select a target.
         self.select_target()
+        # Generate the next queue and set the new tetrimino.
+        self.generate_next(next_count)
+        self.set_tetrimino()
         # Create a new tetrimino.
-        self.create_new()
+        # self.create_new()
     
     # Pause or resume the game.
     def pause_game(self):
@@ -384,6 +401,229 @@ class Tetron:
         self.flag_disoriented = False
         self.update()
 
+    # Randomly generate the next tetriminos and add them to the next queue.
+    def generate_next(self, count=1):
+        # Randomly select a category to choose from, then randomly select a tetrimino within the category with each tetrimino having an equal probability.
+        for is_advanced in random.choices([True, False], [self.weight_advanced, 1-self.weight_advanced], k=count):
+            if is_advanced:
+                id = random.choice([id_advanced[i] for i, x in enumerate(id_advanced) if not self.used_advanced[i]])
+                self.used_advanced[id_advanced.index(id)] = True
+                # Reset all values in the list to False.
+                if all(self.used_advanced):
+                    self.used_advanced = [False] * len(self.used_advanced)
+            else:
+                id = random.choice([id_classic[i] for i, x in enumerate(id_classic) if not self.used_classic[i]])
+                self.used_classic[id_classic.index(id)] = True
+                # Reset all values in the list to False.
+                if all(self.used_classic):
+                    self.used_classic = [False] * len(self.used_classic)
+            
+            # Create tetrimino array.
+            if id not in [899, 801]:
+                tetrimino = self.create_tetrimino(id)
+            else:
+                tetrimino = None
+
+            # Store the tetrimino array, the ID, and rotation in a tuple and append it to the next queue.
+            self.queue_next.append((tetrimino, id, 0))
+    
+    # Create and return a tetrimino array.
+    def create_tetrimino(self, number):
+        # Classic tetriminos.
+        if number == id_classic[0]:  # I
+            tetrimino = number * np.ones([4, 4])
+            tetrimino[[0,2,3],:] = -1
+        elif number == id_classic[1]:  # J
+            tetrimino = number * np.ones([3, 3])
+            tetrimino[0, 1:] = -1
+            tetrimino[2, :] = -1
+        elif number == id_classic[2]:  # L
+            tetrimino = number * np.ones([3, 3])
+            tetrimino[0, 0:2] = -1
+            tetrimino[2, :] = -1
+        elif number == id_classic[3]:  # O
+            tetrimino = number * np.ones([2, 2])
+        elif number == id_classic[4]:  # S
+            tetrimino = number * np.ones([3, 3])
+            tetrimino[0, 0] = -1
+            tetrimino[1, 2] = -1
+            tetrimino[2, :] = -1
+        elif number == id_classic[5]:  # T
+            tetrimino = number * np.ones([3, 3])
+            tetrimino[0, [0,2]] = -2
+            tetrimino[2, [0,2]] = -3
+            tetrimino[2, 1] = -1
+        elif number == id_classic[6]:  # Z
+            tetrimino = number * np.ones([3, 3])
+            tetrimino[0, 2] = -1
+            tetrimino[1, 0] = -1
+            tetrimino[2, :] = -1
+        # Advanced tetriminos.
+        elif number == 101:  # I+
+            tetrimino = number * np.ones([5, 5])
+            tetrimino[[0,1,3,4],:] = -1
+        elif number == 102:  # I-
+            tetrimino = number * np.ones([3, 3])
+            tetrimino[[0,2],:] = -1
+        elif number == 201:  # J+
+            tetrimino = number * np.ones([3, 3])
+            tetrimino[0:2, 1:3] = -1
+        elif number == 202:  # J-
+            tetrimino = number * np.ones([2, 2])
+            tetrimino[0, 1] = -1
+        elif number == 301:  # L+
+            tetrimino = number * np.ones([3, 3])
+            tetrimino[0:2, 0:2] = -1
+        elif number == 302:  # L-
+            tetrimino = number * np.ones([2, 2])
+            tetrimino[0, 0] = -1
+        elif number == 401:  # O+
+            tetrimino = number * np.ones([3, 3])
+            tetrimino[:, 2] = -1
+        elif number == 402:  # O++
+            tetrimino = number * np.ones([4, 4])
+            tetrimino[:, [0,3]] = -1
+        elif number == 403:  # O ring
+            tetrimino = number * np.ones([3, 3])
+            tetrimino[1, 1] = -1
+        elif number == 501:  # S+
+            tetrimino = number * np.ones([3, 3])
+            tetrimino[0:2, 0] = -1
+            tetrimino[1:3, 2] = -1
+        elif number == 601:  # T+1
+            tetrimino = number * np.ones([3, 3])
+            tetrimino[0, 0] = -1
+            tetrimino[0, 2] = -1
+            tetrimino[2, 0] = -1
+            tetrimino[2, 2] = -1
+        elif number == 602:  # T+2
+            tetrimino = number * np.ones([3, 3])
+            tetrimino[1:3, [0,2]] = -1
+        elif number == 701:  # Z+
+            tetrimino = number * np.ones([3, 3])
+            tetrimino[1:3, 0] = -1
+            tetrimino[0:2, 2] = -1
+        elif number == 801:  # Random 3x3
+            shape = [3, 3]
+            tetrimino = -1 * np.ones(shape)
+            random_indices = random.sample(range(tetrimino.size), 5)
+            tetrimino[np.unravel_index(random_indices, shape)] = number
+        elif number == 811:  # Period (.)
+            tetrimino = number * np.ones([1, 1])
+        elif number == 812:  # Comma (,)
+            tetrimino = number * np.ones([2, 2])
+            tetrimino[[0,1],[0,1]] = -1
+        elif number == 813:  # Colon (:)
+            tetrimino = -1 * np.ones([3, 3])
+            tetrimino[[0,2], 1] = number
+        elif number == 814:  # Quotation (")
+            tetrimino = -1 * np.ones([3, 3])
+            tetrimino[0:2, [0,2]] = number
+        elif number == 899:  # Freebie
+            # Index of highest row containing dropped blocks.
+            index_highest = np.argmax(np.any(self.array_dropped > 0, axis=1))
+            # Index of lowest row that can fit this tetrimino.
+            index_lowest = max(np.argmax(self.array_dropped, axis=0))
+            # Get the top rows of the dropped blocks.
+            array_dropped_top = np.copy(self.array_dropped[index_highest:index_lowest+1, :]) > 0
+            # Get the row indices of the highest blocks in each column of the dropped blocks array, with values of -1 for empty columns.
+            rows_highest = np.argmax(array_dropped_top, axis=0)
+            rows_highest[np.all(array_dropped_top == 0, axis=0)] = -1
+            # Fill the blocks below the highest blocks in each column.
+            for column, row in enumerate(rows_highest):
+                if row >= 0:
+                    array_dropped_top[row:, column] = 1
+            # Create the tetrimino by inverting the dropped blocks.
+            tetrimino = number * (1 - array_dropped_top)
+            # Replace all values of 0 with -1.
+            tetrimino[tetrimino == 0] = -1
+        return tetrimino
+    
+    # Create a padded version of a tetrimino array for display in the queues.
+    def create_tetrimino_mini(self, array):
+        # Create a placeholder array for tetriminos that must be generated only when taken out of the next queue.
+        if array is None:
+            array = 800 * np.ones([3, 3])
+        # Pad small arrays.
+        if array.shape[0] <= 2:
+            array = np.pad(array, ((1,1), (0,0)), mode='constant', constant_values=-1)
+        if array.shape[1] <= 2:
+            array = np.pad(array, ((0,0), (1,1)), mode='constant', constant_values=-1)
+        return array
+    
+    # Get the first tetrimino in the next queue or the hold queue and use it as the current.
+    def set_tetrimino(self, hold_data=None):
+        # Get and remove the first data from the next or hold queue.
+        if hold_data is None:
+            data = self.queue_next.pop(0)
+            self.generate_next()
+        else:
+            data = hold_data
+        
+        # Generate any un-generated tetrimino arrays.
+        tetrimino, number, rotation = data
+        if tetrimino is None:
+            tetrimino = self.create_tetrimino(number)
+        
+        # Randomly select a special property after selecting whether to use a special effect.
+        if random.choices([True, False], [self.weight_special, 1-self.weight_special], k=1)[0]:
+            effect_special = random.choice([id_special[i] for i in range(len(id_special)) if not self.used_special[i]])
+            self.used_special[id_special.index(effect_special)] = True
+            # Reset all values in the list to False.
+            if all(self.used_special):
+                self.used_special = [False] * len(self.used_special)
+
+            if effect_special == id_special[0]:
+                self.flag_ghost = True
+                self.flag_fast_fall = True
+                if self.is_player:
+                    sound_special_ghost.play()
+            elif effect_special == id_special[1]:
+                self.flag_heavy = True
+                self.flag_fast_fall = True
+                if self.is_player:
+                    sound_special_heavy.play()
+            elif effect_special == id_special[2]:
+                # Apply the effect only if it is not currently active.
+                if not self.flag_disoriented:
+                    self.flag_disoriented = True
+                    self.duration_disoriented = 0
+                    if self.is_player:
+                        sound_special_disoriented.play()
+            elif effect_special == id_special[3]:
+                # Apply the effect only if it is not currently active.
+                if not self.flag_blind:
+                    self.flag_blind = True
+                    self.duration_blind = 0
+                    if self.is_player:
+                        sound_special_blind.play()
+        # Apply any special effects to tetrimino.
+        if self.flag_ghost:
+            tetrimino[tetrimino > 0] = 901
+        elif self.flag_heavy:
+            tetrimino[tetrimino > 0] = 902
+        
+        # Assign the new data.
+        self.tetrimino = tetrimino
+        self.id_current = number
+        self.rotation_current = rotation
+
+        # Clear the current tetrimino array.
+        self.array_current[:] = 0
+        # Insert the new tetrimino in the array.
+        column_left = int(np.floor((self.column_count-tetrimino.shape[1])/2))
+        self.array_current[0:tetrimino.shape[0], column_left:column_left+tetrimino.shape[1]] = self.tetrimino
+        # Check for landing.
+        self.check_landed()
+        # Update the displayed array.
+        self.update()
+
+        # Record the time for AI.
+        self.ai_time_evaluate = self.time_current + 0
+        # Select a delay for this tetrimino.
+        self.ai_delay = random.gauss(ai_delay_mean, ai_delay_std)
+
+    # *** Deprecate ***
     # Generate a new tetrimino and replace the current arrays.
     def create_new(self, hold_data=None):
         if hold_data is None:
@@ -867,7 +1107,8 @@ class Tetron:
         if self.flag_playing:
             self.check_lose()
             if not self.flag_lose:
-                self.create_new()
+                self.set_tetrimino()
+                # self.create_new()
 
     # Start soft dropping.
     def start_softdropping(self):
@@ -902,10 +1143,12 @@ class Tetron:
         if self.game_mode != 2:
             # Create a new tetrimino if nothing was in the queue.
             if len(self.queue_hold) <= 1:
-                self.create_new()
+                self.set_tetrimino()
+                # self.create_new()
             # Swap the current tetrimino with the one in the queue.
             else:
-                self.create_new(self.queue_hold.pop(0))
+                self.set_tetrimino(self.queue_hold.pop(0))
+                # self.create_new(self.queue_hold.pop(0))
         # Play sound effect.
         if self.instance_number == 0:
             if self.is_player:
@@ -1184,12 +1427,13 @@ class Tetron:
     def draw_hold(self):
         self.surface_hold.fill(rgb(0))
         if len(self.queue_hold) > 0:
-            # Create a copy of the current tetrimino array and properly pad it for displaying in the hold queue.
-            tetrimino_mini = np.copy(self.queue_hold[0][0])
-            if tetrimino_mini.shape[0] <= 2:
-                tetrimino_mini = np.pad(tetrimino_mini, ((1,1), (0,0)), mode='constant', constant_values=0)
-            if tetrimino_mini.shape[1] <= 2:
-                tetrimino_mini = np.pad(tetrimino_mini, ((0,0), (1,1)), mode='constant', constant_values=0)
+            tetrimino_mini = self.create_tetrimino_mini(self.queue_hold[0][0])
+            # # Create a copy of the current tetrimino array and properly pad it for displaying in the hold queue.
+            # tetrimino_mini = np.copy(self.queue_hold[0][0])
+            # if tetrimino_mini.shape[0] <= 2:
+            #     tetrimino_mini = np.pad(tetrimino_mini, ((1,1), (0,0)), mode='constant', constant_values=0)
+            # if tetrimino_mini.shape[1] <= 2:
+            #     tetrimino_mini = np.pad(tetrimino_mini, ((0,0), (1,1)), mode='constant', constant_values=0)
             size = int(min(np.floor([self.width_hold/tetrimino_mini.shape[0], self.width_hold/tetrimino_mini.shape[1]])))
             for row in range(tetrimino_mini.shape[0]):
                 for column in range(tetrimino_mini.shape[1]):
@@ -1199,6 +1443,34 @@ class Tetron:
             # Display the hold queue and text.
             self.surface_main.blit(self.surface_hold, self.rect_hold)
             self.surface_main.blit(self.text_hold, self.rect_text_hold)
+    
+    # Draw the blocks in the next queue.
+    def draw_next(self):
+        self.surface_next.fill(rgb(0))
+        if len(self.queue_next) > 0:
+            # Create the single array containing all blocks in the queue.
+            array_next = np.zeros([0, self.column_count])
+            for data in self.queue_next:
+                tetrimino = self.create_tetrimino_mini(data[0])
+                if tetrimino.shape[1] < array_next.shape[1]:
+                    tetrimino = np.concatenate((
+                        tetrimino,
+                        np.zeros([tetrimino.shape[0], array_next.shape[1] - tetrimino.shape[1]])
+                        ), axis=1)
+                    # Add the current tetrimino array and an empty row at the bottom of the existing array.
+                    array_next = np.concatenate((array_next, tetrimino, np.zeros([1, array_next.shape[1]])), axis=0)
+            # Crop off empty columns at the right.
+            array_next = array_next[:, :-np.argmax(np.any(np.fliplr(array_next>0), axis=0))]
+            # Draw each block in the array.
+            size = int(np.floor(self.width_next/array_next.shape[1]))
+            for row in range(array_next.shape[0]):
+                for column in range(array_next.shape[1]):
+                    color = array_next[row, column]
+                    if color > 0:
+                        pygame.draw.rect(surface=self.surface_next, color=rgb(color), rect=[size*column, size*row, size, size])
+            # Display the next queue and text.
+            self.surface_main.blit(self.surface_next, self.rect_next)
+            self.surface_main.blit(self.text_next, self.rect_text_next)
     
     # Draw the garbage queue.
     def draw_garbage(self):
@@ -1878,7 +2150,9 @@ while not done:
     # Draw elements of each game.
     for game in games.all:
         game.draw_garbage()
-        game.draw_hold()
+        if game_mode != 2:
+            game.draw_hold()
+            game.draw_next()
         game.draw_information()
         game.draw_matrix()
     # Display score text.
