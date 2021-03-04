@@ -607,14 +607,14 @@ class Tetron:
                 # Apply the effect only if it is not currently active.
                 if not self.flag_disoriented:
                     self.flag_disoriented = True
-                    self.time_start_disoriented = self.time_current + 0  #self.duration_disoriented = 0
+                    self.time_start_disoriented = self.time_current + 0
                     if self.is_player:
                         sound_special_disoriented.play()
             elif effect_special == id_special[3]:
                 # Apply the effect only if it is not currently active.
                 if not self.flag_blind:
                     self.flag_blind = True
-                    self.time_start_blind = self.time_current + 0  #self.duration_blind = 0
+                    self.time_start_blind = self.time_current + 0
                     if self.is_player:
                         sound_special_blind.play()
         # Apply any special effects to tetrimino.
@@ -1451,6 +1451,9 @@ class Tetron:
                 else:
                     color = colors[900]
             pygame.draw.rect(surface=self.surface_matrix, color=color, rect=[(self.spacing_block+self.width_block)*column+self.spacing_block, (self.spacing_block+self.height_block)*row+self.spacing_block, self.width_block, self.height_block])
+        # Rotate the matrix if the disoriented effect is active.
+        if self.flag_disoriented:
+            self.surface_matrix.blit(pygame.transform.rotate(self.surface_matrix, 180), (0,0))
         
         # self.surface_matrix.fill(colors[902])
         # for row in range(self.row_count):
@@ -2240,12 +2243,12 @@ while not done:
         if game.flag_disoriented:
             if game.time_current - game.time_start_disoriented > duration_max_disoriented:
                 game.flag_disoriented = False
-            # Rotate the matrix.
-            game.surface_matrix.blit(pygame.transform.rotate(game.surface_matrix, 180), (0,0))
+                game.draw_matrix()
         # Stop the blind effect if it has lasted longer than the maximum duration.
         if game.flag_blind:
             if game.time_current - game.time_start_blind > duration_max_blind:
                 game.flag_blind = False
+                game.draw_matrix()
         
         # Draw the matrix inside the main surface.
         game.surface_main.blit(game.surface_matrix, game.rect_matrix)
@@ -2258,7 +2261,7 @@ while not done:
     ms.append((END-START)*1000)
     # Update the screen.
     pygame.display.flip()
-    # Limit the game to 60 frames per second by delaying every iteration of this loop.
+    # Limit the game to the desired frames per second by delaying every iteration of this loop.
     clock.tick(fps)
 
 print(np.mean(ms), np.median(ms), np.max(ms))
