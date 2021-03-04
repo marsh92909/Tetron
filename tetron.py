@@ -235,8 +235,6 @@ class Tetron:
 
         # Initialize the current time, measured from the time pygame.init() was called.
         self.time_current = 0
-        # Initialize the time at the previous frame.
-        # self.time_previous = 0
         # Initialize the time when the game is started.
         self.time_start = 0
         # Initialize the time elapsed since the start time.
@@ -247,11 +245,11 @@ class Tetron:
         # Initialize the classic flag. Define this attribute here to prevent resetting its value on game restarts.
         self.flag_classic = False
 
-        # Create and set the sizes of the surfaces used to display each element of the game.
-        self.resize_display()
-
         # Initialize all other attributes.
         self.initialize()
+
+        # Create and set the sizes of the surfaces used to display each element of the game.
+        self.resize_display()
 
     # Initialize values of attributes that are both modified during the game and reset when starting the game. Called on first startup and subsequent game starts.
     def initialize(self):
@@ -381,6 +379,9 @@ class Tetron:
         self.rect_information = self.surface_information.get_rect()
         self.rect_information.bottom = self.size_total[1] + 0
         self.rect_information.right = self.size_total[0] + 0
+
+        # Draw the matrix.
+        self.draw_matrix()
 
     # Start the game.
     def start_game(self):
@@ -1395,6 +1396,8 @@ class Tetron:
         self.array_display[self.array_dropped > 0] = self.array_dropped[self.array_dropped > 0]
         self.array_display[self.array_current > 0] = self.array_current[self.array_current > 0]
 
+        self.draw_matrix()
+
     # Update the game difficulty.
     def update_difficulty(self):
         # Update the block fall speed.
@@ -1419,30 +1422,60 @@ class Tetron:
     
     # Draw each block in the matrix.
     def draw_matrix(self):
-        self.surface_matrix.fill(colors[902])
-        for row in range(self.row_count):
-            for column in range(self.column_count):
-                number = self.array_display[row, column]
-                if number != 0:
-                    if self.is_player:
-                        if self.flag_blind:
-                            color = colors[905]  # Color of placed blocks in blind mode
-                        else:
-                            if number < 0:
-                                color = colors[904]  # Color of highlighted blocks
-                            else:
-                                if number < 900:
-                                    color = colors[int(np.floor(number/100)*100)]  # Color of placed blocks
-                                else:
-                                    color = colors[number]
-                    else:
-                        if number < 0:
-                            color = colors[904]
-                        else:
-                            color = colors[900]
+        self.surface_matrix.fill(colors[903])
+        # Draw grid lines.
+        for i in range(self.row_count+1):
+            y = i * (self.height_block+self.spacing_block)
+            pygame.draw.line(surface=self.surface_matrix, color=colors[902], start_pos=[0, y], end_pos=[self.rect_matrix.width, y], width=self.spacing_block)
+        for j in range(self.column_count+1):
+            x = j * (self.width_block+self.spacing_block)
+            pygame.draw.line(surface=self.surface_matrix, color=colors[902], start_pos=[x, 0], end_pos=[x, self.rect_matrix.height], width=self.spacing_block)
+        # Draw non-empty blocks.
+        for indices in np.argwhere(self.array_display != 0):
+            row, column = indices
+            number = self.array_display[row, column]
+            if self.is_player:
+                if self.flag_blind:
+                    color = colors[905]  # Color of placed blocks in blind mode
                 else:
-                    color = colors[903]  # Color of empty blocks
-                pygame.draw.rect(surface=self.surface_matrix, color=color, rect=[(self.spacing_block+self.width_block)*column+self.spacing_block, (self.spacing_block+self.height_block)*row+self.spacing_block, self.width_block, self.height_block])
+                    if number < 0:
+                        color = colors[904]  # Color of highlighted blocks
+                    else:
+                        if number < 900:
+                            color = colors[int(np.floor(number/100)*100)]  # Color of placed blocks
+                        else:
+                            color = colors[number]
+            else:
+                if number < 0:
+                    color = colors[904]
+                else:
+                    color = colors[900]
+            pygame.draw.rect(surface=self.surface_matrix, color=color, rect=[(self.spacing_block+self.width_block)*column+self.spacing_block, (self.spacing_block+self.height_block)*row+self.spacing_block, self.width_block, self.height_block])
+        
+        # self.surface_matrix.fill(colors[902])
+        # for row in range(self.row_count):
+        #     for column in range(self.column_count):
+        #         number = self.array_display[row, column]
+        #         if number != 0:
+        #             if self.is_player:
+        #                 if self.flag_blind:
+        #                     color = colors[905]  # Color of placed blocks in blind mode
+        #                 else:
+        #                     if number < 0:
+        #                         color = colors[904]  # Color of highlighted blocks
+        #                     else:
+        #                         if number < 900:
+        #                             color = colors[int(np.floor(number/100)*100)]  # Color of placed blocks
+        #                         else:
+        #                             color = colors[number]
+        #             else:
+        #                 if number < 0:
+        #                     color = colors[904]
+        #                 else:
+        #                     color = colors[900]
+        #         else:
+        #             color = colors[903]  # Color of empty blocks
+        #         pygame.draw.rect(surface=self.surface_matrix, color=color, rect=[(self.spacing_block+self.width_block)*column+self.spacing_block, (self.spacing_block+self.height_block)*row+self.spacing_block, self.width_block, self.height_block])
 
     # Draw the block in the hold queue.
     def draw_hold(self):
@@ -1751,10 +1784,8 @@ while not done:
     flag_playing = any([game.flag_playing for game in games.all])
     flag_paused = all([game.flag_paused for game in games.all])
     
+    # Calculate current time and elapsed time.
     for game in games.all:
-        # Record the time of the previous frame.
-        # game.time_previous = game.time_current + 0
-        # Calculate current time and elapsed time.
         game.time_current = pygame.time.get_ticks()
         if game.flag_playing:
             game.time_elapsed = game.time_current - game.time_start
@@ -2185,7 +2216,7 @@ while not done:
             game.draw_hold()
             game.draw_next()
         game.draw_information()
-        game.draw_matrix()
+        # game.draw_matrix()   # Do this in each game's update()
     # Display score text.
     text_score = font_normal.render('{}'.format(score), True, colors[901])
     rect_text_score = text_score.get_rect()
@@ -2209,18 +2240,12 @@ while not done:
         if game.flag_disoriented:
             if game.time_current - game.time_start_disoriented > duration_max_disoriented:
                 game.flag_disoriented = False
-            #     game.duration_disoriented = 0
-            # else:
-            #     game.duration_disoriented += (game.time_current - game.time_previous)
             # Rotate the matrix.
             game.surface_matrix.blit(pygame.transform.rotate(game.surface_matrix, 180), (0,0))
         # Stop the blind effect if it has lasted longer than the maximum duration.
         if game.flag_blind:
             if game.time_current - game.time_start_blind > duration_max_blind:
                 game.flag_blind = False
-            #     game.duration_blind = 0
-            # else:
-            #     game.duration_blind += (game.time_current - game.time_previous)
         
         # Draw the matrix inside the main surface.
         game.surface_main.blit(game.surface_matrix, game.rect_matrix)
@@ -2229,15 +2254,14 @@ while not done:
         ((size_window[0] - sum([i.size_total[0] for i in (games.all)]) - (len(games.all)-1)*spacing_large)//2 + sum([i.size_total[0] for i in (games.all)[:index]]) + index*spacing_large, height_panel)
         )
     
+    END = time.time()
+    ms.append((END-START)*1000)
     # Update the screen.
     pygame.display.flip()
     # Limit the game to 60 frames per second by delaying every iteration of this loop.
-    dt = clock.tick(fps)
-    END = time.time()
-    ms.append((END-START)*1000)
+    clock.tick(fps)
 
-
-print(np.mean(ms), np.max(ms))
+print(np.mean(ms), np.median(ms), np.max(ms))
 
 # Close the window and quit.
 pygame.quit()
