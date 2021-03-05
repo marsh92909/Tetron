@@ -237,13 +237,6 @@ class Tetron:
         self.row_count = row_count
         self.column_count = column_count
 
-        # Initialize the current time, measured from the time pygame.init() was called.
-        self.time_current = 0
-        # Initialize the time when the game is started.
-        self.time_start = 0
-        # Initialize the time elapsed since the start time.
-        self.time_elapsed = 0
-
         # Initialize the game mode. Define this attribute here to prevent resetting its value on game restarts.
         self.game_mode = 1
         # Initialize the classic flag. Define this attribute here to prevent resetting its value on game restarts.
@@ -309,7 +302,7 @@ class Tetron:
         # Initialize the garbage queue.
         self.queue_garbage = []
         # Initialize time when current garbage was received.
-        self.time_receive_garbage = self.time_current + 0
+        self.time_receive_garbage = self.games.time_current + 0
 
         # Initialize the score.
         self.score = 0
@@ -391,8 +384,6 @@ class Tetron:
     def start_game(self):
         # Reset attributes.
         self.initialize()
-        # Save the start time.
-        self.time_start = pygame.time.get_ticks()
         self.reset_time_advance()
         # Set flags.
         self.flag_playing = True
@@ -611,14 +602,14 @@ class Tetron:
                 # Apply the effect only if it is not currently active.
                 if not self.flag_disoriented:
                     self.flag_disoriented = True
-                    self.time_start_disoriented = self.time_current + 0
+                    self.time_start_disoriented = self.games.time_current + 0
                     if self.is_player:
                         sound_special_disoriented.play()
             elif effect_special == id_special[3]:
                 # Apply the effect only if it is not currently active.
                 if not self.flag_blind:
                     self.flag_blind = True
-                    self.time_start_blind = self.time_current + 0
+                    self.time_start_blind = self.games.time_current + 0
                     if self.is_player:
                         sound_special_blind.play()
         # Apply any special effects to tetrimino.
@@ -643,7 +634,7 @@ class Tetron:
         self.update()
 
         # Record the time for AI.
-        self.ai_time_evaluate = self.time_current + 0
+        self.ai_time_evaluate = self.games.time_current + 0
         # Select a delay for this tetrimino.
         self.ai_delay = random.gauss(ai_delay_mean, ai_delay_std)
 
@@ -1142,7 +1133,7 @@ class Tetron:
         # Reset the previous advance time.
         self.reset_time_advance()
         # Record the current time used later to calculate how long this key is held.
-        self.time_start_softdrop = self.time_current + 0
+        self.time_start_softdrop = self.games.time_current + 0
         # Initialize the time at which the previous repeat occured.
         self.time_previous_softdrop = 0
         # Play sound effect.
@@ -1188,7 +1179,7 @@ class Tetron:
         is_landed_bottom = np.any(self.array_current[-1,:] > 0)
         if (self.flag_ghost and is_landed_bottom) or (not self.flag_ghost and (is_landed_stack or is_landed_bottom)):
             self.flag_landed = True
-            self.time_landed = self.time_current + 0
+            self.time_landed = self.games.time_current + 0
             # If landed while soft dropping, reset advance timer in addition to resetting specific flags.
             if self.flag_softdropping:
                 self.stop_softdropping()
@@ -1263,7 +1254,7 @@ class Tetron:
         max = 12
         if count > 0:
             if total == 0:
-                self.time_receive_garbage = self.time_current + 0
+                self.time_receive_garbage = self.games.time_current + 0
             if total + count >= max:
                 self.queue_garbage.append(max-total)
             else:
@@ -1299,7 +1290,7 @@ class Tetron:
     def put_garbage(self):
         if len(self.queue_garbage) > 0:
             self.flag_put_garbage = False
-            self.time_receive_garbage = self.time_current + 0
+            self.time_receive_garbage = self.games.time_current + 0
 
             count = self.queue_garbage.pop(0)
             array_garbage = 900 * np.ones([count, column_count])
@@ -1424,7 +1415,7 @@ class Tetron:
 
     # Reset the value of the previous advance time to the current time.
     def reset_time_advance(self):
-        self.time_start_advance = self.time_current + 0
+        self.time_start_advance = self.games.time_current + 0
         # Reset the T-spin flags.
         self.flag_tspin = False
         self.flag_tspin_mini = False
@@ -1662,7 +1653,7 @@ class Tetron:
     # Calculate effectiveness of every move, decide on a move, or perform a move.
     def ai_evaluate(self):
         evaluation = []
-        if (self.time_current - self.ai_time_evaluate) >= self.ai_delay:
+        if (self.games.time_current - self.ai_time_evaluate) >= self.ai_delay:
             self.ai_flag_calculating = False
 
         # Calculate.
@@ -1752,7 +1743,7 @@ class Tetron:
                 elif np.nonzero(np.any(self.array_current > 0, axis=0))[0][0] < self.ai_decision[0][0]:
                     self.move_right()
             else:
-                if (self.time_current - self.ai_time_evaluate) >= self.ai_delay:
+                if (self.games.time_current - self.ai_time_evaluate) >= self.ai_delay:
                     self.harddrop()
 
 # A class that stores and manages game instances.
@@ -1761,6 +1752,10 @@ class Games:
         self.player = []
         self.ai = []
         self.all = []
+
+        self.time_current = 0
+        self.time_start = 0
+        self.time_elapsed = 0
     
     # Add a game to the corresponding list.
     def add_game(self, game):
@@ -1849,10 +1844,9 @@ while not done:
     flag_paused = all([game.flag_paused for game in games.all])
     
     # Calculate current time and elapsed time.
-    for game in games.all:
-        game.time_current = pygame.time.get_ticks()
-        if game.flag_playing:
-            game.time_elapsed = game.time_current - game.time_start
+    if flag_playing:
+        games.time_elapsed += pygame.time.get_ticks() - games.time_current
+    games.time_current = pygame.time.get_ticks()
 
     # =============================================================================
     # Key Presses/Releases And Other Events.
@@ -1894,7 +1888,7 @@ while not done:
                     for index in indices:
                         games.player[index].move_left()
                         # Record the current time used later to calculate how long this key is held.
-                        games.player[index].time_start_move_left = games.player[index].time_current + 0
+                        games.player[index].time_start_move_left = games.time_current + 0
                         # Initialize the time at which the previous repeat occured.
                         games.player[index].time_previous_move_left = 0
                 # Move right.
@@ -1911,7 +1905,7 @@ while not done:
                     for index in indices:
                         games.player[index].move_right()
                         # Record the current time used later to calculate how long this key is held.
-                        games.player[index].time_start_move_right = games.player[index].time_current + 0
+                        games.player[index].time_start_move_right = games.time_current + 0
                         # Initialize the time at which the previous repeat occured.
                         games.player[index].time_previous_move_right = 0
                 # Rotate counterclockwise or clockwise.
@@ -2011,6 +2005,8 @@ while not done:
                         pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_{}.ogg'.format(stage+1)))
                         pygame.mixer.music.play(loops=-1)
                         # Start each game.
+                        games.time_start = games.time_current + 0
+                        games.time_elapsed = 0
                         for game in games.all:
                             game.start_game()
                 # Pause game.
@@ -2074,14 +2070,14 @@ while not done:
                     indices.append(1)
             # Check if the key has been held longer than the required initial delay.
             for index in indices:
-                if (games.player[index].time_current - games.player[index].time_start_softdrop) > delay_softdrop:
+                if (games.time_current - games.player[index].time_start_softdrop) > delay_softdrop:
                     # Check if the key has been held longer than the key repeat interval.
-                    if (games.player[index].time_current - games.player[index].time_previous_softdrop) > speed_softdrop:
+                    if (games.time_current - games.player[index].time_previous_softdrop) > speed_softdrop:
                         if games.player[index].flag_softdropping:  # Check whether soft dropping to prevent advancing line immediately after landing
                             games.player[index].advance()
                             # Play sound effect.
                             sound_game_softdrop.play()
-                        games.player[index].time_previous_softdrop = games.player[index].time_current + 0
+                        games.player[index].time_previous_softdrop = games.time_current + 0
         # Move left.
         if keys_pressed[key_move_left] or keys_pressed[key_left_move_left] or keys_pressed[key_right_move_left]:
             indices = []
@@ -2095,11 +2091,11 @@ while not done:
                     indices.append(1)
             # Check if the key has been held longer than the required initial delay.
             for index in indices:
-                if (games.player[index].time_current - games.player[index].time_start_move_left) > delay_move:
+                if (games.time_current - games.player[index].time_start_move_left) > delay_move:
                     # Check if the key has been held longer than the key repeat interval.
-                    if (games.player[index].time_current - games.player[index].time_previous_move_left) > speed_move:
+                    if (games.time_current - games.player[index].time_previous_move_left) > speed_move:
                         games.player[index].move_left()
-                        games.player[index].time_previous_move_left = games.player[index].time_current + 0
+                        games.player[index].time_previous_move_left = games.time_current + 0
         # Move right.
         if keys_pressed[key_move_right] or keys_pressed[key_left_move_right] or keys_pressed[key_right_move_right]:
             indices = []
@@ -2113,11 +2109,11 @@ while not done:
                     indices.append(1)
             # Check if the key has been held longer than the required initial delay.
             for index in indices:
-                if (games.player[index].time_current - games.player[index].time_start_move_right) > delay_move:
+                if (games.time_current - games.player[index].time_start_move_right) > delay_move:
                     # Check if the key has been held longer than the key repeat interval.
-                    if (games.player[index].time_current - games.player[index].time_previous_move_right) > speed_move:
+                    if (games.time_current - games.player[index].time_previous_move_right) > speed_move:
                         games.player[index].move_right()
-                        games.player[index].time_previous_move_right = games.player[index].time_current + 0
+                        games.player[index].time_previous_move_right = games.time_current + 0
     
 
     # =============================================================================
@@ -2197,9 +2193,9 @@ while not done:
             if game.flag_advancing:
                 if (
                     # Check if the required time for automatic advancing has elapsed.
-                    (not game.flag_landed and (game.time_current - game.time_start_advance) >= (game.speed_fall * (speed_fall_multiplier ** game.flag_fast_fall))) or
+                    (not game.flag_landed and (games.time_current - game.time_start_advance) >= (game.speed_fall * (speed_fall_multiplier ** game.flag_fast_fall))) or
                     # If tetrimino is landed, check if the maximum time has elapsed.
-                    (game.flag_landed and (game.time_current - game.time_landed >= duration_max_landed))
+                    (game.flag_landed and (games.time_current - game.time_landed >= duration_max_landed))
                     ):
                         game.advance()
                         game.reset_time_advance()
@@ -2207,7 +2203,7 @@ while not done:
                 game.reset_time_advance()
             
             # Garbage queue.
-            if game.time_current - game.time_receive_garbage >= time_garbage_warning:
+            if games.time_current - game.time_receive_garbage >= time_garbage_warning:
                 game.flag_put_garbage = True
             else:
                 game.flag_put_garbage = False
@@ -2290,7 +2286,7 @@ while not done:
     rect_text_score.bottom = height_panel + 0
     screen.blit(text_score, rect_text_score)
     # Display elapsed time text.
-    text_time_elapsed = font_normal.render('{:02d}:{:02d}'.format(games.player[0].time_elapsed//60000, int((games.player[0].time_elapsed/1000)%60)), True, colors[901])
+    text_time_elapsed = font_normal.render('{:02d}:{:02d}'.format(games.time_elapsed//60000, int((games.time_elapsed/1000)%60)), True, colors[901])
     rect_text_time_elapsed = text_time_elapsed.get_rect()
     rect_text_time_elapsed.right = size_window[0] - (
         size_window[0] - sum([game.size_total[0] for game in games.all]) - ((len(games.all)-1)*spacing_large)
@@ -2302,12 +2298,12 @@ while not done:
     for index, game in enumerate(games.all):
         # Stop the disoriented effect if it has lasted longer than the maximum duration.
         if game.flag_disoriented:
-            if game.time_current - game.time_start_disoriented > duration_max_disoriented:
+            if games.time_current - game.time_start_disoriented > duration_max_disoriented:
                 game.flag_disoriented = False
                 game.draw_matrix()
         # Stop the blind effect if it has lasted longer than the maximum duration.
         if game.flag_blind:
-            if game.time_current - game.time_start_blind > duration_max_blind:
+            if games.time_current - game.time_start_blind > duration_max_blind:
                 game.flag_blind = False
                 game.draw_matrix()
         
