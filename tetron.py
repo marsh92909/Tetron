@@ -2152,19 +2152,21 @@ while not done:
     # Advance to the next stage of the game.
     elif game_mode in [1, 2, 3] and score_previous < score_thresholds[stage] <= score or \
         game_mode in [4] and remaining <= remaining_thresholds[stage] < remaining_previous:
+        # Calculate the stage value.
+        if game_mode in [1, 2, 3]:
+            stage = sum([score >= i for i in score_thresholds])
+        elif game_mode in [4]:
+            stage = sum([remaining <= i for i in remaining_thresholds])
+        print('Stage: ', stage)
         # Stop and unload current music.
         pygame.mixer.music.stop()
         pygame.mixer.music.unload()
         # Load transition music.
-        pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_transition_{}.ogg'.format(stage+1)))
+        pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_transition_{}.ogg'.format(stage)))
         # Set the music to send an event when done playing.
         pygame.mixer.music.set_endevent(pygame.USEREVENT+1)
         # Play the music once.
         pygame.mixer.music.play(loops=0)
-        # Increment the stage value.
-        if stage < len(score_thresholds)-1:
-            stage += 1
-            print('Stage: ', stage)
     
     # Stop the game if the player has lost.
     if any([game.flag_lose for game in games.player]):
