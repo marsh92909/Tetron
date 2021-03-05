@@ -836,6 +836,9 @@ class Tetron:
                     sound_game_rotate.play()
                 # Reset the advance timer if the tetrimino has landed.
                 self.check_landed()
+                # Reset the T-spin flags.
+                self.flag_tspin = False
+                self.flag_tspin_mini = False
                 # Set flag if T-spin or mini T-spin.
                 if self.id_current == id_classic[5]:
                     front_count = np.sum(self.array_dropped[self.array_current == -2] > 0)
@@ -1227,9 +1230,6 @@ class Tetron:
     # Reset the value of the previous advance time to the current time.
     def reset_time_advance(self):
         self.time_start_advance = self.games.time_current + 0
-        # Reset the T-spin flags.
-        self.flag_tspin = False
-        self.flag_tspin_mini = False
     
     # Draw each block in the matrix.
     def draw_matrix(self):
