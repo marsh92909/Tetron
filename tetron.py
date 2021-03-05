@@ -377,8 +377,12 @@ class Tetron:
         self.rect_information.bottom = self.size_total[1] + 0
         self.rect_information.right = self.size_total[0] + 0
 
-        # Draw the matrix.
+        # Draw the game.
         self.draw_matrix()
+        self.draw_hold()
+        self.draw_next()
+        self.draw_garbage()
+        self.draw_information()
 
     # Start the game.
     def start_game(self):
@@ -922,6 +926,9 @@ class Tetron:
         
         # Reset the previous advance time.
         self.reset_time_advance()
+        # Reset the T-spin flags.
+        self.flag_tspin = False
+        self.flag_tspin_mini = False
         # Reset attributes for AI.
         self.ai_evaluations = []
         self.ai_decision = None
@@ -1079,6 +1086,8 @@ class Tetron:
                     sound_game_garbage_1.play()
                 else:
                     sound_game_garbage_2.play()
+        # Draw garbage queue.
+        self.draw_garbage()
     
     # Subtract garbage from the queue.
     def subtract_garbage(self, count):
@@ -1093,6 +1102,8 @@ class Tetron:
                         count = 0
                     else:
                         count -= self.queue_garbage.pop(0)
+        # Draw garbage queue.
+        self.draw_garbage()
 
     # Send garbage to another game.    
     def send_garbage(self, count):
@@ -1310,8 +1321,8 @@ class Tetron:
                         color = colors[900]
                     pygame.draw.rect(surface=self.surface_hold, color=color, rect=[size*column, size*row, size, size])
             # Display the hold queue and text.
-            self.surface_main.blit(self.surface_hold, self.rect_hold)
-            self.surface_main.blit(self.text_hold, self.rect_text_hold)
+            # self.surface_main.blit(self.surface_hold, self.rect_hold)
+            # self.surface_main.blit(self.text_hold, self.rect_text_hold)
         
         # self.surface_hold.fill(colors[902])
         # if len(self.queue_hold) > 0:
@@ -1364,9 +1375,10 @@ class Tetron:
                     else:
                         color = colors[900]
                     pygame.draw.rect(surface=self.surface_next, color=color, rect=[size*column, size*row, size, size])
-            # Display the next queue and text.
-            self.surface_main.blit(self.surface_next, self.rect_next)
-            self.surface_main.blit(self.text_next, self.rect_text_next)
+            # # Display the next queue and text.
+            # self.surface_main.blit(self.surface_next, self.rect_next)
+            # self.surface_main.blit(self.text_next, self.rect_text_next)
+        
         # self.surface_next.fill(colors[902])
         # if len(self.queue_next) > 0:
         #     # Create the single array containing all blocks in the queue.
@@ -1424,7 +1436,7 @@ class Tetron:
                     position_vertical = (self.spacing_block+self.height_block)*(sum(self.queue_garbage[:index])+block+1) + self.spacing_block + (self.spacing_block*4)*index
                     position_vertical = self.rect_garbage.height - position_vertical
                     pygame.draw.rect(surface=self.surface_garbage, color=color, rect=[0, position_vertical, self.width_block, self.height_block])
-            self.surface_main.blit(self.surface_garbage, self.rect_garbage)
+            # self.surface_main.blit(self.surface_garbage, self.rect_garbage)
     
     # Draw the information text.
     def draw_information(self):
@@ -1459,7 +1471,7 @@ class Tetron:
             self.surface_information.blit(text_ko_value, rect_ko_value)
             self.surface_information.blit(text_ko, rect_ko)
             
-            self.surface_main.blit(self.surface_information, self.rect_information)
+            # self.surface_main.blit(self.surface_information, self.rect_information)
 
     # Calculate effectiveness of every move, decide on a move, or perform a move.
     def ai_evaluate(self):
@@ -2082,14 +2094,14 @@ while not done:
         rect_mode.bottom = height_panel + 0
         rect_mode.centerx = size_window[0]//2
         screen.blit(surface_mode, rect_mode)
-    # Draw elements of each game.
-    for game in games.all:
-        game.draw_garbage()
-        if game_mode != 2:
-            game.draw_hold()
-            game.draw_next()
-        game.draw_information()
-        # game.draw_matrix()   # Do this in each game's update()
+    # # Draw elements of each game.
+    # for game in games.all:
+    #     game.draw_garbage()
+    #     # if game_mode != 2:
+    #     #     game.draw_hold()
+    #     #     game.draw_next()
+    #     game.draw_information()
+    #     # game.draw_matrix()   # Do this in each game's update()
     # Display score text.
     text_score = font_normal.render('{}'.format(score), True, colors[901])
     rect_text_score = text_score.get_rect()
@@ -2120,7 +2132,18 @@ while not done:
                 game.flag_blind = False
                 game.draw_matrix()
         
-        # Draw the matrix inside the main surface.
+        game.draw_garbage()
+        game.draw_information()
+
+        # Draw the elements of each game in order from back to front.
+        game.surface_main.blit(game.surface_garbage, game.rect_garbage)
+        game.surface_main.blit(game.surface_information, game.rect_information)
+        if len(game.queue_hold) > 0:
+            game.surface_main.blit(game.surface_hold, game.rect_hold)
+            game.surface_main.blit(game.text_hold, game.rect_text_hold)
+        if len(game.queue_next) > 0:
+            game.surface_main.blit(game.surface_next, game.rect_next)
+            game.surface_main.blit(game.text_next, game.rect_text_next)
         game.surface_main.blit(game.surface_matrix, game.rect_matrix)
         # Display the game in the window.
         screen.blit(game.surface_main, 
