@@ -432,7 +432,7 @@ class Tetron:
                     self.used_classic = [False] * len(self.used_classic)
             
             # Create tetrimino array.
-            if id not in [899, 801]:
+            if id not in [801, 899]:
                 tetrimino = self.create_tetrimino(id)
             else:
                 tetrimino = None
@@ -1153,6 +1153,8 @@ class Tetron:
         # Set the flag to prevent another hold.
         self.flag_hold = True
         # Store the current tetrimino array, the current ID, and current rotation in a tuple and store it in the hold queue.
+        if self.id_current in [801, 899]:
+            self.tetrimino = None
         self.queue_hold.append((self.tetrimino, self.id_current, self.rotation_current))
         if self.game_mode != 2:
             # Create a new tetrimino if nothing was in the queue.
