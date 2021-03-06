@@ -56,7 +56,7 @@ next_count = 5
 # Define the IDs for classic tetriminos, advanced tetriminos, special effects.
 id_classic = [100, 200, 300, 400, 500, 600, 700]
 id_advanced = [101, 102, 201, 202, 301, 302, 401, 402, 403, 501, 601, 602, 701, 801, 811, 812, 813, 814, 899]
-id_special = ['ghost', 'heavy', 'disoriented', 'blind']
+id_special = ['ghost', 'heavy', 'disoriented', 'blind', 'wind']
 
 # Define the range of probabilities (between 0 and 1) of getting an advanced tetrimino.
 weights_advanced = [0, 1/3]
@@ -66,9 +66,14 @@ score_update_chance_advanced = 100
 weights_special = [0, 1/20]
 # Define the score needed to begin increasing the probability of getting a special effect.
 score_update_chance_special = score_thresholds[0]
-# Define durations for special effects (ms).
+# Define settings for special effects (ms).
 duration_max_disoriented = 20000
 duration_max_blind = 20000
+speed_wind = 500
+
+# Create font objects used to create text.
+font_normal = pygame.font.SysFont('Segoe UI Semibold', 24)
+font_small = pygame.font.SysFont('Segoe UI Semibold', 18)
 
 # =============================================================================
 # Sounds.
@@ -114,10 +119,6 @@ sound_special_ghost.set_volume(0.25)
 sound_special_heavy.set_volume(0.25)
 sound_special_disoriented.set_volume(0.25)
 sound_special_blind.set_volume(0.5)
-
-# Create font objects used to create text.
-font_normal = pygame.font.SysFont('Segoe UI Semibold', 24)
-font_small = pygame.font.SysFont('Segoe UI Semibold', 18)
 
 # =============================================================================
 # Controls.
@@ -267,6 +268,7 @@ class Tetron:
         self.flag_heavy = False
         self.flag_disoriented = False
         self.flag_blind = False
+        self.flag_wind = False
         
         self.flag_put_garbage = False
 
@@ -616,6 +618,12 @@ class Tetron:
                     self.time_start_blind = self.games.time_current + 0
                     if self.is_player:
                         sound_special_blind.play()
+            elif effect_special == id_special[4]:
+                self.flag_wind = True
+                self.time_start_wind = self.games.time_current + 0
+                self.wind_direction = random.choice([1, -1])
+                # if self.is_player:
+                #     sound_special_wind.play()
         # Apply any special effects to tetrimino.
         if self.flag_ghost:
             tetrimino[tetrimino > 0] = 901
@@ -887,6 +895,8 @@ class Tetron:
             self.flag_ghost = False
         if self.flag_heavy:
             self.flag_heavy = False
+        if self.flag_wind:
+            self.flag_wind = False
         if self.flag_fast_fall:
             self.flag_fast_fall = False
         self.flag_landed = False
@@ -926,7 +936,7 @@ class Tetron:
         
         # Reset the previous advance time.
         self.reset_time_advance()
-        # Reset the T-spin flags.
+        # Reset the T-spin flags. Must be after calculating score.
         self.flag_tspin = False
         self.flag_tspin_mini = False
         # Reset attributes for AI.
@@ -944,7 +954,7 @@ class Tetron:
                 self.set_tetrimino()
 
     # Start soft dropping.
-    def start_softdropping(self):
+    def softdrop_start(self):
         self.advance()
         # Set flags.
         self.flag_softdropping = True
@@ -960,7 +970,7 @@ class Tetron:
             sound_game_softdrop.play()
 
     # Stop soft dropping.
-    def stop_softdropping(self):
+    def softdrop_stop(self):
         # Set flags.
         self.flag_softdropping = False
         self.flag_advancing = True
@@ -1003,7 +1013,7 @@ class Tetron:
             self.time_landed = self.games.time_current + 0
             # If landed while soft dropping, reset advance timer in addition to resetting specific flags.
             if self.flag_softdropping:
-                self.stop_softdropping()
+                self.softdrop_stop()
             # If landed normally, reset advance timer only.
             else:
                 self.reset_time_advance()
@@ -1764,7 +1774,7 @@ while not done:
                         elif event.key == key_right_softdrop:
                             indices.append(1)
                     for index in indices:
-                        games.player[index].start_softdropping()
+                        games.player[index].softdrop_start()
                 # Hold / Swap.
                 elif event.key in [key_hold, key_left_hold, key_right_hold]:
                     indices = []
@@ -1861,7 +1871,7 @@ while not done:
                         elif event.key == key_right_softdrop:
                             indices.append(1)
                     for index in indices:
-                        games.player[index].stop_softdropping()
+                        games.player[index].softdrop_stop()
         # Transition music ends.
         elif event.type == pygame.USEREVENT+1:
             if flag_playing:
@@ -2027,6 +2037,15 @@ while not done:
             else:
                 game.reset_time_advance()
             
+            # Apply wind special effect.
+            if game.flag_wind:
+                if games.time_current - game.time_start_wind >= speed_wind:
+                    game.time_start_wind = games.time_current + 0
+                    if game.wind_direction > 0:
+                        game.move_right()
+                    elif game.wind_direction < 0:
+                        game.move_left()
+
             # Garbage queue.
             if games.time_current - game.time_receive_garbage >= time_garbage_warning:
                 game.flag_put_garbage = True
