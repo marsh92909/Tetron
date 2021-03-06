@@ -56,7 +56,7 @@ next_count = 5
 # Define the IDs for classic tetriminos, advanced tetriminos, special effects.
 id_classic = [100, 200, 300, 400, 500, 600, 700]
 id_advanced = [101, 102, 201, 202, 301, 302, 401, 402, 403, 501, 601, 602, 701, 801, 811, 812, 813, 814, 899]
-id_special = ['ghost', 'heavy', 'disoriented', 'blind', 'wind']
+id_special = ['ghost', 'heavy', 'disoriented', 'blind', 'wind', 'zombie']
 
 # Define the range of probabilities (between 0 and 1) of getting an advanced tetrimino.
 weights_advanced = [0, 1/3]
@@ -206,13 +206,34 @@ colors = {
     700: (255,64,64),  # Red
     800: (255,77,136),  # Pink
     900: rgb(0.618),  # Garbage / AI
-    901: (255,255,255),  # White
-    902: (0,0,0),  # Black
-    903: rgb(0.25),  # Empty
-    904: rgb(0.35),  # Highlighting
-    905: rgb(0.28),  # Blind mode
-    906: rgb(0.50),  # Gray text
+    901: rgb(1.00),  # Ghost
+    902: rgb(0.00),  # Heavy
+    904: rgb(0.28),  # Blind
+    906: (143,191,167),  # Zombie  (HSB 150, 25%, 75%)
+
+    1001: rgb(1.00),  # White
+    1002: rgb(0.00),  # Black
+    1003: rgb(0.25),  # Empty blocks
+    1004: rgb(0.35),  # Highlighted blocks
+    1005: rgb(0.50),  # Gray text
     }
+# colors = {
+#     100: (0,175,191),  # Cyan
+#     200: (0,149,255),  # Blue
+#     300: (255,128,0),  # Orange
+#     400: (255,191,0),  # Yellow
+#     500: (0,191,96),  # Green
+#     600: (140,102,255),  # Purple
+#     700: (255,64,64),  # Red
+#     800: (255,77,136),  # Pink
+#     900: rgb(0.618),  # Garbage / AI
+#     901: (255,255,255),  # White
+#     902: (0,0,0),  # Black
+#     903: rgb(0.25),  # Empty
+#     904: rgb(0.35),  # Highlighting
+#     905: rgb(0.28),  # Blind mode
+#     906: rgb(0.50),  # Gray text
+#     }
 
 
 # =============================================================================
@@ -350,7 +371,7 @@ class Tetron:
         self.rect_matrix = self.surface_matrix.get_rect()
         self.rect_matrix.left = self.width_hold + self.spacing_small
         # Create the text and rect object for the hold queue.
-        self.text_hold = font_small.render('HOLD', True, colors[906])
+        self.text_hold = font_small.render('HOLD', True, colors[1005])
         self.rect_text_hold = self.text_hold.get_rect()
         self.rect_text_hold.top = 0
         self.rect_text_hold.centerx = self.width_hold // 2
@@ -359,7 +380,7 @@ class Tetron:
         self.rect_hold = self.surface_hold.get_rect()
         self.rect_hold.top = self.rect_text_hold.height + 0
         # Create the text and rect object for the next queue.
-        self.text_next = font_small.render('NEXT', True, colors[906])
+        self.text_next = font_small.render('NEXT', True, colors[1005])
         self.rect_text_next = self.text_next.get_rect()
         self.rect_text_next.top = 0
         self.rect_text_next.centerx = self.size_total[0] - self.width_next // 2
@@ -622,6 +643,7 @@ class Tetron:
                 self.flag_wind = True
                 self.time_start_wind = self.games.time_current + 0
                 self.wind_direction = random.choice([1, -1])
+                self.wind_position = self.width_block // 2
                 # if self.is_player:
                 #     sound_special_wind.play()
         # Apply any special effects to tetrimino.
@@ -1254,24 +1276,24 @@ class Tetron:
     
     # Draw each block in the matrix.
     def draw_matrix(self):
-        self.surface_matrix.fill(colors[903])
+        self.surface_matrix.fill(colors[1003])
         # Draw grid lines.
         for i in range(self.row_count+1):
             y = i * (self.height_block+self.spacing_block)
-            pygame.draw.line(surface=self.surface_matrix, color=colors[902], start_pos=[0, y], end_pos=[self.rect_matrix.width, y], width=self.spacing_block)
+            pygame.draw.line(surface=self.surface_matrix, color=colors[1002], start_pos=[0, y], end_pos=[self.rect_matrix.width, y], width=self.spacing_block)
         for j in range(self.column_count+1):
             x = j * (self.width_block+self.spacing_block)
-            pygame.draw.line(surface=self.surface_matrix, color=colors[902], start_pos=[x, 0], end_pos=[x, self.rect_matrix.height], width=self.spacing_block)
+            pygame.draw.line(surface=self.surface_matrix, color=colors[1002], start_pos=[x, 0], end_pos=[x, self.rect_matrix.height], width=self.spacing_block)
         # Draw non-empty blocks.
         for indices in np.argwhere(self.array_display != 0):
             row, column = indices
             number = self.array_display[row, column]
             if self.is_player:
                 if self.flag_blind:
-                    color = colors[905]  # Color of placed blocks in blind mode
+                    color = colors[904]  # Color of placed blocks in blind mode
                 else:
                     if number < 0:
-                        color = colors[904]  # Color of highlighted blocks
+                        color = colors[1004]  # Color of highlighted blocks
                     else:
                         if number < 900:
                             color = colors[int(np.floor(number/100)*100)]  # Color of placed blocks
@@ -1279,25 +1301,42 @@ class Tetron:
                             color = colors[number]
             else:
                 if number < 0:
-                    color = colors[904]
+                    color = colors[1004]
                 else:
                     color = colors[900]
             pygame.draw.rect(surface=self.surface_matrix, color=color, rect=[(self.spacing_block+self.width_block)*column+self.spacing_block, (self.spacing_block+self.height_block)*row+self.spacing_block, self.width_block, self.height_block])
+        # Draw wind.
+        if self.flag_wind:
+            for i in range(3):
+                height_wind = (i+1) * self.spacing_block + i * self.height_block + self.height_block // 2
+                # Calculate positions of endpoints of lines.
+                start_pos = self.wind_position + 0
+                end_pos = start_pos - 3 * self.width_block
+                width_matrix = self.surface_matrix.get_width()
+                if self.wind_direction < 0:
+                    start_pos = width_matrix - start_pos
+                    end_pos = width_matrix - end_pos
+                # Draw lines.
+                if self.is_player:
+                    color = colors[1001]
+                else:
+                    color = colors[900]
+                pygame.draw.line(surface=self.surface_matrix, color=color, start_pos=[start_pos, height_wind], end_pos=[end_pos, height_wind], width=self.spacing_block*4)
         # Rotate the matrix if the disoriented effect is active.
         if self.flag_disoriented:
             self.surface_matrix.blit(pygame.transform.rotate(self.surface_matrix, 180), (0,0))
         
-        # self.surface_matrix.fill(colors[902])
+        # self.surface_matrix.fill(colors[1002])
         # for row in range(self.row_count):
         #     for column in range(self.column_count):
         #         number = self.array_display[row, column]
         #         if number != 0:
         #             if self.is_player:
         #                 if self.flag_blind:
-        #                     color = colors[905]  # Color of placed blocks in blind mode
+        #                     color = colors[904]  # Color of placed blocks in blind mode
         #                 else:
         #                     if number < 0:
-        #                         color = colors[904]  # Color of highlighted blocks
+        #                         color = colors[1004]  # Color of highlighted blocks
         #                     else:
         #                         if number < 900:
         #                             color = colors[int(np.floor(number/100)*100)]  # Color of placed blocks
@@ -1305,16 +1344,16 @@ class Tetron:
         #                             color = colors[number]
         #             else:
         #                 if number < 0:
-        #                     color = colors[904]
+        #                     color = colors[1004]
         #                 else:
         #                     color = colors[900]
         #         else:
-        #             color = colors[903]  # Color of empty blocks
+        #             color = colors[1003]  # Color of empty blocks
         #         pygame.draw.rect(surface=self.surface_matrix, color=color, rect=[(self.spacing_block+self.width_block)*column+self.spacing_block, (self.spacing_block+self.height_block)*row+self.spacing_block, self.width_block, self.height_block])
 
     # Draw the hold queue.
     def draw_hold(self):
-        self.surface_hold.fill(colors[902])
+        self.surface_hold.fill(colors[1002])
         if len(self.queue_hold) > 0:
             tetrimino_mini = self.create_tetrimino_mini(self.queue_hold[0][0])
             size = int(min(np.floor([self.width_hold/tetrimino_mini.shape[0], self.width_hold/tetrimino_mini.shape[1]])))
@@ -1334,7 +1373,7 @@ class Tetron:
             # self.surface_main.blit(self.surface_hold, self.rect_hold)
             # self.surface_main.blit(self.text_hold, self.rect_text_hold)
         
-        # self.surface_hold.fill(colors[902])
+        # self.surface_hold.fill(colors[1002])
         # if len(self.queue_hold) > 0:
         #     tetrimino_mini = self.create_tetrimino_mini(self.queue_hold[0][0])
         #     size = int(min(np.floor([self.width_hold/tetrimino_mini.shape[0], self.width_hold/tetrimino_mini.shape[1]])))
@@ -1356,7 +1395,7 @@ class Tetron:
     
     # Draw the next queue.
     def draw_next(self):
-        self.surface_next.fill(colors[902])
+        self.surface_next.fill(colors[1002])
         if len(self.queue_next) > 0:
             # Create the single array containing all blocks in the queue.
             array_next = np.zeros([0, self.column_count])
@@ -1389,7 +1428,7 @@ class Tetron:
             # self.surface_main.blit(self.surface_next, self.rect_next)
             # self.surface_main.blit(self.text_next, self.rect_text_next)
         
-        # self.surface_next.fill(colors[902])
+        # self.surface_next.fill(colors[1002])
         # if len(self.queue_next) > 0:
         #     # Create the single array containing all blocks in the queue.
         #     array_next = np.zeros([0, self.column_count])
@@ -1424,7 +1463,7 @@ class Tetron:
     
     # Draw the garbage queue.
     def draw_garbage(self):
-        self.surface_garbage.fill(colors[902])
+        self.surface_garbage.fill(colors[1002])
         if len(self.queue_garbage) > 0:
             for index, count in enumerate(self.queue_garbage):
                 if index == 0:
@@ -1450,28 +1489,28 @@ class Tetron:
     
     # Draw the information text.
     def draw_information(self):
-        self.surface_information.fill(colors[902])
+        self.surface_information.fill(colors[1002])
         if self.game_mode in [4] and self.is_player and self.flag_playing:
             if self.instance_target == self.instance_self:
                 target = 'Self'
             else:
                 target = 'AI {}'.format(self.instance_target)
-            text_targeting_value = font_normal.render(target, True, colors[901])
+            text_targeting_value = font_normal.render(target, True, colors[1001])
             rect_targeting_value = text_targeting_value.get_rect()
             rect_targeting_value.bottom = self.rect_information.bottom + 0
             rect_targeting_value.right = self.rect_information.width + 0
 
-            text_targeting = font_small.render('Targeting: ', True, colors[906])
+            text_targeting = font_small.render('Targeting: ', True, colors[1005])
             rect_targeting = text_targeting.get_rect()
             rect_targeting.bottom = rect_targeting_value.top + 0
             rect_targeting.left = 0
             
-            text_ko_value = font_normal.render('', True, colors[901])
+            text_ko_value = font_normal.render('', True, colors[1001])
             rect_ko_value = text_ko_value.get_rect()
             rect_ko_value.bottom = rect_targeting.top - rect_ko_value.height
             rect_ko_value.right = self.rect_information.width + 0
 
-            text_ko = font_small.render('KOs: ', True, colors[906])
+            text_ko = font_small.render('KOs: ', True, colors[1005])
             rect_ko = text_ko.get_rect()
             rect_ko.bottom = rect_ko_value.top + 0
             rect_ko.left = 0
@@ -1655,16 +1694,16 @@ flag_classic = False
 logo_full = pygame.image.load(os.path.join(folder_program, 'logo.png'))
 logo = pygame.transform.smoothscale(logo_full, [int(height_panel*(logo_full.get_width()/logo_full.get_height())), height_panel])
 # Create text for classic Tetris.
-text_classic = font_normal.render('Tetris', True, colors[901])
+text_classic = font_normal.render('Tetris', True, colors[1001])
 # Create text for other game modes.
-text_mode_1_prefix = font_normal.render('', True, colors[901])
-text_mode_1_suffix = font_normal.render('', True, colors[901])
-text_mode_2_prefix = font_normal.render('Twin ', True, colors[901])
-text_mode_2_suffix = font_normal.render('', True, colors[901])
-text_mode_3_prefix = font_normal.render('', True, colors[901])
-text_mode_3_suffix = font_normal.render(' 1v1', True, colors[901])
-text_mode_4_prefix = font_normal.render('', True, colors[901])
-text_mode_4_suffix = font_normal.render(' 99', True, colors[901])
+text_mode_1_prefix = font_normal.render('', True, colors[1001])
+text_mode_1_suffix = font_normal.render('', True, colors[1001])
+text_mode_2_prefix = font_normal.render('Twin ', True, colors[1001])
+text_mode_2_suffix = font_normal.render('', True, colors[1001])
+text_mode_3_prefix = font_normal.render('', True, colors[1001])
+text_mode_3_suffix = font_normal.render(' 1v1', True, colors[1001])
+text_mode_4_prefix = font_normal.render('', True, colors[1001])
+text_mode_4_suffix = font_normal.render(' 99', True, colors[1001])
 # Initialize the game mode surface.
 surface_mode = pygame.Surface((0,0))
 
@@ -2041,10 +2080,13 @@ while not done:
             if game.flag_wind:
                 if games.time_current - game.time_start_wind >= speed_wind:
                     game.time_start_wind = games.time_current + 0
+                    game.wind_position += game.width_block
                     if game.wind_direction > 0:
                         game.move_right()
                     elif game.wind_direction < 0:
                         game.move_left()
+                    if game.is_player:
+                        game.draw_matrix()
 
             # Garbage queue.
             if games.time_current - game.time_receive_garbage >= time_garbage_warning:
@@ -2061,10 +2103,10 @@ while not done:
     # Draw Screen.
     # =============================================================================
     # Erase all surfaces.
-    screen.fill(colors[902])
-    surface_mode.fill(colors[902])
+    screen.fill(colors[1002])
+    surface_mode.fill(colors[1002])
     for game in games.all:
-        game.surface_main.fill(colors[902])
+        game.surface_main.fill(colors[1002])
 
     # Draw the game mode if not playing.
     if not flag_playing:
@@ -2122,7 +2164,7 @@ while not done:
     #     game.draw_information()
     #     # game.draw_matrix()   # Do this in each game's update()
     # Display score text.
-    text_score = font_normal.render('{}'.format(score), True, colors[901])
+    text_score = font_normal.render('{}'.format(score), True, colors[1001])
     rect_text_score = text_score.get_rect()
     rect_text_score.left = (
         size_window[0] - sum([game.size_total[0] for game in games.all]) - ((len(games.all)-1)*spacing_large)
@@ -2130,7 +2172,7 @@ while not done:
     rect_text_score.bottom = height_panel + 0
     screen.blit(text_score, rect_text_score)
     # Display elapsed time text.
-    text_time_elapsed = font_normal.render('{:02d}:{:02d}'.format(games.time_elapsed//60000, int((games.time_elapsed/1000)%60)), True, colors[901])
+    text_time_elapsed = font_normal.render('{:02d}:{:02d}'.format(games.time_elapsed//60000, int((games.time_elapsed/1000)%60)), True, colors[1001])
     rect_text_time_elapsed = text_time_elapsed.get_rect()
     rect_text_time_elapsed.right = size_window[0] - (
         size_window[0] - sum([game.size_total[0] for game in games.all]) - ((len(games.all)-1)*spacing_large)
