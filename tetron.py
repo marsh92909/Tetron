@@ -34,6 +34,7 @@ score_thresholds = [400, 800, 1000]
 remaining_thresholds = [50, 10, 1]
 # Define the range of block fall speeds (ms) from the start to end of the game.
 speeds_fall = [1000, 200]
+speeds_fall_classic = [1000, 50]
 # Define the block fall speed multiplier for some special effects (values below 1 result in faster speeds).
 speed_fall_multiplier = 1/2
 # Define the block move speed (ms) and initial delay for key repeats (ms).
@@ -1298,7 +1299,10 @@ class Tetron:
     # Update the game difficulty.
     def update_difficulty(self):
         # Update the block fall speed.
-        self.speed_fall = np.interp(self.score, [0, score_thresholds[-2]], speeds_fall)
+        if self.flag_classic:
+            self.speed_fall = np.interp(self.score, [0, score_thresholds[-2]], speeds_fall_classic)
+        else:
+            self.speed_fall = np.interp(self.score, [0, score_thresholds[-2]], speeds_fall)
         # Update the probability of getting an advanced tetrimino.
         if self.flag_classic:
             self.weight_advanced = 0
