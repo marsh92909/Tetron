@@ -289,6 +289,7 @@ class Tetron:
         self.flag_fast_fall = False
         self.flag_harddrop = False
         self.flag_softdropping = False
+        self.flag_perfect = False
         self.reset_special(reset_all=True)
         
         self.flag_put_garbage = False
@@ -308,7 +309,7 @@ class Tetron:
 
         # Initialize arrays for current tetrimino, dropped blocks, blocks displayed on screen, and highlighted blocks showing where tetriminos will be hard dropped.
         self.array_current = np.zeros([self.row_count, self.column_count])
-        self.array_dropped = np.zeros([self.row_count, self.column_count])
+        self.array_stack = np.zeros([self.row_count, self.column_count])
         self.array_display = np.zeros([self.row_count, self.column_count])
         self.array_highlight = np.zeros([self.row_count, self.column_count])
 
@@ -472,16 +473,16 @@ class Tetron:
         if self.flag_zombie:
             width = random.choice([2, 3])
             height = random.choice([1, 2, 3])
-            left = random.choice([column for column in range(self.column_count-width+1) if np.any(self.array_dropped[:,column])>0])
+            left = random.choice([column for column in range(self.column_count-width+1) if np.any(self.array_stack[:,column])>0])
             right = left + width
-            top = np.argmax(np.any(self.array_dropped[:, left:right] > 0, axis=1))
-            bottom = max(np.argmax(self.array_dropped[:, left:right] > 0, axis=0)) + 1
+            top = np.argmax(np.any(self.array_stack[:, left:right] > 0, axis=1))
+            bottom = max(np.argmax(self.array_stack[:, left:right] > 0, axis=0)) + 1
             if bottom - top != height:
                 bottom = min([self.row_count, top+height])
-            tetrimino = np.copy(self.array_dropped[top:bottom, left:right])
+            tetrimino = np.copy(self.array_stack[top:bottom, left:right])
             tetrimino[tetrimino <= 0] = -1
             tetrimino[tetrimino > 0] = 906
-            self.array_dropped[top:bottom, left:right] = 0
+            self.array_stack[top:bottom, left:right] = 0
             # Make the tetrimino square.
             if (bottom-top) != (right-left):
                 difference = (bottom-top) - (right-left)
@@ -595,20 +596,20 @@ class Tetron:
                 tetrimino[0:2, [0,2]] = number
             elif number == 899:  # Freebie
                 # Index of highest row containing dropped blocks.
-                index_highest = np.argmax(np.any(self.array_dropped > 0, axis=1))
+                index_highest = np.argmax(np.any(self.array_stack > 0, axis=1))
                 # Index of lowest row that can fit this tetrimino.
-                index_lowest = max(np.argmax(self.array_dropped, axis=0))
+                index_lowest = max(np.argmax(self.array_stack, axis=0))
                 # Get the top rows of the dropped blocks.
-                array_dropped_top = np.copy(self.array_dropped[index_highest:index_lowest+1, :]) > 0
+                array_stack_top = np.copy(self.array_stack[index_highest:index_lowest+1, :]) > 0
                 # Get the row indices of the highest blocks in each column of the dropped blocks array, with values of -1 for empty columns.
-                rows_highest = np.argmax(array_dropped_top, axis=0)
-                rows_highest[np.all(array_dropped_top == 0, axis=0)] = -1
+                rows_highest = np.argmax(array_stack_top, axis=0)
+                rows_highest[np.all(array_stack_top == 0, axis=0)] = -1
                 # Fill the blocks below the highest blocks in each column.
                 for column, row in enumerate(rows_highest):
                     if row >= 0:
-                        array_dropped_top[row:, column] = 1
+                        array_stack_top[row:, column] = 1
                 # Create the tetrimino by inverting the dropped blocks.
-                tetrimino = number * (1 - array_dropped_top)
+                tetrimino = number * (1 - array_stack_top)
                 # Replace all values of 0 with -1.
                 tetrimino[tetrimino == 0] = -1
         return tetrimino
@@ -668,7 +669,7 @@ class Tetron:
                 #     sound_special_wind.play()
             elif effect_special == id_special[5]:
                 # Apply the effect only if there are placed blocks to use and if not taking a block out of hold.
-                if np.any(self.array_dropped > 0) and hold_data is None:
+                if np.any(self.array_stack > 0) and hold_data is None:
                     self.flag_zombie = True
                     self.flag_fast_fall = True
                     if self.is_player:
@@ -723,7 +724,7 @@ class Tetron:
         # Advance the current tetrimino array one line and return a copy.
         array_current = np.roll(self.array_current, shift=1*((-1) ** self.flag_zombie), axis=0)
         # Determine if the advanced copy intersects already placed blocks.
-        is_intersecting = np.any(self.array_dropped[array_current > 0] > 0)
+        is_intersecting = np.any(self.array_stack[array_current > 0] > 0)
         # Apply the advancement if not intersecting and not at the bottom.
         if (self.flag_ghost and not is_at_bottom) or (not self.flag_ghost and (not is_at_bottom and not is_intersecting)):
             self.array_current = np.copy(array_current)
@@ -741,7 +742,7 @@ class Tetron:
         if self.flag_ghost or not np.any(self.array_current[:, 0] > 0):
             # Check if placed blocks are in the way.
             indices_rows, indices_columns = np.nonzero(self.array_current > 0)
-            if self.flag_ghost or not np.any(self.array_dropped[indices_rows, indices_columns-1] > 0):
+            if self.flag_ghost or not np.any(self.array_stack[indices_rows, indices_columns-1] > 0):
                 self.array_current = np.roll(self.array_current, shift=-1, axis=1)
                 # Reset the advance timer if the tetrimino has landed.
                 self.check_landed()
@@ -761,7 +762,7 @@ class Tetron:
         if self.flag_ghost or not np.any(self.array_current[:, -1] > 0):
             # Check if placed blocks are in the way.
             indices_rows, indices_columns = np.nonzero(self.array_current > 0)
-            if self.flag_ghost or not np.any(self.array_dropped[indices_rows, indices_columns+1] > 0):
+            if self.flag_ghost or not np.any(self.array_stack[indices_rows, indices_columns+1] > 0):
                 self.array_current = np.roll(self.array_current, shift=1, axis=1)
                 # Reset the advance timer if the tetrimino has landed.
                 self.check_landed()
@@ -892,7 +893,7 @@ class Tetron:
                         continue
 
             # Check whether the rotated tetrimino, when translated, intersects already placed blocks.
-            is_intersecting = np.any(self.array_dropped[np.roll(array_current, shift=translation, axis=(1,0)) > 0] > 0)
+            is_intersecting = np.any(self.array_stack[np.roll(array_current, shift=translation, axis=(1,0)) > 0] > 0)
             # Skip to the next interation of the for loop if intersecting.
             if is_intersecting and not self.flag_ghost:
                 continue
@@ -919,8 +920,8 @@ class Tetron:
                 self.flag_tspin_mini = False
                 # Set flag if T-spin or mini T-spin.
                 if self.id_current == id_classic[5]:
-                    front_count = np.sum(self.array_dropped[self.array_current == -2] > 0)
-                    back_count = np.sum(self.array_dropped[self.array_current == -3] > 0)
+                    front_count = np.sum(self.array_stack[self.array_current == -2] > 0)
+                    back_count = np.sum(self.array_stack[self.array_current == -3] > 0)
                     if front_count == 2 and back_count >= 1:
                         self.flag_tspin = True
                         self.flag_tspin_mini = False
@@ -937,7 +938,7 @@ class Tetron:
     def harddrop(self):
         # If a heavy tetrimino, delete placed blocks below the current tetrimino and shift tetrimino to bottom row.
         if self.flag_heavy:
-            self.array_dropped[self.array_highlight < 0] = 0
+            self.array_stack[self.array_highlight < 0] = 0
             self.array_current = np.roll(self.array_current, np.argmax(np.any(np.flipud(self.array_current) > 0, axis=1)), axis=0)
         # Shift the tetrimino down.
         else:
@@ -945,7 +946,7 @@ class Tetron:
                 self.array_current = -1 * self.array_highlight
         # Drop the tetrimino.
         if not self.flag_fake:
-            self.array_dropped[self.array_current > 0] = self.array_current[self.array_current > 0]
+            self.array_stack[self.array_current > 0] = self.array_current[self.array_current > 0]
         # Set flag to hard drop other game instances.
         self.flag_harddrop = True
         # Play sound effect.
@@ -966,30 +967,32 @@ class Tetron:
         self.flag_landed = False
         self.flag_hold = False
         # Update the values of previously placed special blocks.
-        self.array_dropped[self.array_dropped == 901] = 900
-        self.array_dropped[self.array_dropped == 902] = 900
-        self.array_dropped[self.array_dropped == 906] = 900
+        self.array_stack[self.array_stack == 901] = 900
+        self.array_stack[self.array_stack == 902] = 900
+        self.array_stack[self.array_stack == 906] = 900
 
         # Check for cleared lines and empty them.
-        cleared_rows = np.argwhere(np.all(self.array_dropped > 0, axis=1))
-        cleared_increment = len(cleared_rows)
-        if cleared_increment > 0:
-            self.array_dropped = np.concatenate((
-                np.zeros([cleared_increment,self.column_count]),
-                np.delete(self.array_dropped, obj=cleared_rows, axis=0)
+        rows_cleared = np.argwhere(np.all(self.array_stack > 0, axis=1))
+        line_count = len(rows_cleared)
+        if line_count > 0:
+            self.array_stack = np.concatenate((
+                np.zeros([line_count,self.column_count]),
+                np.delete(self.array_stack, obj=rows_cleared, axis=0)
                 ), axis=0)
         # Increment the combo counter if a line was cleared.
-        if cleared_increment > 0:
+        if line_count > 0:
             self.combos += 1
+            # Check for a perfect clear.
+            self.flag_perfect = not np.any(self.array_stack)
         else:
             self.combos = 0
 
         # Calculate number of garbage lines.
-        garbage_count = self.calculate_garbage(cleared_increment)
-        # Clear garbage lines.
+        garbage_count = self.calculate_garbage(line_count)
+        # Clear garbage lines if the queue contains any.
         if len(self.queue_garbage) > 0:
             self.subtract_garbage(garbage_count)
-        # Send garbage lines.
+        # Send garbage lines if the queue is empty.
         else:
             self.send_garbage(garbage_count)
         # Put garbage in the matrix.
@@ -997,13 +1000,14 @@ class Tetron:
             self.put_garbage()
 
         # Put the score increment in the queue.
-        self.score_increment.append(self.calculate_score(cleared_increment))
+        self.score_increment.append(self.calculate_score(line_count))
         
         # Reset the previous advance time.
         self.reset_time_advance()
-        # Reset the T-spin flags. Must be after calculating score.
+        # Reset the T-spin and perfect clear flags. Must be after calculating score.
         self.flag_tspin = False
         self.flag_tspin_mini = False
+        self.flag_perfect = False
         # Reset attributes for AI.
         self.ai_evaluations = []
         self.ai_decision = None
@@ -1074,7 +1078,7 @@ class Tetron:
 
     # Reset the advance timer if the tetrimino is directly above an already placed block or is on the bottom of the matrix.
     def check_landed(self):
-        is_landed_stack = np.any(self.array_dropped[np.roll(self.array_current, shift=1*((-1) ** self.flag_zombie), axis=0) > 0] > 0)
+        is_landed_stack = np.any(self.array_stack[np.roll(self.array_current, shift=1*((-1) ** self.flag_zombie), axis=0) > 0] > 0)
         is_landed_bottom = np.any(self.array_current[-1*(not self.flag_zombie) + 0*self.flag_zombie,:] > 0)
         if (self.flag_ghost and is_landed_bottom) or (not self.flag_ghost and (is_landed_stack or is_landed_bottom)):
             self.flag_landed = True
@@ -1094,7 +1098,7 @@ class Tetron:
     
     # Set the flag and stop the game if the top row is occupied.
     def check_lose(self):
-        if np.any(self.array_dropped[0, :] > 0):
+        if np.any(self.array_stack[0, :] > 0):
             self.flag_lose = True
             if not self.is_player:
                 self.stop_game()
@@ -1131,20 +1135,22 @@ class Tetron:
                 count = 2
         elif lines >= 4:
             count = 4
-        # Perfect clear.
-        if False:
-            count += 4
-        # Combos.
-        if self.combos in [2, 3]:
-            count += 1
-        elif self.combos in [4, 5]:
-            count += 2
-        elif self.combos in [6, 7]:
-            count += 3
-        elif self.combos in [8, 9, 10]:
-            count += 4
-        elif self.combos >= 11:
-            count += 5
+        # Bonus lines.
+        if self.id_current != 899:
+            # Perfect clear.
+            if self.flag_perfect:
+                count += 4
+            # Combos.
+            if self.combos in [2, 3]:
+                count += 1
+            elif self.combos in [4, 5]:
+                count += 2
+            elif self.combos in [6, 7]:
+                count += 3
+            elif self.combos in [8, 9, 10]:
+                count += 4
+            elif self.combos >= 11:
+                count += 5
         return count
 
     # Add garbage to the queue.
@@ -1198,28 +1204,25 @@ class Tetron:
             count = self.queue_garbage.pop(0)
             array_garbage = 900 * np.ones([count, column_count])
             array_garbage[:, random.choice(range(column_count))] = 0
-            self.array_dropped = np.concatenate((
-                self.array_dropped[count:, :],
+            self.array_stack = np.concatenate((
+                self.array_stack[count:, :],
                 array_garbage
                 ), axis=0)
             self.check_lose()
 
     # Return the points to add to the score by inputting how many lines were cleared.
-    def calculate_score(self, cleared_increment):
-        # Check for a perfect clear.
-        cleared_perfect = not np.any(self.array_dropped)
-        
+    def calculate_score(self, lines):
         # Calculate points earned based on the type of line clear.
-        score_increment = 5 * cleared_increment
-        if cleared_increment >= 4:
-            score_increment = 10 * cleared_increment
+        score_increment = 5 * lines
+        if lines >= 4:
+            score_increment = 10 * lines
         # Calculate points for T-spins.
         if self.flag_tspin:
-            score_increment = 20 * (cleared_increment + 1)
-            print('tspin points ', score_increment)
+            score_increment = 20 * (lines + 1)
+            print('tspin points: ', score_increment)
         elif self.flag_tspin_mini:
-            score_increment = 5 * (2 ** cleared_increment)
-            print('mini tspin points ', score_increment)
+            score_increment = 5 * (2 ** lines)
+            print('mini tspin points: ', score_increment)
         
         # Calculate point multipliers.
         multipliers = []
@@ -1228,30 +1231,30 @@ class Tetron:
             if self.id_current != 899:
                 multipliers.append(self.combos)
                 # print('combo multiplier: ', multipliers[-1])
-        if cleared_perfect:
+        if self.flag_perfect:
             # Perfect clear multiplier.
             if self.id_current != 899:
-                multipliers.append(cleared_increment)
-                # print('perfect clear multiplier: ', multipliers[-1])
+                multipliers.append(lines)
+                print('perfect clear multiplier: ', multipliers[-1])
         if self.game_mode == 2:
             # Twin multiplier.
             multipliers.append(1.6)
         
         # Play a sound corresponding to the number of lines cleared.
         if self.is_player:
-            if cleared_increment == 1:
+            if lines == 1:
                 sound_game_single.play()
-            elif cleared_increment == 2:
+            elif lines == 2:
                 sound_game_double.play()
-            elif cleared_increment == 3:
+            elif lines == 3:
                 sound_game_triple.play()
-            elif cleared_increment >= 4:
+            elif lines >= 4:
                 sound_game_tetris.play()
             # Play a sound for perfect clears.
-            if cleared_perfect:
+            if self.flag_perfect:
                 sound_game_perfect.play()
             # Play a sound for special line clears.
-            if self.flag_tspin or self.flag_tspin_mini or cleared_increment >= 4:
+            if self.flag_tspin or self.flag_tspin_mini or lines >= 4:
                 sound_game_special.play()
         
         return int(score_increment * np.prod(multipliers))
@@ -1268,26 +1271,26 @@ class Tetron:
             # List of row indices of the bottommost blocks in each column of the current tetrimino.
             indices_current = (self.row_count-1) - np.argmax(np.flipud(self.array_current > 0), axis=0)[columns]
             # Get the current columns of the placed blocks array.
-            array_dropped_current = self.array_dropped[:, columns]
+            array_stack_current = self.array_stack[:, columns]
             # Clear the blocks at or above the current tetrimino.
             for i in range(len(indices_current)):
-                array_dropped_current[indices_current[i]::-1, i] = 0
+                array_stack_current[indices_current[i]::-1, i] = 0
             # List of row indices of highest available positions in current tetrimino's columns.
             if self.flag_heavy:
-                indices_available = (self.row_count-1) * np.ones(array_dropped_current.shape[1])
+                indices_available = (self.row_count-1) * np.ones(array_stack_current.shape[1])
             else:
                 indices_available = np.where(
-                    np.any(array_dropped_current > 0, axis=0),
-                    np.argmax(array_dropped_current > 0, axis=0)-1,
-                    (self.row_count-1) * np.ones(array_dropped_current.shape[1])
+                    np.any(array_stack_current > 0, axis=0),
+                    np.argmax(array_stack_current > 0, axis=0)-1,
+                    (self.row_count-1) * np.ones(array_stack_current.shape[1])
                     )
             # Mark the blocks where the current tetrimino will fall if hard dropped with negative numbers.
             shift = int(min(indices_available - indices_current))
             if self.flag_heavy:
                 for i in range(len(indices_current)):
                     if (indices_current[i]+1) <= self.row_count-1:
-                        array_dropped_current[indices_current[i]+1:indices_current[i]+1+shift, i] = -1
-                self.array_highlight[:, columns] = array_dropped_current
+                        array_stack_current[indices_current[i]+1:indices_current[i]+1+shift, i] = -1
+                self.array_highlight[:, columns] = array_stack_current
             else:
                 self.array_highlight = -1 * np.roll(self.array_current, shift=shift, axis=0)
         # Remove the current tetrimino if not playing.
@@ -1296,7 +1299,7 @@ class Tetron:
         # Add the highlighted blocks, dropped blocks, and current tetrimino to the displayed array.
         if not self.flag_ghost and not self.flag_blind and not (self.flag_zombie and np.any(self.array_current[0,:]>0)) and self.is_player:
             self.array_display[self.array_highlight < 0] = self.array_highlight[self.array_highlight < 0]
-        self.array_display[self.array_dropped > 0] = self.array_dropped[self.array_dropped > 0]
+        self.array_display[self.array_stack > 0] = self.array_stack[self.array_stack > 0]
         self.array_display[self.array_current > 0] = self.array_current[self.array_current > 0]
         # Draw the matrix.
         self.draw_matrix()
@@ -1601,7 +1604,7 @@ class Tetron:
             # Calculate effectiveness value.
             else:
                 # Create a copy of the array.
-                array = np.copy(self.array_dropped)
+                array = np.copy(self.array_stack)
                 # Calculate the number of holes.
                 rows_highest = np.where(np.any(array > 0, axis=0), np.argmax(array > 0, axis=0), row_count * np.ones(column_count, dtype=int))
                 array_holes = np.copy(array)
@@ -1611,7 +1614,7 @@ class Tetron:
                 
                 # Hard drop the current tetrimino and calculate the number of cleared lines.
                 array[self.array_highlight < 0] = -self.array_highlight[self.array_highlight < 0]
-                cleared_increment = len(np.argwhere(np.all(array > 0, axis=1)))
+                line_count = len(np.argwhere(np.all(array > 0, axis=1)))
                 # Calculate the number of holes.
                 rows_highest = np.where(np.any(array > 0, axis=0), np.argmax(array > 0, axis=0), row_count * np.ones(column_count, dtype=int))
                 array_holes = np.copy(array)
@@ -1622,7 +1625,7 @@ class Tetron:
                 # Initialize the effectiveness value.
                 effectiveness = 0
                 # Add points for cleared lines.
-                effectiveness += self.calculate_score(cleared_increment)
+                effectiveness += self.calculate_score(line_count)
                 # Subtract points for height of placed tetrimino.
                 effectiveness -= 1 * abs(row_count - np.argmax(np.any(self.array_highlight < 0, axis=1)))
                 # Subtract points for occupying the top row.
