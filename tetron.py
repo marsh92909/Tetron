@@ -289,13 +289,7 @@ class Tetron:
         self.flag_fast_fall = False
         self.flag_harddrop = False
         self.flag_softdropping = False
-        self.flag_ghost = False
-        self.flag_heavy = False
-        self.flag_disoriented = False
-        self.flag_blind = False
-        self.flag_wind = False
-        self.flag_zombie = False
-        self.flag_fake = False
+        self.reset_special(reset_all=True)
         
         self.flag_put_garbage = False
 
@@ -441,10 +435,7 @@ class Tetron:
     def stop_game(self):
         self.flag_playing = False
         self.flag_paused = False
-        self.flag_ghost = False
-        self.flag_heavy = False
-        self.flag_blind = False
-        self.flag_disoriented = False
+        self.reset_special(reset_all=True)
         self.update()
 
     # Randomly generate the next tetriminos and add them to the next queue.
@@ -679,6 +670,7 @@ class Tetron:
                 # Apply the effect only if there are placed blocks to use and if not taking a block out of hold.
                 if np.any(self.array_dropped > 0) and hold_data is None:
                     self.flag_zombie = True
+                    self.flag_fast_fall = True
                     if self.is_player:
                         sound_special_zombie.play()
             elif effect_special == id_special[6]:
@@ -968,19 +960,9 @@ class Tetron:
         # Increment the placed blocks counter.
         self.count += 1
 
-        # Reset certain flags if needed.
-        if self.flag_ghost:
-            self.flag_ghost = False
-        if self.flag_heavy:
-            self.flag_heavy = False
-        if self.flag_wind:
-            self.flag_wind = False
-        if self.flag_zombie:
-            self.flag_zombie = False
-        if self.flag_fake:
-            self.flag_fake = False
-        if self.flag_fast_fall:
-            self.flag_fast_fall = False
+        # Reset certain flags.
+        self.reset_special(reset_all=False)
+        self.flag_fast_fall = False
         self.flag_landed = False
         self.flag_hold = False
         # Update the values of previously placed special blocks.
@@ -1068,6 +1050,9 @@ class Tetron:
         if self.id_current in [899]:
             self.tetrimino = None
         self.queue_hold.append((self.tetrimino, self.id_current, self.rotation_current))
+        # Reset some special effects.
+        self.reset_special(reset_all=False)
+        # Set the next tetrimino.
         if self.game_mode != 2:
             # Create a new tetrimino if nothing was in the queue.
             if len(self.queue_hold) <= 1:
@@ -1309,7 +1294,7 @@ class Tetron:
         else:
             self.array_current[:] = 0
         # Add the highlighted blocks, dropped blocks, and current tetrimino to the displayed array.
-        if not self.flag_ghost and not self.flag_blind and self.is_player:
+        if not self.flag_ghost and not self.flag_blind and not (self.flag_zombie and np.any(self.array_current[0,:]>0)) and self.is_player:
             self.array_display[self.array_highlight < 0] = self.array_highlight[self.array_highlight < 0]
         self.array_display[self.array_dropped > 0] = self.array_dropped[self.array_dropped > 0]
         self.array_display[self.array_current > 0] = self.array_current[self.array_current > 0]
@@ -1334,6 +1319,18 @@ class Tetron:
     # Reset the value of the previous advance time to the current time.
     def reset_time_advance(self):
         self.time_start_advance = self.games.time_current + 0
+    
+    # Reset some or all special effects.
+    def reset_special(self, reset_all=False):
+        self.flag_ghost = False
+        self.flag_heavy = False
+        self.flag_wind = False
+        self.flag_zombie = False
+        self.flag_fake = False
+        # Duration-based special effects that should not be reset when hard dropping.
+        if reset_all:
+            self.flag_disoriented = False
+            self.flag_blind = False
     
     # Draw each block in the matrix.
     def draw_matrix(self):
