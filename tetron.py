@@ -100,6 +100,7 @@ sound_special_heavy = pygame.mixer.Sound(os.path.join(folder_sounds, 'special_he
 sound_special_disoriented = pygame.mixer.Sound(os.path.join(folder_sounds, 'special_disoriented.wav'))
 sound_special_blind = pygame.mixer.Sound(os.path.join(folder_sounds, 'special_blind.wav'))
 sound_special_zombie = pygame.mixer.Sound(os.path.join(folder_sounds, 'special_zombie.wav'))
+sound_special_fake = pygame.mixer.Sound(os.path.join(folder_sounds, 'special_fake.wav'))
 # Set volume for sound effects.
 sound_game_move.set_volume(0.1)
 sound_game_rotate.set_volume(0.1)
@@ -121,6 +122,7 @@ sound_special_heavy.set_volume(0.25)
 sound_special_disoriented.set_volume(0.25)
 sound_special_blind.set_volume(0.5)
 sound_special_zombie.set_volume(0.5)
+sound_special_fake.set_volume(0.25)
 
 # =============================================================================
 # Controls.
@@ -960,7 +962,7 @@ class Tetron:
                 if not self.flag_fake:
                     sound_game_harddrop.play()
                 else:
-                    pass
+                    sound_special_fake.play()
         self.update()
 
         # Increment the placed blocks counter.
@@ -2277,7 +2279,15 @@ while not done:
     # Limit the game to the desired frames per second by delaying every iteration of this loop.
     clock.tick(fps)
 
-print(np.mean(ms), np.median(ms), np.max(ms))
-
 # Close the window and quit.
 pygame.quit()
+
+# import matplotlib.pyplot as plot
+# plot.plot(ms)
+# plot.show()
+print('Average: {:.2f},   Median: {:.2f},   Max: {:.2f},   Percent over: {:.2f}%'.format(
+    np.mean(ms),
+    np.median(ms),
+    np.max(ms),
+    100 * len([i for i in ms if i > 1000/fps])/len(ms)
+    ))
