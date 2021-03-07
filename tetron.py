@@ -55,7 +55,7 @@ ai_delay_std = 100
 next_count = 5
 # Define the IDs for classic tetriminos, advanced tetriminos, special effects.
 id_classic = [100, 200, 300, 400, 500, 600, 700]
-id_advanced = [101, 102, 201, 202, 301, 302, 401, 402, 403, 501, 601, 602, 701, 801, 811, 812, 813, 814, 899]
+id_advanced = [101, 102, 201, 202, 203, 301, 302, 303, 401, 402, 403, 501, 601, 602, 701, 801, 811, 812, 813, 814, 899]
 id_special = ['ghost', 'heavy', 'disoriented', 'blind', 'wind', 'zombie', 'fake']
 
 # Define the range of probabilities (between 0 and 1) of getting an advanced tetrimino.
@@ -221,23 +221,6 @@ colors = {
     1004: rgb(0.35),  # Highlighted blocks
     1005: rgb(0.50),  # Gray text
     }
-# colors = {
-#     100: (0,175,191),  # Cyan
-#     200: (0,149,255),  # Blue
-#     300: (255,128,0),  # Orange
-#     400: (255,191,0),  # Yellow
-#     500: (0,191,96),  # Green
-#     600: (140,102,255),  # Purple
-#     700: (255,64,64),  # Red
-#     800: (255,77,136),  # Pink
-#     900: rgb(0.618),  # Garbage / AI
-#     901: (255,255,255),  # White
-#     902: (0,0,0),  # Black
-#     903: rgb(0.25),  # Empty
-#     904: rgb(0.35),  # Highlighting
-#     905: rgb(0.28),  # Blind mode
-#     906: rgb(0.50),  # Gray text
-#     }
 
 
 # =============================================================================
@@ -507,7 +490,7 @@ class Tetron:
             # Classic tetriminos.
             if number == id_classic[0]:  # I
                 tetrimino = number * np.ones([4, 4])
-                tetrimino[[0,2,3],:] = -1
+                tetrimino[[0,2,3], :] = -1
             elif number == id_classic[1]:  # J
                 tetrimino = number * np.ones([3, 3])
                 tetrimino[0, 1:] = -1
@@ -534,44 +517,52 @@ class Tetron:
                 tetrimino[1, 0] = -1
                 tetrimino[2, :] = -1
             # Advanced tetriminos.
-            elif number == 101:  # I+
+            elif number == 101:  # I+ (1x5)
                 tetrimino = number * np.ones([5, 5])
-                tetrimino[[0,1,3,4],:] = -1
+                tetrimino[[0,2,3,4], :] = -1
             elif number == 102:  # I-
                 tetrimino = number * np.ones([3, 3])
-                tetrimino[[0,2],:] = -1
-            elif number == 201:  # J+
+                tetrimino[[0,2], :] = -1
+            elif number == 201:  # J+ (3x3)
                 tetrimino = number * np.ones([3, 3])
                 tetrimino[0:2, 1:3] = -1
-            elif number == 202:  # J-
+            elif number == 202:  # J- (2x2)
                 tetrimino = number * np.ones([2, 2])
                 tetrimino[0, 1] = -1
-            elif number == 301:  # L+
+            elif number == 203:  # J+ (2x4)
+                tetrimino = number * np.ones([4, 4])
+                tetrimino[[0,3], :] = -1
+                tetrimino[1, 1:4] = -1
+            elif number == 301:  # L+ (3x3)
                 tetrimino = number * np.ones([3, 3])
                 tetrimino[0:2, 0:2] = -1
-            elif number == 302:  # L-
+            elif number == 302:  # L- (2x2)
                 tetrimino = number * np.ones([2, 2])
                 tetrimino[0, 0] = -1
-            elif number == 401:  # O+
-                tetrimino = number * np.ones([3, 3])
-                tetrimino[:, 2] = -1
-            elif number == 402:  # O++
+            elif number == 303:  # L+ (2x4)
                 tetrimino = number * np.ones([4, 4])
-                tetrimino[:, [0,3]] = -1
-            elif number == 403:  # O ring
+                tetrimino[[0,3], :] = -1
+                tetrimino[1, 0:3] = -1
+            elif number == 401:  # O+ (2x3)
+                tetrimino = number * np.ones([3, 3])
+                tetrimino[2, :] = -1
+            elif number == 402:  # O+ (2x4)
+                tetrimino = number * np.ones([4, 4])
+                tetrimino[[0,3], :] = -1
+            elif number == 403:  # O+ (Ring)
                 tetrimino = number * np.ones([3, 3])
                 tetrimino[1, 1] = -1
             elif number == 501:  # S+
                 tetrimino = number * np.ones([3, 3])
                 tetrimino[0:2, 0] = -1
                 tetrimino[1:3, 2] = -1
-            elif number == 601:  # T+1
+            elif number == 601:  # T+ (Plus)
                 tetrimino = number * np.ones([3, 3])
                 tetrimino[0, 0] = -1
                 tetrimino[0, 2] = -1
                 tetrimino[2, 0] = -1
                 tetrimino[2, 2] = -1
-            elif number == 602:  # T+2
+            elif number == 602:  # T+ (Capital)
                 tetrimino = number * np.ones([3, 3])
                 tetrimino[1:3, [0,2]] = -1
             elif number == 701:  # Z+
@@ -590,7 +581,7 @@ class Tetron:
                 tetrimino[[0,1],[0,1]] = -1
             elif number == 813:  # Colon (:)
                 tetrimino = -1 * np.ones([3, 3])
-                tetrimino[[0,2], 1] = number
+                tetrimino[1, [0,2]] = number
             elif number == 814:  # Quotation (")
                 tetrimino = -1 * np.ones([3, 3])
                 tetrimino[0:2, [0,2]] = number
@@ -1386,31 +1377,6 @@ class Tetron:
         # Rotate the matrix if the disoriented effect is active.
         if self.flag_disoriented:
             self.surface_matrix.blit(pygame.transform.rotate(self.surface_matrix, 180), (0,0))
-        
-        # self.surface_matrix.fill(colors[1002])
-        # for row in range(self.row_count):
-        #     for column in range(self.column_count):
-        #         number = self.array_display[row, column]
-        #         if number != 0:
-        #             if self.is_player:
-        #                 if self.flag_blind:
-        #                     color = colors[904]  # Color of placed blocks in blind mode
-        #                 else:
-        #                     if number < 0:
-        #                         color = colors[1004]  # Color of highlighted blocks
-        #                     else:
-        #                         if number < 900:
-        #                             color = colors[int(np.floor(number/100)*100)]  # Color of placed blocks
-        #                         else:
-        #                             color = colors[number]
-        #             else:
-        #                 if number < 0:
-        #                     color = colors[1004]
-        #                 else:
-        #                     color = colors[900]
-        #         else:
-        #             color = colors[1003]  # Color of empty blocks
-        #         pygame.draw.rect(surface=self.surface_matrix, color=color, rect=[(self.spacing_block+self.width_block)*column+self.spacing_block, (self.spacing_block+self.height_block)*row+self.spacing_block, self.width_block, self.height_block])
 
     # Draw the hold queue.
     def draw_hold(self):
@@ -1430,29 +1396,6 @@ class Tetron:
                     else:
                         color = colors[900]
                     pygame.draw.rect(surface=self.surface_hold, color=color, rect=[size*column, size*row, size, size])
-            # Display the hold queue and text.
-            # self.surface_main.blit(self.surface_hold, self.rect_hold)
-            # self.surface_main.blit(self.text_hold, self.rect_text_hold)
-        
-        # self.surface_hold.fill(colors[1002])
-        # if len(self.queue_hold) > 0:
-        #     tetrimino_mini = self.create_tetrimino_mini(self.queue_hold[0][0])
-        #     size = int(min(np.floor([self.width_hold/tetrimino_mini.shape[0], self.width_hold/tetrimino_mini.shape[1]])))
-        #     for row in range(tetrimino_mini.shape[0]):
-        #         for column in range(tetrimino_mini.shape[1]):
-        #             number = tetrimino_mini[row, column]
-        #             if number > 0:
-        #                 if self.is_player:
-        #                     if number < 900:
-        #                         color = colors[int(np.floor(number/100)*100)]
-        #                     else:
-        #                         color = colors[number]
-        #                 else:
-        #                     color = colors[900]
-        #                 pygame.draw.rect(surface=self.surface_hold, color=color, rect=[size*column, size*row, size, size])
-        #     # Display the hold queue and text.
-        #     self.surface_main.blit(self.surface_hold, self.rect_hold)
-        #     self.surface_main.blit(self.text_hold, self.rect_text_hold)
     
     # Draw the next queue.
     def draw_next(self):
@@ -1485,42 +1428,6 @@ class Tetron:
                     else:
                         color = colors[900]
                     pygame.draw.rect(surface=self.surface_next, color=color, rect=[size*column, size*row, size, size])
-            # # Display the next queue and text.
-            # self.surface_main.blit(self.surface_next, self.rect_next)
-            # self.surface_main.blit(self.text_next, self.rect_text_next)
-        
-        # self.surface_next.fill(colors[1002])
-        # if len(self.queue_next) > 0:
-        #     # Create the single array containing all blocks in the queue.
-        #     array_next = np.zeros([0, self.column_count])
-        #     for data in self.queue_next:
-        #         tetrimino = self.create_tetrimino_mini(data[0])
-        #         if tetrimino.shape[1] < array_next.shape[1]:
-        #             tetrimino = np.concatenate((
-        #                 tetrimino,
-        #                 np.zeros([tetrimino.shape[0], array_next.shape[1] - tetrimino.shape[1]])
-        #                 ), axis=1)
-        #             # Add the current tetrimino array and an empty row at the bottom of the existing array.
-        #             array_next = np.concatenate((array_next, tetrimino, np.zeros([1, array_next.shape[1]])), axis=0)
-        #     # Crop off empty columns at the right.
-        #     array_next = array_next[:, :-np.argmax(np.any(np.fliplr(array_next>0), axis=0))]
-        #     # Draw each block in the array.
-        #     size = int(np.floor(self.width_next/array_next.shape[1]))
-        #     for row in range(array_next.shape[0]):
-        #         for column in range(array_next.shape[1]):
-        #             number = array_next[row, column]
-        #             if number > 0:
-        #                 if self.is_player:
-        #                     if number < 900:
-        #                         color = colors[int(np.floor(number/100)*100)]
-        #                     else:
-        #                         color = colors[number]
-        #                 else:
-        #                     color = colors[900]
-        #                 pygame.draw.rect(surface=self.surface_next, color=color, rect=[size*column, size*row, size, size])
-        #     # Display the next queue and text.
-        #     self.surface_main.blit(self.surface_next, self.rect_next)
-        #     self.surface_main.blit(self.text_next, self.rect_text_next)
     
     # Draw the garbage queue.
     def draw_garbage(self):
@@ -1546,7 +1453,6 @@ class Tetron:
                     position_vertical = (self.spacing_block+self.height_block)*(sum(self.queue_garbage[:index])+block+1) + self.spacing_block + (self.spacing_block*4)*index
                     position_vertical = self.rect_garbage.height - position_vertical
                     pygame.draw.rect(surface=self.surface_garbage, color=color, rect=[0, position_vertical, self.width_block, self.height_block])
-            # self.surface_main.blit(self.surface_garbage, self.rect_garbage)
     
     # Draw the information text.
     def draw_information(self):
@@ -1580,8 +1486,6 @@ class Tetron:
             self.surface_information.blit(text_targeting, rect_targeting)
             self.surface_information.blit(text_ko_value, rect_ko_value)
             self.surface_information.blit(text_ko, rect_ko)
-            
-            # self.surface_main.blit(self.surface_information, self.rect_information)
 
     # Calculate effectiveness of every move, decide on a move, or perform a move.
     def ai_evaluate(self):
@@ -1769,6 +1673,7 @@ text_mode_4_suffix = font_normal.render(' 99', True, colors[1001])
 surface_mode = pygame.Surface((0,0))
 
 ms = []  # Debug
+
 # Loop until the window is closed.
 done = False
 while not done:
@@ -2216,14 +2121,6 @@ while not done:
         rect_mode.bottom = height_panel + 0
         rect_mode.centerx = size_window[0]//2
         screen.blit(surface_mode, rect_mode)
-    # # Draw elements of each game.
-    # for game in games.all:
-    #     game.draw_garbage()
-    #     # if game_mode != 2:
-    #     #     game.draw_hold()
-    #     #     game.draw_next()
-    #     game.draw_information()
-    #     # game.draw_matrix()   # Do this in each game's update()
     # Display score text.
     text_score = font_normal.render('{}'.format(score), True, colors[1001])
     rect_text_score = text_score.get_rect()
