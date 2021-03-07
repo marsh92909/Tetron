@@ -67,8 +67,8 @@ weights_special = [0, 1/20]
 # Define the score needed to begin increasing the probability of getting a special effect.
 score_update_chance_special = score_thresholds[0]
 # Define settings for special effects (ms).
-duration_max_disoriented = 20000
-duration_max_blind = 20000
+duration_disoriented = 20000
+duration_blind = 20000
 speed_wind = 500
 
 # Create font objects used to create text.
@@ -99,6 +99,7 @@ sound_special_ghost = pygame.mixer.Sound(os.path.join(folder_sounds, 'special_gh
 sound_special_heavy = pygame.mixer.Sound(os.path.join(folder_sounds, 'special_heavy.wav'))
 sound_special_disoriented = pygame.mixer.Sound(os.path.join(folder_sounds, 'special_disoriented.wav'))
 sound_special_blind = pygame.mixer.Sound(os.path.join(folder_sounds, 'special_blind.wav'))
+sound_special_zombie = pygame.mixer.Sound(os.path.join(folder_sounds, 'special_zombie.wav'))
 # Set volume for sound effects.
 sound_game_move.set_volume(0.1)
 sound_game_rotate.set_volume(0.1)
@@ -119,6 +120,7 @@ sound_special_ghost.set_volume(0.25)
 sound_special_heavy.set_volume(0.25)
 sound_special_disoriented.set_volume(0.25)
 sound_special_blind.set_volume(0.5)
+sound_special_zombie.set_volume(0.5)
 
 # =============================================================================
 # Controls.
@@ -209,7 +211,7 @@ colors = {
     901: rgb(1.00),  # Ghost
     902: rgb(0.00),  # Heavy
     904: rgb(0.28),  # Blind
-    906: (143,191,167),  # Zombie  (HSB 150, 25%, 75%)
+    906: (96,128,112),  # Zombie  (HSB 150, 25%, 50%)
 
     1001: rgb(1.00),  # White
     1002: rgb(0.00),  # Black
@@ -290,6 +292,7 @@ class Tetron:
         self.flag_disoriented = False
         self.flag_blind = False
         self.flag_wind = False
+        self.flag_zombie = False
         
         self.flag_put_garbage = False
 
@@ -417,7 +420,7 @@ class Tetron:
         # Select a target.
         self.select_target()
         # Generate the next queue and set the new tetrimino.
-        self.generate_next(next_count)
+        self.add_next(next_count)
         self.set_tetrimino()
     
     # Pause or resume the game.
@@ -442,7 +445,7 @@ class Tetron:
         self.update()
 
     # Randomly generate the next tetriminos and add them to the next queue.
-    def generate_next(self, count=1):
+    def add_next(self, count=1):
         # Randomly select a category to choose from, then randomly select a tetrimino within the category with each tetrimino having an equal probability.
         for is_advanced in random.choices([True, False], [self.weight_advanced, 1-self.weight_advanced], k=count):
             if is_advanced:
@@ -471,114 +474,149 @@ class Tetron:
     
     # Create and return a tetrimino array.
     def create_tetrimino(self, number):
-        # Classic tetriminos.
-        if number == id_classic[0]:  # I
-            tetrimino = number * np.ones([4, 4])
-            tetrimino[[0,2,3],:] = -1
-        elif number == id_classic[1]:  # J
-            tetrimino = number * np.ones([3, 3])
-            tetrimino[0, 1:] = -1
-            tetrimino[2, :] = -1
-        elif number == id_classic[2]:  # L
-            tetrimino = number * np.ones([3, 3])
-            tetrimino[0, 0:2] = -1
-            tetrimino[2, :] = -1
-        elif number == id_classic[3]:  # O
-            tetrimino = number * np.ones([2, 2])
-        elif number == id_classic[4]:  # S
-            tetrimino = number * np.ones([3, 3])
-            tetrimino[0, 0] = -1
-            tetrimino[1, 2] = -1
-            tetrimino[2, :] = -1
-        elif number == id_classic[5]:  # T
-            tetrimino = number * np.ones([3, 3])
-            tetrimino[0, [0,2]] = -2
-            tetrimino[2, [0,2]] = -3
-            tetrimino[2, 1] = -1
-        elif number == id_classic[6]:  # Z
-            tetrimino = number * np.ones([3, 3])
-            tetrimino[0, 2] = -1
-            tetrimino[1, 0] = -1
-            tetrimino[2, :] = -1
-        # Advanced tetriminos.
-        elif number == 101:  # I+
-            tetrimino = number * np.ones([5, 5])
-            tetrimino[[0,1,3,4],:] = -1
-        elif number == 102:  # I-
-            tetrimino = number * np.ones([3, 3])
-            tetrimino[[0,2],:] = -1
-        elif number == 201:  # J+
-            tetrimino = number * np.ones([3, 3])
-            tetrimino[0:2, 1:3] = -1
-        elif number == 202:  # J-
-            tetrimino = number * np.ones([2, 2])
-            tetrimino[0, 1] = -1
-        elif number == 301:  # L+
-            tetrimino = number * np.ones([3, 3])
-            tetrimino[0:2, 0:2] = -1
-        elif number == 302:  # L-
-            tetrimino = number * np.ones([2, 2])
-            tetrimino[0, 0] = -1
-        elif number == 401:  # O+
-            tetrimino = number * np.ones([3, 3])
-            tetrimino[:, 2] = -1
-        elif number == 402:  # O++
-            tetrimino = number * np.ones([4, 4])
-            tetrimino[:, [0,3]] = -1
-        elif number == 403:  # O ring
-            tetrimino = number * np.ones([3, 3])
-            tetrimino[1, 1] = -1
-        elif number == 501:  # S+
-            tetrimino = number * np.ones([3, 3])
-            tetrimino[0:2, 0] = -1
-            tetrimino[1:3, 2] = -1
-        elif number == 601:  # T+1
-            tetrimino = number * np.ones([3, 3])
-            tetrimino[0, 0] = -1
-            tetrimino[0, 2] = -1
-            tetrimino[2, 0] = -1
-            tetrimino[2, 2] = -1
-        elif number == 602:  # T+2
-            tetrimino = number * np.ones([3, 3])
-            tetrimino[1:3, [0,2]] = -1
-        elif number == 701:  # Z+
-            tetrimino = number * np.ones([3, 3])
-            tetrimino[1:3, 0] = -1
-            tetrimino[0:2, 2] = -1
-        elif number == 801:  # Random 3x3
-            shape = [3, 3]
-            tetrimino = -1 * np.ones(shape)
-            random_indices = random.sample(range(tetrimino.size), 5)
-            tetrimino[np.unravel_index(random_indices, shape)] = number
-        elif number == 811:  # Period (.)
-            tetrimino = number * np.ones([1, 1])
-        elif number == 812:  # Comma (,)
-            tetrimino = number * np.ones([2, 2])
-            tetrimino[[0,1],[0,1]] = -1
-        elif number == 813:  # Colon (:)
-            tetrimino = -1 * np.ones([3, 3])
-            tetrimino[[0,2], 1] = number
-        elif number == 814:  # Quotation (")
-            tetrimino = -1 * np.ones([3, 3])
-            tetrimino[0:2, [0,2]] = number
-        elif number == 899:  # Freebie
-            # Index of highest row containing dropped blocks.
-            index_highest = np.argmax(np.any(self.array_dropped > 0, axis=1))
-            # Index of lowest row that can fit this tetrimino.
-            index_lowest = max(np.argmax(self.array_dropped, axis=0))
-            # Get the top rows of the dropped blocks.
-            array_dropped_top = np.copy(self.array_dropped[index_highest:index_lowest+1, :]) > 0
-            # Get the row indices of the highest blocks in each column of the dropped blocks array, with values of -1 for empty columns.
-            rows_highest = np.argmax(array_dropped_top, axis=0)
-            rows_highest[np.all(array_dropped_top == 0, axis=0)] = -1
-            # Fill the blocks below the highest blocks in each column.
-            for column, row in enumerate(rows_highest):
-                if row >= 0:
-                    array_dropped_top[row:, column] = 1
-            # Create the tetrimino by inverting the dropped blocks.
-            tetrimino = number * (1 - array_dropped_top)
-            # Replace all values of 0 with -1.
-            tetrimino[tetrimino == 0] = -1
+        # Zombie tetrimino.
+        if self.flag_zombie:
+            width = random.choice([2, 3])
+            height = random.choice([1, 2, 3])
+            left = random.choice([column for column in range(self.column_count-width+1) if np.any(self.array_dropped[:,column])>0])
+            right = left + width
+            top = np.argmax(np.any(self.array_dropped[:, left:right] > 0, axis=1))
+            bottom = max(np.argmax(self.array_dropped[:, left:right] > 0, axis=0)) + 1
+            if bottom - top != height:
+                bottom = min([self.row_count, top+height])
+            tetrimino = np.copy(self.array_dropped[top:bottom, left:right])
+            tetrimino[tetrimino <= 0] = -1
+            tetrimino[tetrimino > 0] = 906
+            self.array_dropped[top:bottom, left:right] = 0
+            # Make the tetrimino square.
+            if (bottom-top) != (right-left):
+                difference = (bottom-top) - (right-left)
+                if difference < 0:
+                    if bottom + abs(difference) > self.row_count:
+                        top -= abs(difference)
+                        tetrimino = np.concatenate((-1*np.ones([abs(difference),tetrimino.shape[1]]), tetrimino), axis=0)
+                    else:
+                        bottom += abs(difference)
+                        tetrimino = np.concatenate((tetrimino, -1*np.ones([abs(difference),tetrimino.shape[1]])), axis=0)
+                elif difference > 0:
+                    if right + abs(difference) > self.column_count:
+                        left -= abs(difference)
+                        tetrimino = np.concatenate((-1*np.ones([tetrimino.shape[0],abs(difference)]), tetrimino), axis=1)
+                    else:
+                        right += abs(difference)
+                        tetrimino = np.concatenate((tetrimino, -1*np.ones([tetrimino.shape[0],abs(difference)])), axis=1)
+            # Insert the tetrimino into the current tetrimino array.
+            self.array_current[:] = 0
+            self.array_current[top:bottom, left:right] = tetrimino
+        else:
+            # Classic tetriminos.
+            if number == id_classic[0]:  # I
+                tetrimino = number * np.ones([4, 4])
+                tetrimino[[0,2,3],:] = -1
+            elif number == id_classic[1]:  # J
+                tetrimino = number * np.ones([3, 3])
+                tetrimino[0, 1:] = -1
+                tetrimino[2, :] = -1
+            elif number == id_classic[2]:  # L
+                tetrimino = number * np.ones([3, 3])
+                tetrimino[0, 0:2] = -1
+                tetrimino[2, :] = -1
+            elif number == id_classic[3]:  # O
+                tetrimino = number * np.ones([2, 2])
+            elif number == id_classic[4]:  # S
+                tetrimino = number * np.ones([3, 3])
+                tetrimino[0, 0] = -1
+                tetrimino[1, 2] = -1
+                tetrimino[2, :] = -1
+            elif number == id_classic[5]:  # T
+                tetrimino = number * np.ones([3, 3])
+                tetrimino[0, [0,2]] = -2
+                tetrimino[2, [0,2]] = -3
+                tetrimino[2, 1] = -1
+            elif number == id_classic[6]:  # Z
+                tetrimino = number * np.ones([3, 3])
+                tetrimino[0, 2] = -1
+                tetrimino[1, 0] = -1
+                tetrimino[2, :] = -1
+            # Advanced tetriminos.
+            elif number == 101:  # I+
+                tetrimino = number * np.ones([5, 5])
+                tetrimino[[0,1,3,4],:] = -1
+            elif number == 102:  # I-
+                tetrimino = number * np.ones([3, 3])
+                tetrimino[[0,2],:] = -1
+            elif number == 201:  # J+
+                tetrimino = number * np.ones([3, 3])
+                tetrimino[0:2, 1:3] = -1
+            elif number == 202:  # J-
+                tetrimino = number * np.ones([2, 2])
+                tetrimino[0, 1] = -1
+            elif number == 301:  # L+
+                tetrimino = number * np.ones([3, 3])
+                tetrimino[0:2, 0:2] = -1
+            elif number == 302:  # L-
+                tetrimino = number * np.ones([2, 2])
+                tetrimino[0, 0] = -1
+            elif number == 401:  # O+
+                tetrimino = number * np.ones([3, 3])
+                tetrimino[:, 2] = -1
+            elif number == 402:  # O++
+                tetrimino = number * np.ones([4, 4])
+                tetrimino[:, [0,3]] = -1
+            elif number == 403:  # O ring
+                tetrimino = number * np.ones([3, 3])
+                tetrimino[1, 1] = -1
+            elif number == 501:  # S+
+                tetrimino = number * np.ones([3, 3])
+                tetrimino[0:2, 0] = -1
+                tetrimino[1:3, 2] = -1
+            elif number == 601:  # T+1
+                tetrimino = number * np.ones([3, 3])
+                tetrimino[0, 0] = -1
+                tetrimino[0, 2] = -1
+                tetrimino[2, 0] = -1
+                tetrimino[2, 2] = -1
+            elif number == 602:  # T+2
+                tetrimino = number * np.ones([3, 3])
+                tetrimino[1:3, [0,2]] = -1
+            elif number == 701:  # Z+
+                tetrimino = number * np.ones([3, 3])
+                tetrimino[1:3, 0] = -1
+                tetrimino[0:2, 2] = -1
+            elif number == 801:  # Random 3x3
+                shape = [3, 3]
+                tetrimino = -1 * np.ones(shape)
+                random_indices = random.sample(range(tetrimino.size), 5)
+                tetrimino[np.unravel_index(random_indices, shape)] = number
+            elif number == 811:  # Period (.)
+                tetrimino = number * np.ones([1, 1])
+            elif number == 812:  # Comma (,)
+                tetrimino = number * np.ones([2, 2])
+                tetrimino[[0,1],[0,1]] = -1
+            elif number == 813:  # Colon (:)
+                tetrimino = -1 * np.ones([3, 3])
+                tetrimino[[0,2], 1] = number
+            elif number == 814:  # Quotation (")
+                tetrimino = -1 * np.ones([3, 3])
+                tetrimino[0:2, [0,2]] = number
+            elif number == 899:  # Freebie
+                # Index of highest row containing dropped blocks.
+                index_highest = np.argmax(np.any(self.array_dropped > 0, axis=1))
+                # Index of lowest row that can fit this tetrimino.
+                index_lowest = max(np.argmax(self.array_dropped, axis=0))
+                # Get the top rows of the dropped blocks.
+                array_dropped_top = np.copy(self.array_dropped[index_highest:index_lowest+1, :]) > 0
+                # Get the row indices of the highest blocks in each column of the dropped blocks array, with values of -1 for empty columns.
+                rows_highest = np.argmax(array_dropped_top, axis=0)
+                rows_highest[np.all(array_dropped_top == 0, axis=0)] = -1
+                # Fill the blocks below the highest blocks in each column.
+                for column, row in enumerate(rows_highest):
+                    if row >= 0:
+                        array_dropped_top[row:, column] = 1
+                # Create the tetrimino by inverting the dropped blocks.
+                tetrimino = number * (1 - array_dropped_top)
+                # Replace all values of 0 with -1.
+                tetrimino[tetrimino == 0] = -1
         return tetrimino
     
     # Create a padded version of a tetrimino array for display in the queues.
@@ -595,18 +633,6 @@ class Tetron:
     
     # Get the first tetrimino in the next queue or the hold queue and use it as the current.
     def set_tetrimino(self, hold_data=None):
-        # Get and remove the first data from the next or hold queue.
-        if hold_data is None:
-            data = self.queue_next.pop(0)
-            self.generate_next()
-        else:
-            data = hold_data
-        
-        # Generate any un-generated tetrimino arrays.
-        tetrimino, number, rotation = data
-        if tetrimino is None:
-            tetrimino = self.create_tetrimino(number)
-        
         # Randomly select a special property after selecting whether to use a special effect.
         if random.choices([True, False], [self.weight_special, 1-self.weight_special], k=1)[0]:
             effect_special = random.choice([id_special[i] for i in range(len(id_special)) if not self.used_special[i]])
@@ -614,7 +640,7 @@ class Tetron:
             # Reset all values in the list to False.
             if all(self.used_special):
                 self.used_special = [False] * len(self.used_special)
-
+            # Apply the special effect.
             if effect_special == id_special[0]:
                 self.flag_ghost = True
                 self.flag_fast_fall = True
@@ -646,6 +672,26 @@ class Tetron:
                 self.wind_position = self.width_block // 2
                 # if self.is_player:
                 #     sound_special_wind.play()
+            elif effect_special == id_special[5]:
+                # Apply the effect only if there are placed blocks to use and if not taking a block out of hold.
+                if np.any(self.array_dropped > 0) and hold_data is None:
+                    self.flag_zombie = True
+                    if self.is_player:
+                        sound_special_zombie.play()
+        # Get and remove the first item from the next or hold queue.
+        if self.flag_zombie:
+            data = [None, None, 0]
+        else:
+            if hold_data is None:
+                data = self.queue_next.pop(0)
+                self.add_next()
+            else:
+                data = hold_data
+        tetrimino, number, rotation = data
+
+        # Generate any un-generated tetrimino arrays.
+        if tetrimino is None:
+            tetrimino = self.create_tetrimino(number)
         # Apply any special effects to tetrimino.
         if self.flag_ghost:
             tetrimino[tetrimino > 0] = 901
@@ -657,11 +703,12 @@ class Tetron:
         self.id_current = number
         self.rotation_current = rotation
 
-        # Clear the current tetrimino array.
-        self.array_current[:] = 0
-        # Insert the new tetrimino in the array.
-        column_left = int(np.floor((self.column_count-tetrimino.shape[1])/2))
-        self.array_current[0:tetrimino.shape[0], column_left:column_left+tetrimino.shape[1]] = self.tetrimino
+        if not self.flag_zombie:
+            # Clear the current tetrimino array.
+            self.array_current[:] = 0
+            # Insert the new tetrimino in the array.
+            column_left = int(np.floor((self.column_count-tetrimino.shape[1])/2))
+            self.array_current[0:tetrimino.shape[0], column_left:column_left+tetrimino.shape[1]] = self.tetrimino
         # Check for landing.
         self.check_landed()
         # Update the displayed array.
@@ -675,9 +722,9 @@ class Tetron:
     # Advance one line.
     def advance(self):
         # Determine if at the bottom of the matrix.
-        is_at_bottom = np.any(self.array_current[-1,:] > 0)
+        is_at_bottom = np.any(self.array_current[-1*(not self.flag_zombie) + 0*self.flag_zombie,:] > 0)
         # Advance the current tetrimino array one line and return a copy.
-        array_current = np.roll(self.array_current, shift=1, axis=0)
+        array_current = np.roll(self.array_current, shift=1*((-1) ** self.flag_zombie), axis=0)
         # Determine if the advanced copy intersects already placed blocks.
         is_intersecting = np.any(self.array_dropped[array_current > 0] > 0)
         # Apply the advancement if not intersecting and not at the bottom.
@@ -895,9 +942,9 @@ class Tetron:
         if self.flag_heavy:
             self.array_dropped[self.array_highlight < 0] = 0
             self.array_current = np.roll(self.array_current, np.argmax(np.any(np.flipud(self.array_current) > 0, axis=1)), axis=0)
-        # If not a ghost tetrimino, shift the tetrimino down.
+        # Shift the tetrimino down.
         else:
-            if not self.flag_ghost:
+            if not self.flag_ghost and not (self.flag_zombie and np.any(self.array_current[0,:] > 0)):
                 self.array_current = -1 * self.array_highlight
         # Drop the tetrimino.
         self.array_dropped[self.array_current > 0] = self.array_current[self.array_current > 0]
@@ -919,13 +966,16 @@ class Tetron:
             self.flag_heavy = False
         if self.flag_wind:
             self.flag_wind = False
+        if self.flag_zombie:
+            self.flag_zombie = False
         if self.flag_fast_fall:
             self.flag_fast_fall = False
         self.flag_landed = False
         self.flag_hold = False
-        # Update the values of previously placed ghost blocks and heavy blocks.
+        # Update the values of previously placed special blocks.
         self.array_dropped[self.array_dropped == 901] = 900
         self.array_dropped[self.array_dropped == 902] = 900
+        self.array_dropped[self.array_dropped == 906] = 900
 
         # Check for cleared lines and empty them.
         cleared_rows = np.argwhere(np.all(self.array_dropped > 0, axis=1))
@@ -1028,8 +1078,8 @@ class Tetron:
 
     # Reset the advance timer if the tetrimino is directly above an already placed block or is on the bottom of the matrix.
     def check_landed(self):
-        is_landed_stack = np.any(self.array_dropped[np.roll(self.array_current, shift=1, axis=0) > 0] > 0)
-        is_landed_bottom = np.any(self.array_current[-1,:] > 0)
+        is_landed_stack = np.any(self.array_dropped[np.roll(self.array_current, shift=1*((-1) ** self.flag_zombie), axis=0) > 0] > 0)
+        is_landed_bottom = np.any(self.array_current[-1*(not self.flag_zombie) + 0*self.flag_zombie,:] > 0)
         if (self.flag_ghost and is_landed_bottom) or (not self.flag_ghost and (is_landed_stack or is_landed_bottom)):
             self.flag_landed = True
             self.time_landed = self.games.time_current + 0
@@ -1823,7 +1873,7 @@ while not done:
                     elif len(games.player) >= 2:
                         indices = [0, 1]
                     # Check that no games currently holding, no games have a ghost block, and no games have a heavy block.
-                    if not any([any([game.flag_hold, game.flag_ghost, game.flag_heavy]) for game in games.player]):
+                    if not any([any([game.flag_hold, game.flag_ghost, game.flag_heavy, game.flag_zombie]) for game in games.player]):
                         # Hold.
                         for index in indices:
                             games.player[index].hold()
@@ -2184,12 +2234,12 @@ while not done:
     for index, game in enumerate(games.all):
         # Stop the disoriented effect if it has lasted longer than the maximum duration.
         if game.flag_disoriented:
-            if games.time_current - game.time_start_disoriented > duration_max_disoriented:
+            if games.time_current - game.time_start_disoriented > duration_disoriented:
                 game.flag_disoriented = False
                 game.draw_matrix()
         # Stop the blind effect if it has lasted longer than the maximum duration.
         if game.flag_blind:
-            if games.time_current - game.time_start_blind > duration_max_blind:
+            if games.time_current - game.time_start_blind > duration_blind:
                 game.flag_blind = False
                 game.draw_matrix()
         
