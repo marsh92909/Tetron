@@ -56,7 +56,7 @@ next_count = 5
 # Define the IDs for classic tetriminos, advanced tetriminos, special effects.
 id_classic = [100, 200, 300, 400, 500, 600, 700]
 id_advanced = [101, 102, 201, 202, 301, 302, 401, 402, 403, 501, 601, 602, 701, 801, 811, 812, 813, 814, 899]
-id_special = ['ghost', 'heavy', 'disoriented', 'blind', 'wind', 'zombie']
+id_special = ['ghost', 'heavy', 'disoriented', 'blind', 'wind', 'zombie', 'fake']
 
 # Define the range of probabilities (between 0 and 1) of getting an advanced tetrimino.
 weights_advanced = [0, 1/3]
@@ -293,6 +293,7 @@ class Tetron:
         self.flag_blind = False
         self.flag_wind = False
         self.flag_zombie = False
+        self.flag_fake = False
         
         self.flag_put_garbage = False
 
@@ -678,6 +679,8 @@ class Tetron:
                     self.flag_zombie = True
                     if self.is_player:
                         sound_special_zombie.play()
+            elif effect_special == id_special[6]:
+                self.flag_fake = True
         # Get and remove the first item from the next or hold queue.
         if self.flag_zombie:
             data = [None, None, 0]
@@ -947,13 +950,17 @@ class Tetron:
             if not self.flag_ghost and not (self.flag_zombie and np.any(self.array_current[0,:] > 0)):
                 self.array_current = -1 * self.array_highlight
         # Drop the tetrimino.
-        self.array_dropped[self.array_current > 0] = self.array_current[self.array_current > 0]
+        if not self.flag_fake:
+            self.array_dropped[self.array_current > 0] = self.array_current[self.array_current > 0]
         # Set flag to hard drop other game instances.
         self.flag_harddrop = True
         # Play sound effect.
         if self.instance_self == 0:
             if self.is_player:
-                sound_game_harddrop.play()
+                if not self.flag_fake:
+                    sound_game_harddrop.play()
+                else:
+                    pass
         self.update()
 
         # Increment the placed blocks counter.
@@ -968,6 +975,8 @@ class Tetron:
             self.flag_wind = False
         if self.flag_zombie:
             self.flag_zombie = False
+        if self.flag_fake:
+            self.flag_fake = False
         if self.flag_fast_fall:
             self.flag_fast_fall = False
         self.flag_landed = False
