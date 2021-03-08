@@ -23,11 +23,6 @@ pygame.init()
 # =============================================================================
 # Game Settings.
 # =============================================================================
-# Define the frames per second of the game.
-fps = 60
-# Create a clock that manages how fast the screen updates.
-clock = pygame.time.Clock()
-
 # Define the scores needed to move to the next stage. The last value is the score needed to win the game.
 score_thresholds = [400, 800, 1000]
 # Define the numbers of remaining players needed to move to the next stage. The last value is the number needed to win the game.
@@ -68,8 +63,8 @@ weights_special = [0, 1/20]
 # Define the score needed to begin increasing the probability of getting a special effect.
 score_update_chance_special = score_thresholds[0]
 # Define settings for special effects (ms).
-duration_disoriented = 10000 #20000
-duration_blind = 15000 #20000
+duration_disoriented = 10000
+duration_blind = 15000
 speed_wind = 500
 
 # Create font objects used to create text.
@@ -80,7 +75,6 @@ font_small = pygame.font.SysFont('Segoe UI Semibold', 18)
 # Sounds.
 # =============================================================================
 # Load sound effects.
-# sound_game_advance = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_advance.wav'))
 sound_game_move = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_move.wav'))
 sound_game_rotate = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_rotate.wav'))
 sound_game_harddrop = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_harddrop.wav'))
@@ -246,11 +240,6 @@ class Tetron:
         # Define the number of rows and columns of the matrix.
         self.row_count = row_count
         self.column_count = column_count
-
-        # Initialize the game mode. Define this attribute here to prevent resetting its value on game restarts.
-        self.game_mode = 1
-        # Initialize the classic flag. Define this attribute here to prevent resetting its value on game restarts.
-        self.flag_classic = False
 
         # Initialize all other attributes.
         self.initialize()
@@ -1049,7 +1038,7 @@ class Tetron:
         # Reset some special effects.
         self.reset_special(reset_all=False)
         # Set the next tetrimino.
-        if self.game_mode != 2:
+        if self.games.game_mode != 2:
             # Create a new tetrimino if nothing was in the queue.
             if len(self.queue_hold) <= 1:
                 self.set_tetrimino()
@@ -1228,7 +1217,7 @@ class Tetron:
             if self.id_current != 899:
                 multipliers.append(lines)
                 print('perfect clear multiplier: ', multipliers[-1])
-        if self.game_mode == 2:
+        if self.games.game_mode == 2:
             # Twin multiplier.
             multipliers.append(1.6)
         
@@ -1299,17 +1288,17 @@ class Tetron:
     # Update the game difficulty.
     def update_difficulty(self):
         # Update the block fall speed.
-        if self.flag_classic:
+        if self.games.flag_classic:
             self.speed_fall = np.interp(self.score, [0, score_thresholds[-2]], speeds_fall_classic)
         else:
             self.speed_fall = np.interp(self.score, [0, score_thresholds[-2]], speeds_fall)
         # Update the probability of getting an advanced tetrimino.
-        if self.flag_classic:
+        if self.games.flag_classic:
             self.weight_advanced = 0
         else:
             self.weight_advanced = np.interp(self.score, [score_update_chance_advanced, score_thresholds[-2]], weights_advanced)
         # Update the probability of getting a special effect.
-        if self.flag_classic:
+        if self.games.flag_classic:
             self.weight_special = 0
         else:
             self.weight_special = np.interp(self.score, [score_update_chance_special, score_thresholds[-2]], weights_special)
@@ -1461,7 +1450,7 @@ class Tetron:
     # Draw the information text.
     def draw_information(self):
         self.surface_information.fill(colors[1002])
-        if self.game_mode in [4] and self.is_player and self.flag_playing:
+        if self.games.game_mode in [4] and self.is_player and self.flag_playing:
             if self.instance_target == self.instance_self:
                 target = 'Self'
             else:
@@ -1587,17 +1576,38 @@ class Tetron:
                 if (self.games.time_current - self.ai_time_evaluate) >= self.ai_delay:
                     self.harddrop()
 
-# A class that stores and manages game instances.
+# A class that stores and manages different game instances.
 class Games:
     def __init__(self):
         self.player = []
         self.ai = []
         self.all = []
 
+        # Define the frames per second of the game.
+        self.fps = 60
+        # Create a clock that manages how fast the screen updates.
+        self.clock = pygame.time.Clock()
+
+        # Initialize time-related attributes.
         self.time_current = 0
         self.time_start = 0
         self.time_elapsed = 0
+
+        # Initialize the game mode number and classic flag.
+        self.game_mode = 1
+        self.flag_classic = False
+
+        # Initialize game-related attributes.
+        self.reset_game()
     
+    # Reset parameters when starting a new game.
+    def reset_game(self):
+        self.score = 0
+        self.score_previous = 0
+        self.remaining = 0
+        self.remaining_previous = 0
+        self.stage = 0
+
     # Add a game to the corresponding list.
     def add_game(self, game):
         if game.is_player:
@@ -1625,24 +1635,18 @@ row_count = 20
 column_count = 10
 # Define the size of the space between blocks in pixels.
 spacing_block = 1
-# Get the size of the display.
-info_display = pygame.display.Info()
 # Define the height and width of the blocks in pixels.
-height_block = round(((0.8 * info_display.current_h) - ((row_count+1) * spacing_block)) / (row_count+1))
+height_block = round(((0.8 * pygame.display.Info().current_h) - ((row_count+1) * spacing_block)) / (row_count+1))
 width_block = height_block + 0
 # Define the height of the panel above the matrix in pixels.
 height_panel = height_block + 0
 # Define the width of spacing between elements.
 spacing_large = width_block + 0
 
-# Create an object to contain lists of player games and AI games.
+# Create an object to contain lists of player/AI games and general game information.
 games = Games()
 # Create a player instance of the game.
 games.add_game(Tetron(True, len(games.player), games, width_block, height_block, spacing_block, row_count, column_count))
-# Initialize the score, players remaining, and stage number.
-score = 0
-remaining = 0
-stage = 0
 
 # Initialize the window size [width, height] in pixels.
 size_window = [
@@ -1656,9 +1660,6 @@ pygame.display.set_icon(icon)
 # Create the window.
 screen = pygame.display.set_mode(size_window, pygame.RESIZABLE)
 
-# Initialize the game mode and the classic Tetris flag.
-game_mode = 1
-flag_classic = False
 # Load the logo.
 logo_full = pygame.image.load(os.path.join(folder_program, 'logo.png'))
 logo = pygame.transform.smoothscale(logo_full, [int(height_panel*(logo_full.get_width()/logo_full.get_height())), height_panel])
@@ -1805,30 +1806,24 @@ while not done:
             else:
                 if not flag_paused:
                     # Switch game modes.
-                    if event.key == key_mode_1 and game_mode != 1:
-                        game_mode = 1
+                    if event.key == key_mode_1 and games.game_mode != 1:
+                        games.game_mode = 1
                         games.remove_games_player()
                         games.remove_games_ai()
-                    elif event.key == key_mode_2 and game_mode != 2:
-                        game_mode = 2
+                    elif event.key == key_mode_2 and games.game_mode != 2:
+                        games.game_mode = 2
                         games.remove_games_player()
                         games.add_game(Tetron(True, len(games.player), games, width_block, height_block, spacing_block, row_count, column_count))
                         games.remove_games_ai()
-                    elif event.key == key_mode_3 and game_mode != 3:
-                        game_mode = 3
+                    elif event.key == key_mode_3 and games.game_mode != 3:
+                        games.game_mode = 3
                         games.remove_games_player()
                         games.add_game(Tetron(False, len(games.all), games, width_block, height_block, spacing_block, row_count, column_count))
-                    elif False: #event.key == key_mode_4 and game_mode != 4:
-                        game_mode = 4
+                    elif False: #event.key == key_mode_4 and games.game_mode != 4:
+                        games.game_mode = 4
                     # Toggle classic Tetris.
                     elif event.key == key_toggle_classic:
-                        flag_classic = not flag_classic
-                        for game in games.all:
-                            game.flag_classic = flag_classic
-                    # Update the classic flag for all games in case toggling was performed before a game mode switch.
-                    for game in games.all:
-                        game.flag_classic = flag_classic
-                        game.game_mode = game_mode
+                        games.flag_classic = not games.flag_classic
         # Key releases.
         elif event.type == pygame.KEYUP:
             if event.key == key_start:
@@ -1840,11 +1835,10 @@ while not done:
                             game.pause_game()
                     # Start game.
                     else:
-                        score = 0
-                        stage = 0
+                        games.reset_game()
                         # Unload current music and start playing music indefinitely.
                         pygame.mixer.music.unload()
-                        pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_{}.ogg'.format(stage+1)))
+                        pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_{}.ogg'.format(games.stage+1)))
                         pygame.mixer.music.play(loops=-1)
                         # Start each game.
                         games.time_start = games.time_current + 0
@@ -1888,7 +1882,7 @@ while not done:
                 pygame.mixer.music.stop()
                 pygame.mixer.music.unload()
                 # Load music for current stage.
-                pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_{}.ogg'.format(stage+1)))
+                pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_{}.ogg'.format(games.stage+1)))
                 # Disable the event sent when music ends, and play indefinitely.
                 pygame.mixer.music.set_endevent()
                 pygame.mixer.music.play(loops=-1)
@@ -1962,22 +1956,22 @@ while not done:
     # Game Progress.
     # =============================================================================
     # Calculate score.
-    score_previous = score + 0
-    if game_mode in [1, 2]:
-        score += sum([game.score_increment.pop(0) for game in games.player if len(game.score_increment) > 0])
-    elif game_mode in [3]:
-        score += max([0] + [game.score_increment.pop(0) for game in games.all if len(game.score_increment) > 0])
+    games.score_previous = games.score + 0
+    if games.game_mode in [1, 2]:
+        games.score += sum([game.score_increment.pop(0) for game in games.player if len(game.score_increment) > 0])
+    elif games.game_mode in [3]:
+        games.score += max([0] + [game.score_increment.pop(0) for game in games.all if len(game.score_increment) > 0])
     # Calculate number of players left.
-    remaining_previous = remaining + 0
-    remaining = sum([not game.flag_lose for game in games.all])
+    games.remaining_previous = games.remaining + 0
+    games.remaining = sum([not game.flag_lose for game in games.all])
     # Update scores and difficulty for all games.
     for game in games.all:
-        game.score = score
+        game.score = games.score + 0
         game.update_difficulty()
     
     # Win the game.
-    if game_mode in [1, 2] and score_previous < score_thresholds[-1] <= score or \
-        game_mode in [3, 4] and remaining <= remaining_thresholds[-1] < remaining_previous:
+    if games.game_mode in [1, 2] and games.score_previous < score_thresholds[-1] <= games.score or \
+        games.game_mode in [3, 4] and games.remaining <= remaining_thresholds[-1] < games.remaining_previous:
         # Play music and sound effect only if the player won.
         if all([game.flag_lose for game in games.ai]):
             pygame.mixer.music.stop()
@@ -1990,19 +1984,19 @@ while not done:
         for game in games.all:
             game.stop_game()
     # Advance to the next stage of the game.
-    elif game_mode in [1, 2, 3] and score_previous < score_thresholds[stage] <= score or \
-        game_mode in [4] and remaining <= remaining_thresholds[stage] < remaining_previous:
+    elif games.game_mode in [1, 2, 3] and games.score_previous < score_thresholds[games.stage] <= games.score or \
+        games.game_mode in [4] and games.remaining <= remaining_thresholds[games.stage] < games.remaining_previous:
         # Calculate the stage value.
-        if game_mode in [1, 2, 3]:
-            stage = sum([score >= i for i in score_thresholds])
-        elif game_mode in [4]:
-            stage = sum([remaining <= i for i in remaining_thresholds])
-        print('Stage: ', stage)
+        if games.game_mode in [1, 2, 3]:
+            games.stage = sum([games.score >= i for i in score_thresholds])
+        elif games.game_mode in [4]:
+            games.stage = sum([games.remaining <= i for i in remaining_thresholds])
+        print('Stage: ', games.stage)
         # Stop and unload current music.
         pygame.mixer.music.stop()
         pygame.mixer.music.unload()
         # Load transition music.
-        pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_transition_{}.ogg'.format(stage)))
+        pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_transition_{}.ogg'.format(games.stage)))
         # Set the music to send an event when done playing.
         pygame.mixer.music.set_endevent(pygame.USEREVENT+1)
         # Play the music once.
@@ -2081,44 +2075,44 @@ while not done:
     # Draw the game mode if not playing.
     if not flag_playing:
         # Get the width of the logo or text.
-        if flag_classic:
+        if games.flag_classic:
             width_name = text_classic.get_width()
         else:
             width_name = logo.get_width()
         # Create the game mode surface and insert the prefix.
-        if game_mode == 1:
+        if games.game_mode == 1:
             width_prefix = text_mode_1_prefix.get_width()
             width_suffix = text_mode_1_suffix.get_width()
             surface_mode = pygame.Surface((width_prefix+width_name+width_suffix, height_panel))
             surface_mode.blit(text_mode_1_prefix, (0,surface_mode.get_height()-text_mode_1_prefix.get_height()))
-        elif game_mode == 2:
+        elif games.game_mode == 2:
             width_prefix = text_mode_2_prefix.get_width()
             width_suffix = text_mode_2_suffix.get_width()
             surface_mode = pygame.Surface((width_prefix+width_name+width_suffix, height_panel))
             surface_mode.blit(text_mode_2_prefix, (0,surface_mode.get_height()-text_mode_2_prefix.get_height()))
-        elif game_mode == 3:
+        elif games.game_mode == 3:
             width_prefix = text_mode_3_prefix.get_width()
             width_suffix = text_mode_3_suffix.get_width()
             surface_mode = pygame.Surface((width_prefix+width_name+width_suffix, height_panel))
             surface_mode.blit(text_mode_3_prefix, (0,surface_mode.get_height()-text_mode_3_prefix.get_height()))
-        elif game_mode == 4:
+        elif games.game_mode == 4:
             width_prefix = text_mode_4_prefix.get_width()
             width_suffix = text_mode_4_suffix.get_width()
             surface_mode = pygame.Surface((width_prefix+width_name+width_suffix, height_panel))
             surface_mode.blit(text_mode_4_prefix, (0,surface_mode.get_height()-text_mode_4_prefix.get_height()))
         # Insert the logo or text.
-        if flag_classic:
+        if games.flag_classic:
             surface_mode.blit(text_classic, (width_prefix,surface_mode.get_height()-text_classic.get_height()))
         else:
             surface_mode.blit(logo, (width_prefix,0))
         # Insert the suffix.
-        if game_mode == 1:
+        if games.game_mode == 1:
             surface_mode.blit(text_mode_1_suffix, (surface_mode.get_width()-text_mode_1_suffix.get_width(),surface_mode.get_height()-text_mode_1_suffix.get_height()))
-        elif game_mode == 2:
+        elif games.game_mode == 2:
             surface_mode.blit(text_mode_2_suffix, (surface_mode.get_width()-text_mode_2_suffix.get_width(),surface_mode.get_height()-text_mode_2_suffix.get_height()))
-        elif game_mode == 3:
+        elif games.game_mode == 3:
             surface_mode.blit(text_mode_3_suffix, (surface_mode.get_width()-text_mode_3_suffix.get_width(),surface_mode.get_height()-text_mode_3_suffix.get_height()))
-        elif game_mode == 4:
+        elif games.game_mode == 4:
             surface_mode.blit(text_mode_4_suffix, (surface_mode.get_width()-text_mode_4_suffix.get_width(),surface_mode.get_height()-text_mode_4_suffix.get_height()))
         # Insert the game mode surface in the screen.
         rect_mode = surface_mode.get_rect()
@@ -2126,7 +2120,7 @@ while not done:
         rect_mode.centerx = size_window[0]//2
         screen.blit(surface_mode, rect_mode)
     # Display score text.
-    text_score = font_normal.render('{}'.format(score), True, colors[1001])
+    text_score = font_normal.render('{}'.format(games.score), True, colors[1001])
     rect_text_score = text_score.get_rect()
     rect_text_score.left = (
         size_window[0] - sum([game.size_total[0] for game in games.all]) - ((len(games.all)-1)*spacing_large)
@@ -2178,7 +2172,7 @@ while not done:
     # Update the screen.
     pygame.display.flip()
     # Limit the game to the desired frames per second by delaying every iteration of this loop.
-    clock.tick(fps)
+    games.clock.tick(games.fps)
 
 # Close the window and quit.
 pygame.quit()
@@ -2190,5 +2184,5 @@ print('Average: {:.2f},   Median: {:.2f},   Max: {:.2f},   Percent over: {:.2f}%
     np.mean(ms),
     np.median(ms),
     np.max(ms),
-    100 * len([i for i in ms if i > 1000/fps])/len(ms)
+    100 * len([i for i in ms if i > 1000/games.fps])/len(ms)
     ))
