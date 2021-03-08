@@ -68,8 +68,8 @@ weights_special = [0, 1/20]
 # Define the score needed to begin increasing the probability of getting a special effect.
 score_update_chance_special = score_thresholds[0]
 # Define settings for special effects (ms).
-duration_disoriented = 20000
-duration_blind = 20000
+duration_disoriented = 10000 #20000
+duration_blind = 15000 #20000
 speed_wind = 500
 
 # Create font objects used to create text.
@@ -521,7 +521,7 @@ class Tetron:
             elif number == 101:  # I+ (1x5)
                 tetrimino = number * np.ones([5, 5])
                 tetrimino[[0,2,3,4], :] = -1
-            elif number == 102:  # I-
+            elif number == 102:  # I- (1x3)
                 tetrimino = number * np.ones([3, 3])
                 tetrimino[[0,2], :] = -1
             elif number == 201:  # J+ (3x3)
