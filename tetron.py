@@ -4,6 +4,7 @@
 import os
 import random
 import sys
+import threading
 import time
 
 import numpy as np
@@ -1626,6 +1627,19 @@ class Games:
         self.ai = []
         self.all = [game for game in self.all if game.is_player]
 
+# A thread that controls AI games.
+# class AIThread(threading.Thread):
+#     # Override __init__ method.
+#     def __init__(self, games):
+#         super().__init__()
+#         self.games = games
+    
+#     # Override run method.
+#     def run(self):
+#         print('Starting thread {}'.format(self.name))
+#         pass
+#         print('Stopping thread {}'.format(self.name))
+
 
 # =============================================================================
 # Main Program Loop.
@@ -1682,7 +1696,6 @@ ms = []  # Debug
 # Loop until the window is closed.
 done = False
 while not done:
-    START = time.time()
     flag_playing = any([game.flag_playing for game in games.all])
     flag_paused = all([game.flag_paused for game in games.all])
     
@@ -2014,7 +2027,6 @@ while not done:
             game.flag_lose = False
             game.stop_game()
 
-
     # =============================================================================
     # Game Actions.
     # =============================================================================
@@ -2061,7 +2073,6 @@ while not done:
             # Process AI games.
             if not game.is_player:
                 game.ai_evaluate()
-
     
     # =============================================================================
     # Draw Screen.
@@ -2136,6 +2147,7 @@ while not done:
     rect_text_time_elapsed.bottom = height_panel + 0
     screen.blit(text_time_elapsed, rect_text_time_elapsed)
 
+    START = time.time()  # Debug
     # Draw each game.
     for index, game in enumerate(games.all):
         # Stop the disoriented effect if it has lasted longer than the maximum duration.
@@ -2166,9 +2178,9 @@ while not done:
         screen.blit(game.surface_main, 
         ((size_window[0] - sum([i.size_total[0] for i in (games.all)]) - (len(games.all)-1)*spacing_large)//2 + sum([i.size_total[0] for i in (games.all)[:index]]) + index*spacing_large, height_panel)
         )
+    END = time.time()  # Debug
+    ms.append((END-START)*1000)  # Debug
     
-    END = time.time()
-    ms.append((END-START)*1000)
     # Update the screen.
     pygame.display.flip()
     # Limit the game to the desired frames per second by delaying every iteration of this loop.
