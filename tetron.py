@@ -209,7 +209,7 @@ colors = {
     901: rgb(1.00),  # Ghost
     902: rgb(0.00),  # Heavy
     904: rgb(0.28),  # Blind
-    906: (96,128,112),  # Zombie  (HSB 150, 25%, 50%)
+    906: (106, 128, 96),  # Zombie  (HSB 100, 25%, 50%)
 
     1001: rgb(1.00),  # White
     1002: rgb(0.00),  # Black
@@ -542,8 +542,9 @@ class Tetron:
                 tetrimino[0:2, 2] = -1
             elif number == 801:  # Random 3x3
                 shape = [3, 3]
+                count = random.choice([3, 4, 5])
+                random_indices = random.sample(range(np.prod(shape)), count)
                 tetrimino = -1 * np.ones(shape)
-                random_indices = random.sample(range(tetrimino.size), 5)
                 tetrimino[np.unravel_index(random_indices, shape)] = number
             elif number == 811:  # Period (.)
                 tetrimino = number * np.ones([1, 1])
@@ -741,7 +742,7 @@ class Tetron:
         success = False
         # List of lists of tuples for all translation values (right, down) for each rotation, defined in the order they should be checked.
         translations_all = [
-            # J, L, S, T, Z
+            # J, L, S, T, Z and their variants
             [( 0, 0),	(-1, 0),	(-1,-1),	( 0,+2),	(-1,+2),],  # 0->R
             [( 0, 0),	(+1, 0),	(+1,+1),	( 0,-2),	(+1,-2),],  # R->0
             [( 0, 0),	(+1, 0),	(+1,+1),	( 0,-2),	(+1,-2),],  # R->2
@@ -750,7 +751,7 @@ class Tetron:
             [( 0, 0),	(-1, 0),	(-1,+1),	( 0,-2),	(-1,-2),],  # L->2
             [( 0, 0),	(-1, 0),	(-1,+1),	( 0,-2),	(-1,-2),],  # L->0
             [( 0, 0),	(+1, 0),	(+1,-1),	( 0,+2),	(+1,+2),],  # 0->L
-            # I
+            # I and its variants
             [( 0, 0),	(-2, 0),	(+1, 0),	(-2,+1),	(+1,-2),],  # 0->R
             [( 0, 0),	(+2, 0),	(-1, 0),	(+2,-1),	(-1,+2),],  # R->0
             [( 0, 0),	(-1, 0),	(+2, 0),	(-1,-2),	(+2,+1),],  # R->2
@@ -759,11 +760,18 @@ class Tetron:
             [( 0, 0),	(-2, 0),	(+1, 0),	(-2,+1),	(+1,-2),],  # L->2
             [( 0, 0),	(+1, 0),	(-2, 0),	(+1,+2),	(-2,-1),],  # L->0
             [( 0, 0),	(-1, 0),	(+2, 0),	(-1,-2),	(+2,+1),],  # 0->L
-            # Other
+            # O and its variants
             [( 0, 0),],
+            # Others
+            [( 0, 0),   (-1, 0),    ( 0,-1),    (-1,-1),    ( 0,-2),    (-1,-2),],  # Clockwise
+            [( 0, 0),   (+1, 0),    ( 0,-1),    (+1,-1),    ( 0,-2),    (+1,-2),],  # Counterclockwise
             ]
         # Assign the corresponding translation values.
-        if self.id_current in np.array(id_classic)[[1, 2, 4, 5, 6]]:
+        if self.id_current is None:
+            id_group = None
+        else:
+            id_group = int(np.floor(self.id_current / 100) * 100)
+        if id_group in np.array(id_classic)[[1, 2, 4, 5, 6]]:
             if self.rotation_current == 0 and direction == -1:
                 translations = translations_all[0]
             elif self.rotation_current == 0 and direction == 1:
@@ -780,7 +788,7 @@ class Tetron:
                 translations = translations_all[2]
             elif self.rotation_current == 270 and direction == 1:
                 translations = translations_all[1]
-        elif self.id_current == id_classic[0]:
+        elif id_group == id_classic[0]:
             if self.rotation_current == 0 and direction == -1:
                 translations = translations_all[8]
             elif self.rotation_current == 0 and direction == 1:
@@ -797,8 +805,13 @@ class Tetron:
                 translations = translations_all[10]
             elif self.rotation_current == 270 and direction == 1:
                 translations = translations_all[9]
+        elif id_group == id_classic[3]:
+            translations = translations_all[16]
         else:
-            translations = translations_all[-1]
+            if direction == -1:
+                translations = translations_all[18]
+            else:
+                translations = translations_all[17]
 
         # Calculate how many empty rows at top/bottom and empty columns at left/right within tetrimino before attempting rotation.
         top_empty_before, bottom_empty_before = np.argmax(np.any(self.tetrimino > 0, axis=1)), np.argmax(np.any(np.flipud(self.tetrimino > 0), axis=1))
