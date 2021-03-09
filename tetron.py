@@ -225,22 +225,22 @@ colors = {
 # The main class containing all gameplay actions (such as moving and rotating blocks).
 class Tetron:
     # Initialize the attributes of the instance of of this class when it is first created.
-    def __init__(self, is_player, instance_self, games, width_block, height_block, spacing_block, row_count, column_count):
+    def __init__(self, is_player, instance_self, games):         #, width_block, height_block, spacing_block, row_count, column_count):
         self.is_player = is_player
         self.instance_self = instance_self
         self.games = games
 
-        # Define the width, height, and spacing of the blocks in pixels.
-        self.width_block = width_block
-        self.height_block = height_block
-        self.spacing_block = spacing_block
-        # Define widths of multiple sizes of spacing between elements.
-        self.spacing_large = 1 * self.width_block
-        self.spacing_small = int(0.5 * self.width_block)
+        # # Define the width, height, and spacing of the blocks in pixels.
+        # self.width_block = width_block
+        # self.height_block = height_block
+        # self.spacing_block = spacing_block
+        # # Define widths of multiple sizes of spacing between elements.
+        # self.spacing_large = 1 * self.width_block
+        # self.spacing_small = int(0.5 * self.width_block)
 
-        # Define the number of rows and columns of the matrix.
-        self.row_count = row_count
-        self.column_count = column_count
+        # # Define the number of rows and columns of the matrix.
+        # self.row_count = row_count
+        # self.column_count = column_count
 
         # Initialize all other attributes.
         self.initialize()
@@ -282,10 +282,10 @@ class Tetron:
         self.ai_delay = 0
 
         # Initialize arrays for current tetrimino, dropped blocks, blocks displayed on screen, and highlighted blocks showing where tetriminos will be hard dropped.
-        self.array_current = np.zeros([self.row_count, self.column_count])
-        self.array_stack = np.zeros([self.row_count, self.column_count])
-        self.array_display = np.zeros([self.row_count, self.column_count])
-        self.array_highlight = np.zeros([self.row_count, self.column_count])
+        self.array_current = np.zeros([self.games.row_count, self.games.column_count])
+        self.array_stack = np.zeros([self.games.row_count, self.games.column_count])
+        self.array_display = np.zeros([self.games.row_count, self.games.column_count])
+        self.array_highlight = np.zeros([self.games.row_count, self.games.column_count])
 
         # Initialize lists with Booleans indicating which tetriminos or special effects have been used to prevent duplicates.
         self.used_classic = [False] * len(id_classic)
@@ -314,66 +314,73 @@ class Tetron:
         # Initialize the block fall speed, the probability of getting an advanced tetrimino, and the probability of getting a special effect.
         self.update_difficulty()
 
-    # Create and set the sizes of the surfaces used to display each element of the game.
-    def resize_display(self, width_block=None, height_block=None, spacing_block=None, row_count=None, column_count=None):
-        # Resize the basic elements used to determine the sizes of other elements.
-        if width_block is not None:
-            self.width_block = width_block
-        if height_block is not None:
-            self.height_block = height_block
-        if spacing_block is not None:
-            self.spacing_block = spacing_block
-        if row_count is not None:
-            self.row_count = row_count
-        if column_count is not None:
-            self.column_count = column_count
-        # Define the widths of the hold and next columns.
-        self.width_hold = 2 * self.width_block
-        self.width_next = 2 * self.width_block
+    # Resize and reposition the surfaces used to display each element of the game.
+    def resize_display(self): #, width_block=None, height_block=None, spacing_block=None, row_count=None, column_count=None):
+        # # Resize the basic elements used to determine the sizes of other elements.
+        # if width_block is not None:
+        #     self.width_block = width_block
+        # if height_block is not None:
+        #     self.height_block = height_block
+        # if spacing_block is not None:
+        #     self.spacing_block = spacing_block
+        # if row_count is not None:
+        #     self.row_count = row_count
+        # if column_count is not None:
+        #     self.column_count = column_count
+        # # Define the widths of the hold and next columns.
+        # self.width_hold = 2 * self.width_block
+        # self.width_next = 2 * self.width_block
+        
         # Define the sizes (width, height) of the elements.
         self.size_matrix = (
-            self.column_count*self.width_block + (self.column_count+1)*self.spacing_block,
-            self.row_count*self.height_block + (self.row_count+1)*self.spacing_block
+            self.games.column_count*self.games.width_block + (self.games.column_count+1)*self.games.spacing_block,
+            self.games.row_count*self.games.height_block + (self.games.row_count+1)*self.games.spacing_block
             )
         self.size_total = (
-            self.width_hold + self.spacing_small + self.size_matrix[0] + self.spacing_small + self.width_next,
+            self.games.width_hold + self.games.spacing_small + self.size_matrix[0] + self.games.spacing_small + self.games.width_next,
             self.size_matrix[1]
             )
-        # Create the main surface used to display all elements together.
-        self.surface_main = pygame.Surface(self.size_total)
+        # Define the location (left, top) of the bounding box of the game. Must be after defining the total size.
+        position_main = (
+            (self.games.size_window[0] - sum([game.size_total[0] for game in self.games.all]) - (len(self.games.all)-1)*self.games.spacing_large)//2 + sum([game.size_total[0] for game in (self.games.all)[:self.instance_self]]) + self.instance_self*self.games.spacing_large,
+            games.height_panel
+            )
+
         # Create the surface and rect object used to display the matrix.
         self.surface_matrix = pygame.Surface(self.size_matrix)
         self.rect_matrix = self.surface_matrix.get_rect()
-        self.rect_matrix.left = self.width_hold + self.spacing_small
+        self.rect_matrix.left = position_main[0] + self.games.width_hold + self.games.spacing_small
+        self.rect_matrix.top = position_main[1] + 0
         # Create the text and rect object for the hold queue.
         self.text_hold = font_small.render('HOLD', True, colors[1005])
         self.rect_text_hold = self.text_hold.get_rect()
-        self.rect_text_hold.top = 0
-        self.rect_text_hold.centerx = self.width_hold // 2
+        self.rect_text_hold.centerx = position_main[0] + self.games.width_hold // 2
+        self.rect_text_hold.top = position_main[1] + 0
         # Create the surface and rect object used to display the hold queue.
-        self.surface_hold = pygame.Surface((self.width_hold, self.width_hold))
+        self.surface_hold = pygame.Surface((self.games.width_hold, self.games.width_hold))
         self.rect_hold = self.surface_hold.get_rect()
-        self.rect_hold.top = self.rect_text_hold.height + 0
+        self.rect_hold.left = position_main[0] + 0
+        self.rect_hold.top = position_main[1] + self.rect_text_hold.height
         # Create the text and rect object for the next queue.
         self.text_next = font_small.render('NEXT', True, colors[1005])
         self.rect_text_next = self.text_next.get_rect()
-        self.rect_text_next.top = 0
-        self.rect_text_next.centerx = self.size_total[0] - self.width_next // 2
+        self.rect_text_next.centerx = position_main[0] + self.size_total[0] - self.games.width_next // 2
+        self.rect_text_next.top = position_main[1] + 0
         # Create the surface and rect object used to display the next queue.
-        self.surface_next = pygame.Surface((self.width_next, self.size_total[1]))
+        self.surface_next = pygame.Surface((self.games.width_next, self.size_total[1]))
         self.rect_next = self.surface_next.get_rect()
-        self.rect_next.top = self.rect_text_next.height + 0
-        self.rect_next.right = self.size_total[0] + 0
+        self.rect_next.right = position_main[0] + self.size_total[0]
+        self.rect_next.top = position_main[1] + self.rect_text_next.height
         # Create the surface and rect object used to display the garbage queue.
-        self.surface_garbage = pygame.Surface((self.width_block, self.size_total[1]))
+        self.surface_garbage = pygame.Surface((self.games.width_block, self.size_total[1]))
         self.rect_garbage = self.surface_garbage.get_rect()
-        self.rect_garbage.bottom = self.size_total[1] + 0
-        self.rect_garbage.right = self.width_hold + 0
+        self.rect_garbage.right = position_main[0] + self.games.width_hold
+        self.rect_garbage.bottom = position_main[1] + self.size_total[1]
         # Create the surface and rect object used to display multiplayer information.
-        self.surface_information = pygame.Surface((self.width_next, self.size_total[1]))
+        self.surface_information = pygame.Surface((self.games.width_next, self.size_total[1]))
         self.rect_information = self.surface_information.get_rect()
-        self.rect_information.bottom = self.size_total[1] + 0
-        self.rect_information.right = self.size_total[0] + 0
+        self.rect_information.right = position_main[0] + self.size_total[0]
+        self.rect_information.bottom = position_main[1] + self.size_total[1]
 
         # Draw the game.
         self.draw_matrix()
@@ -447,12 +454,12 @@ class Tetron:
         if self.flag_zombie:
             width = random.choice([2, 3])
             height = random.choice([1, 2, 3])
-            left = random.choice([column for column in range(self.column_count-width+1) if np.any(self.array_stack[:,column])>0])
+            left = random.choice([column for column in range(self.games.column_count-width+1) if np.any(self.array_stack[:,column])>0])
             right = left + width
             top = np.argmax(np.any(self.array_stack[:, left:right] > 0, axis=1))
             bottom = max(np.argmax(self.array_stack[:, left:right] > 0, axis=0)) + 1
             if bottom - top != height:
-                bottom = min([self.row_count, top+height])
+                bottom = min([self.games.row_count, top+height])
             tetrimino = np.copy(self.array_stack[top:bottom, left:right])
             tetrimino[tetrimino <= 0] = -1
             tetrimino[tetrimino > 0] = 906
@@ -461,14 +468,14 @@ class Tetron:
             if (bottom-top) != (right-left):
                 difference = (bottom-top) - (right-left)
                 if difference < 0:
-                    if bottom + abs(difference) > self.row_count:
+                    if bottom + abs(difference) > self.games.row_count:
                         top -= abs(difference)
                         tetrimino = np.concatenate((-1*np.ones([abs(difference),tetrimino.shape[1]]), tetrimino), axis=0)
                     else:
                         bottom += abs(difference)
                         tetrimino = np.concatenate((tetrimino, -1*np.ones([abs(difference),tetrimino.shape[1]])), axis=0)
                 elif difference > 0:
-                    if right + abs(difference) > self.column_count:
+                    if right + abs(difference) > self.games.column_count:
                         left -= abs(difference)
                         tetrimino = np.concatenate((-1*np.ones([tetrimino.shape[0],abs(difference)]), tetrimino), axis=1)
                     else:
@@ -646,7 +653,7 @@ class Tetron:
                 self.flag_wind = True
                 self.time_start_wind = self.games.time_current + 0
                 self.wind_direction = random.choice([1, -1])
-                self.wind_position = self.width_block // 2
+                self.wind_position = self.games.width_block // 2
                 # if self.is_player:
                 #     sound_special_wind.play()
             elif effect_special == id_special[5]:
@@ -687,7 +694,7 @@ class Tetron:
             # Clear the current tetrimino array.
             self.array_current[:] = 0
             # Insert the new tetrimino in the array.
-            column_left = int(np.floor((self.column_count-tetrimino.shape[1])/2))
+            column_left = int(np.floor((self.games.column_count-tetrimino.shape[1])/2))
             self.array_current[0:tetrimino.shape[0], column_left:column_left+tetrimino.shape[1]] = self.tetrimino
         # Check for landing.
         self.check_landed()
@@ -958,7 +965,7 @@ class Tetron:
         line_count = len(rows_cleared)
         if line_count > 0:
             self.array_stack = np.concatenate((
-                np.zeros([line_count,self.column_count]),
+                np.zeros([line_count,self.games.column_count]),
                 np.delete(self.array_stack, obj=rows_cleared, axis=0)
                 ), axis=0)
         # Increment the combo counter if a line was cleared.
@@ -1184,8 +1191,8 @@ class Tetron:
             self.time_receive_garbage = self.games.time_current + 0
 
             count = self.queue_garbage.pop(0)
-            array_garbage = 900 * np.ones([count, column_count])
-            array_garbage[:, random.choice(range(column_count))] = 0
+            array_garbage = 900 * np.ones([count, self.games.column_count])
+            array_garbage[:, random.choice(range(self.games.column_count))] = 0
             self.array_stack = np.concatenate((
                 self.array_stack[count:, :],
                 array_garbage
@@ -1251,7 +1258,7 @@ class Tetron:
             # List of Booleans indicating which columns of the matrix contain blocks from the current tetrimino.
             columns = np.any(self.array_current > 0, axis=0)
             # List of row indices of the bottommost blocks in each column of the current tetrimino.
-            indices_current = (self.row_count-1) - np.argmax(np.flipud(self.array_current > 0), axis=0)[columns]
+            indices_current = (self.games.row_count-1) - np.argmax(np.flipud(self.array_current > 0), axis=0)[columns]
             # Get the current columns of the placed blocks array.
             array_stack_current = self.array_stack[:, columns]
             # Clear the blocks at or above the current tetrimino.
@@ -1259,18 +1266,18 @@ class Tetron:
                 array_stack_current[indices_current[i]::-1, i] = 0
             # List of row indices of highest available positions in current tetrimino's columns.
             if self.flag_heavy:
-                indices_available = (self.row_count-1) * np.ones(array_stack_current.shape[1])
+                indices_available = (self.games.row_count-1) * np.ones(array_stack_current.shape[1])
             else:
                 indices_available = np.where(
                     np.any(array_stack_current > 0, axis=0),
                     np.argmax(array_stack_current > 0, axis=0)-1,
-                    (self.row_count-1) * np.ones(array_stack_current.shape[1])
+                    (self.games.row_count-1) * np.ones(array_stack_current.shape[1])
                     )
             # Mark the blocks where the current tetrimino will fall if hard dropped with negative numbers.
             shift = int(min(indices_available - indices_current))
             if self.flag_heavy:
                 for i in range(len(indices_current)):
-                    if (indices_current[i]+1) <= self.row_count-1:
+                    if (indices_current[i]+1) <= self.games.row_count-1:
                         array_stack_current[indices_current[i]+1:indices_current[i]+1+shift, i] = -1
                 self.array_highlight[:, columns] = array_stack_current
             else:
@@ -1324,12 +1331,12 @@ class Tetron:
     def draw_matrix(self):
         self.surface_matrix.fill(colors[1003])
         # Draw grid lines.
-        for i in range(self.row_count+1):
-            y = i * (self.height_block+self.spacing_block)
-            pygame.draw.line(surface=self.surface_matrix, color=colors[1002], start_pos=[0, y], end_pos=[self.rect_matrix.width, y], width=self.spacing_block)
-        for j in range(self.column_count+1):
-            x = j * (self.width_block+self.spacing_block)
-            pygame.draw.line(surface=self.surface_matrix, color=colors[1002], start_pos=[x, 0], end_pos=[x, self.rect_matrix.height], width=self.spacing_block)
+        for i in range(self.games.row_count+1):
+            y = i * (self.games.height_block+self.games.spacing_block)
+            pygame.draw.line(surface=self.surface_matrix, color=colors[1002], start_pos=[0, y], end_pos=[self.rect_matrix.width, y], width=self.games.spacing_block)
+        for j in range(self.games.column_count+1):
+            x = j * (self.games.width_block+self.games.spacing_block)
+            pygame.draw.line(surface=self.surface_matrix, color=colors[1002], start_pos=[x, 0], end_pos=[x, self.rect_matrix.height], width=self.games.spacing_block)
         # Draw non-empty blocks.
         for indices in np.argwhere(self.array_display != 0):
             row, column = indices
@@ -1350,14 +1357,14 @@ class Tetron:
                     color = colors[1004]
                 else:
                     color = colors[900]
-            pygame.draw.rect(surface=self.surface_matrix, color=color, rect=[(self.spacing_block+self.width_block)*column+self.spacing_block, (self.spacing_block+self.height_block)*row+self.spacing_block, self.width_block, self.height_block])
+            pygame.draw.rect(surface=self.surface_matrix, color=color, rect=[(self.games.spacing_block+self.games.width_block)*column+self.games.spacing_block, (self.games.spacing_block+self.games.height_block)*row+self.games.spacing_block, self.games.width_block, self.games.height_block])
         # Draw wind.
         if self.flag_wind:
             for i in range(3):
-                height_wind = (i+1) * self.spacing_block + i * self.height_block + self.height_block // 2
+                height_wind = (i+1) * self.games.spacing_block + i * self.games.height_block + self.games.height_block // 2
                 # Calculate positions of endpoints of lines.
                 start_pos = self.wind_position + 0
-                end_pos = start_pos - 3 * self.width_block
+                end_pos = start_pos - 3 * self.games.width_block
                 width_matrix = self.surface_matrix.get_width()
                 if self.wind_direction < 0:
                     start_pos = width_matrix - start_pos
@@ -1367,7 +1374,7 @@ class Tetron:
                     color = colors[1001]
                 else:
                     color = colors[900]
-                pygame.draw.line(surface=self.surface_matrix, color=color, start_pos=[start_pos, height_wind], end_pos=[end_pos, height_wind], width=self.spacing_block*4)
+                pygame.draw.line(surface=self.surface_matrix, color=color, start_pos=[start_pos, height_wind], end_pos=[end_pos, height_wind], width=self.games.spacing_block*4)
         # Rotate the matrix if the disoriented effect is active.
         if self.flag_disoriented:
             self.surface_matrix.blit(pygame.transform.rotate(self.surface_matrix, 180), (0,0))
@@ -1377,7 +1384,7 @@ class Tetron:
         self.surface_hold.fill(colors[1002])
         if len(self.queue_hold) > 0:
             tetrimino_mini = self.create_tetrimino_mini(self.queue_hold[0][0])
-            size = int(min(np.floor([self.width_hold/tetrimino_mini.shape[0], self.width_hold/tetrimino_mini.shape[1]])))
+            size = int(min(np.floor([self.games.width_hold/tetrimino_mini.shape[0], self.games.width_hold/tetrimino_mini.shape[1]])))
             for indices in np.argwhere(tetrimino_mini != 0):
                 row, column = indices
                 number = tetrimino_mini[row, column]
@@ -1396,7 +1403,7 @@ class Tetron:
         self.surface_next.fill(colors[1002])
         if len(self.queue_next) > 0:
             # Create the single array containing all blocks in the queue.
-            array_next = np.zeros([0, self.column_count])
+            array_next = np.zeros([0, self.games.column_count])
             for data in self.queue_next:
                 tetrimino = self.create_tetrimino_mini(data[0])
                 if tetrimino.shape[1] < array_next.shape[1]:
@@ -1409,7 +1416,7 @@ class Tetron:
             # Crop off empty columns at the right.
             array_next = array_next[:, :-np.argmax(np.any(np.fliplr(array_next>0), axis=0))]
             # Draw each block in the array.
-            size = int(np.floor(self.width_next/array_next.shape[1]))
+            size = int(np.floor(self.games.width_next/array_next.shape[1]))
             for indices in np.argwhere(array_next != 0):
                 row, column = indices
                 number = array_next[row, column]
@@ -1444,13 +1451,13 @@ class Tetron:
                 else:
                     color = colors[900]
                 for block in range(count):
-                    position_vertical = (self.spacing_block+self.height_block)*(sum(self.queue_garbage[:index])+block+1) + self.spacing_block + (self.spacing_block*4)*index
+                    position_vertical = (self.games.spacing_block+self.games.height_block)*(sum(self.queue_garbage[:index])+block+1) + self.games.spacing_block + (self.games.spacing_block*4)*index
                     position_vertical = self.rect_garbage.height - position_vertical
-                    pygame.draw.rect(surface=self.surface_garbage, color=color, rect=[0, position_vertical, self.width_block, self.height_block])
+                    pygame.draw.rect(surface=self.surface_garbage, color=color, rect=[0, position_vertical, self.games.width_block, self.games.height_block])
     
     # Draw the information text.
     def draw_information(self):
-        self.surface_information.fill(colors[1002])
+        self.surface_information.fill(colors[1002])  # Delete this, and re-create the surface below
         if self.games.game_mode in [4] and self.is_player and self.flag_playing:
             if self.instance_target == self.instance_self:
                 target = 'Self'
@@ -1504,7 +1511,7 @@ class Tetron:
                 # Create a copy of the array.
                 array = np.copy(self.array_stack)
                 # Calculate the number of holes.
-                rows_highest = np.where(np.any(array > 0, axis=0), np.argmax(array > 0, axis=0), row_count * np.ones(column_count, dtype=int))
+                rows_highest = np.where(np.any(array > 0, axis=0), np.argmax(array > 0, axis=0), self.games.row_count * np.ones(self.games.column_count, dtype=int))
                 array_holes = np.copy(array)
                 for column, row in enumerate(rows_highest):
                     array_holes[:row, column] = 1
@@ -1514,7 +1521,7 @@ class Tetron:
                 array[self.array_highlight < 0] = -self.array_highlight[self.array_highlight < 0]
                 line_count = len(np.argwhere(np.all(array > 0, axis=1)))
                 # Calculate the number of holes.
-                rows_highest = np.where(np.any(array > 0, axis=0), np.argmax(array > 0, axis=0), row_count * np.ones(column_count, dtype=int))
+                rows_highest = np.where(np.any(array > 0, axis=0), np.argmax(array > 0, axis=0), self.games.row_count * np.ones(self.games.column_count, dtype=int))
                 array_holes = np.copy(array)
                 for column, row in enumerate(rows_highest):
                     array_holes[:row, column] = 1
@@ -1525,7 +1532,7 @@ class Tetron:
                 # Add points for cleared lines.
                 effectiveness += self.calculate_score(line_count)
                 # Subtract points for height of placed tetrimino.
-                effectiveness -= 1 * abs(row_count - np.argmax(np.any(self.array_highlight < 0, axis=1)))
+                effectiveness -= 1 * abs(self.games.row_count - np.argmax(np.any(self.array_highlight < 0, axis=1)))
                 # Subtract points for occupying the top row.
                 if any(array[0, :] > 0):
                     effectiveness -= 100
@@ -1598,9 +1605,50 @@ class Games:
         self.game_mode = 1
         self.flag_classic = False
 
+        # Define the numbers of rows and columns.
+        self.row_count = 20
+        self.column_count = 10
+        # Define the size of the space between blocks in pixels.
+        self.spacing_block = 1
+        # Define the height and width of the blocks in pixels.
+        self.height_block = round(((0.8 * pygame.display.Info().current_h) - ((self.row_count+1) * self.spacing_block)) / (self.row_count+1))
+        self.width_block = self.height_block + 0
+        # Define the height of the panel above the matrix in pixels.
+        self.height_panel = self.height_block + 0
+        # Define the widths of the hold and next columns.
+        self.width_hold = 2 * self.width_block
+        self.width_next = 2 * self.width_block
+        # Define the width of spacing between elements.
+        self.spacing_large = self.width_block + 0
+        self.spacing_small = self.width_block // 2
+        # Initialize the window size (width, height) in pixels.
+        self.size_window = (
+            self.column_count*self.width_block + (self.column_count+1)*self.spacing_block + (self.width_hold+self.spacing_small) + (self.width_next+self.spacing_small),
+            self.height_panel + self.row_count*self.height_block + (self.row_count+1)*self.spacing_block
+            )
+
         # Initialize game-related attributes.
         self.reset_game()
     
+    # Redefine the sizes of elements.
+    def resize_display(self):
+        # Get the new size of the window.
+        self.size_window = pygame.display.get_window_size()
+        
+        # Redefine the sizes of elements.
+        self.width_block = int(np.floor((self.size_window[1] - ((self.row_count+1)*self.spacing_block)) / (self.row_count+1)))
+        self.height_block = self.width_block + 0
+        self.height_panel = self.height_block + 0
+        self.width_hold = 2 * self.width_block
+        self.width_next = 2 * self.width_block
+        self.spacing_large = self.width_block + 0
+        self.spacing_small = self.width_block // 2
+
+    # Reposition all games.
+    def reposition_games(self):
+        for game in self.all:
+            game.resize_display()
+
     # Reset parameters when starting a new game.
     def reset_game(self):
         self.score = 0
@@ -1644,50 +1692,57 @@ class Games:
 # =============================================================================
 # Main Program Loop.
 # =============================================================================
-# Define the numbers of rows and columns.
-row_count = 20
-column_count = 10
-# Define the size of the space between blocks in pixels.
-spacing_block = 1
-# Define the height and width of the blocks in pixels.
-height_block = round(((0.8 * pygame.display.Info().current_h) - ((row_count+1) * spacing_block)) / (row_count+1))
-width_block = height_block + 0
-# Define the height of the panel above the matrix in pixels.
-height_panel = height_block + 0
-# Define the width of spacing between elements.
-spacing_large = width_block + 0
+# # Define the numbers of rows and columns.
+# row_count = 20
+# column_count = 10
+# # Define the size of the space between blocks in pixels.
+# spacing_block = 1
+# # Define the height and width of the blocks in pixels.
+# height_block = round(((0.8 * pygame.display.Info().current_h) - ((row_count+1) * spacing_block)) / (row_count+1))
+# width_block = height_block + 0
+# # Define the height of the panel above the matrix in pixels.
+# height_panel = height_block + 0
+# # Define the width of spacing between elements.
+# spacing_large = width_block + 0
 
 # Create an object to contain lists of player/AI games and general game information.
 games = Games()
 # Create a player instance of the game.
-games.add_game(Tetron(True, len(games.player), games, width_block, height_block, spacing_block, row_count, column_count))
+games.add_game(Tetron(True, len(games.player), games))      #, width_block, height_block, spacing_block, row_count, column_count))
+# Reposition the game.
+games.reposition_games()
 
-# Initialize the window size [width, height] in pixels.
-size_window = [
-    column_count*width_block + (column_count+1)*spacing_block + (games.player[0].width_hold+games.player[0].spacing_small) + (games.player[0].width_next+games.player[0].spacing_small),
-    height_panel + row_count*height_block+(row_count+1)*spacing_block
-    ]
 # Set the window title and window icon.
 pygame.display.set_caption(name_program + ' ' + version_program)
 icon = pygame.image.load(os.path.join(folder_program, 'icon.png'))
 pygame.display.set_icon(icon)
 # Create the window.
-screen = pygame.display.set_mode(size_window, pygame.RESIZABLE)
+screen = pygame.display.set_mode(games.size_window, pygame.RESIZABLE)
 
 # Load the logo.
 logo_full = pygame.image.load(os.path.join(folder_program, 'logo.png'))
-logo = pygame.transform.smoothscale(logo_full, [int(height_panel*(logo_full.get_width()/logo_full.get_height())), height_panel])
+logo = pygame.transform.smoothscale(logo_full, [int(games.height_panel*(logo_full.get_width()/logo_full.get_height())), games.height_panel])
 # Create text for classic Tetris.
 text_classic = font_normal.render('Tetris', True, colors[1001])
+# Define names [prefix, suffix] for each game mode.
+game_mode_names = [
+    ['', ''],
+    ['Twin ', ''],
+    ['', ' 1v1'],
+    ['', ' 99'],
+    ]
+# Initialize the game mode text.
+text_prefix = font_normal.render(game_mode_names[0][0], True, colors[1001])
+text_suffix = font_normal.render(game_mode_names[0][1], True, colors[1001])
 # Create text for other game modes.
-text_mode_1_prefix = font_normal.render('', True, colors[1001])
-text_mode_1_suffix = font_normal.render('', True, colors[1001])
-text_mode_2_prefix = font_normal.render('Twin ', True, colors[1001])
-text_mode_2_suffix = font_normal.render('', True, colors[1001])
-text_mode_3_prefix = font_normal.render('', True, colors[1001])
-text_mode_3_suffix = font_normal.render(' 1v1', True, colors[1001])
-text_mode_4_prefix = font_normal.render('', True, colors[1001])
-text_mode_4_suffix = font_normal.render(' 99', True, colors[1001])
+# text_mode_1_prefix = font_normal.render('', True, colors[1001])
+# text_mode_1_suffix = font_normal.render('', True, colors[1001])
+# text_mode_2_prefix = font_normal.render('Twin ', True, colors[1001])
+# text_mode_2_suffix = font_normal.render('', True, colors[1001])
+# text_mode_3_prefix = font_normal.render('', True, colors[1001])
+# text_mode_3_suffix = font_normal.render(' 1v1', True, colors[1001])
+# text_mode_4_prefix = font_normal.render('', True, colors[1001])
+# text_mode_4_suffix = font_normal.render(' 99', True, colors[1001])
 # Initialize the game mode surface.
 surface_mode = pygame.Surface((0,0))
 
@@ -1696,6 +1751,8 @@ ms = []  # Debug
 # Loop until the window is closed.
 done = False
 while not done:
+    START = time.time()  # Debug
+
     flag_playing = any([game.flag_playing for game in games.all])
     flag_paused = all([game.flag_paused for game in games.all])
     
@@ -1713,20 +1770,24 @@ while not done:
             done = True
         # Window is resized.
         elif event.type == pygame.VIDEORESIZE:
-            # Get the new size of the window.
-            size_window = pygame.display.get_window_size()
+            # # Get the new size of the window.
+            # size_window = pygame.display.get_window_size()
             
-            # Redefine the sizes of elements.
-            width_block = int(np.floor((size_window[1] - ((row_count+1)*spacing_block)) / (row_count+1)))
-            height_block = width_block + 0
-            height_panel = height_block + 0
-            spacing_large = width_block + 0
-            # Resize and reposition the elements of each game.
-            for game in games.all:
-                game.resize_display(width_block=width_block, height_block=height_block)
+            # # Redefine the sizes of elements.
+            # width_block = int(np.floor((size_window[1] - ((row_count+1)*spacing_block)) / (row_count+1)))
+            # height_block = width_block + 0
+            # height_panel = height_block + 0
+            # spacing_large = width_block + 0
+
+            # Resize the elements of each game.
+            games.resize_display()
+            # Reposition the elements of each game.
+            games.reposition_games()
+            # for game in games.all:
+            #     game.resize_display(size_window, width_block=width_block, height_block=height_block)
 
             # Resize the logo.
-            logo = pygame.transform.smoothscale(logo_full, [int(height_panel*(logo_full.get_width()/logo_full.get_height())), height_panel])
+            logo = pygame.transform.smoothscale(logo_full, [int(games.height_panel*(logo_full.get_width()/logo_full.get_height())), games.height_panel])
         # Key presses.
         elif event.type == pygame.KEYDOWN:
             if flag_playing:
@@ -1826,17 +1887,22 @@ while not done:
                     elif event.key == key_mode_2 and games.game_mode != 2:
                         games.game_mode = 2
                         games.remove_games_player()
-                        games.add_game(Tetron(True, len(games.player), games, width_block, height_block, spacing_block, row_count, column_count))
+                        games.add_game(Tetron(True, len(games.player), games))       #, width_block, height_block, spacing_block, row_count, column_count))
                         games.remove_games_ai()
                     elif event.key == key_mode_3 and games.game_mode != 3:
                         games.game_mode = 3
                         games.remove_games_player()
-                        games.add_game(Tetron(False, len(games.all), games, width_block, height_block, spacing_block, row_count, column_count))
+                        games.add_game(Tetron(False, len(games.all), games))         #, width_block, height_block, spacing_block, row_count, column_count))
                     elif False: #event.key == key_mode_4 and games.game_mode != 4:
                         games.game_mode = 4
                     # Toggle classic Tetris.
                     elif event.key == key_toggle_classic:
                         games.flag_classic = not games.flag_classic
+                    # Reposition all games.
+                    games.reposition_games()
+                    # Update game mode text.
+                    text_prefix = font_normal.render(game_mode_names[games.game_mode-1][0], True, colors[1001])
+                    text_suffix = font_normal.render(game_mode_names[games.game_mode-1][1], True, colors[1001])
         # Key releases.
         elif event.type == pygame.KEYUP:
             if event.key == key_start:
@@ -2056,7 +2122,7 @@ while not done:
             if game.flag_wind:
                 if games.time_current - game.time_start_wind >= speed_wind:
                     game.time_start_wind = games.time_current + 0
-                    game.wind_position += game.width_block
+                    game.wind_position += games.width_block
                     if game.wind_direction > 0:
                         game.move_right()
                     elif game.wind_direction < 0:
@@ -2079,9 +2145,7 @@ while not done:
     # =============================================================================
     # Erase all surfaces.
     screen.fill(colors[1002])
-    surface_mode.fill(colors[1002])
-    for game in games.all:
-        game.surface_main.fill(colors[1002])
+    # surface_mode.fill(colors[1002])   # Delete if not needed (recreated every loop)
 
     # Draw the game mode if not playing.
     if not flag_playing:
@@ -2091,63 +2155,74 @@ while not done:
         else:
             width_name = logo.get_width()
         # Create the game mode surface and insert the prefix.
-        if games.game_mode == 1:
-            width_prefix = text_mode_1_prefix.get_width()
-            width_suffix = text_mode_1_suffix.get_width()
-            surface_mode = pygame.Surface((width_prefix+width_name+width_suffix, height_panel))
-            surface_mode.blit(text_mode_1_prefix, (0,surface_mode.get_height()-text_mode_1_prefix.get_height()))
-        elif games.game_mode == 2:
-            width_prefix = text_mode_2_prefix.get_width()
-            width_suffix = text_mode_2_suffix.get_width()
-            surface_mode = pygame.Surface((width_prefix+width_name+width_suffix, height_panel))
-            surface_mode.blit(text_mode_2_prefix, (0,surface_mode.get_height()-text_mode_2_prefix.get_height()))
-        elif games.game_mode == 3:
-            width_prefix = text_mode_3_prefix.get_width()
-            width_suffix = text_mode_3_suffix.get_width()
-            surface_mode = pygame.Surface((width_prefix+width_name+width_suffix, height_panel))
-            surface_mode.blit(text_mode_3_prefix, (0,surface_mode.get_height()-text_mode_3_prefix.get_height()))
-        elif games.game_mode == 4:
-            width_prefix = text_mode_4_prefix.get_width()
-            width_suffix = text_mode_4_suffix.get_width()
-            surface_mode = pygame.Surface((width_prefix+width_name+width_suffix, height_panel))
-            surface_mode.blit(text_mode_4_prefix, (0,surface_mode.get_height()-text_mode_4_prefix.get_height()))
+        width_prefix = text_prefix.get_width()
+        width_suffix = text_suffix.get_width()
+        surface_mode = pygame.Surface((width_prefix+width_name+width_suffix, games.height_panel))
+        surface_mode.blit(text_prefix, (0,surface_mode.get_height()-text_prefix.get_height()))
         # Insert the logo or text.
         if games.flag_classic:
             surface_mode.blit(text_classic, (width_prefix,surface_mode.get_height()-text_classic.get_height()))
         else:
             surface_mode.blit(logo, (width_prefix,0))
         # Insert the suffix.
-        if games.game_mode == 1:
-            surface_mode.blit(text_mode_1_suffix, (surface_mode.get_width()-text_mode_1_suffix.get_width(),surface_mode.get_height()-text_mode_1_suffix.get_height()))
-        elif games.game_mode == 2:
-            surface_mode.blit(text_mode_2_suffix, (surface_mode.get_width()-text_mode_2_suffix.get_width(),surface_mode.get_height()-text_mode_2_suffix.get_height()))
-        elif games.game_mode == 3:
-            surface_mode.blit(text_mode_3_suffix, (surface_mode.get_width()-text_mode_3_suffix.get_width(),surface_mode.get_height()-text_mode_3_suffix.get_height()))
-        elif games.game_mode == 4:
-            surface_mode.blit(text_mode_4_suffix, (surface_mode.get_width()-text_mode_4_suffix.get_width(),surface_mode.get_height()-text_mode_4_suffix.get_height()))
+        surface_mode.blit(text_suffix, (surface_mode.get_width()-width_suffix,surface_mode.get_height()-text_suffix.get_height()))
+
+        # if games.game_mode == 1:
+        #     width_prefix = text_mode_1_prefix.get_width()
+        #     width_suffix = text_mode_1_suffix.get_width()
+        #     surface_mode = pygame.Surface((width_prefix+width_name+width_suffix, games.height_panel))
+        #     surface_mode.blit(text_mode_1_prefix, (0,surface_mode.get_height()-text_mode_1_prefix.get_height()))
+        # elif games.game_mode == 2:
+        #     width_prefix = text_mode_2_prefix.get_width()
+        #     width_suffix = text_mode_2_suffix.get_width()
+        #     surface_mode = pygame.Surface((width_prefix+width_name+width_suffix, games.height_panel))
+        #     surface_mode.blit(text_mode_2_prefix, (0,surface_mode.get_height()-text_mode_2_prefix.get_height()))
+        # elif games.game_mode == 3:
+        #     width_prefix = text_mode_3_prefix.get_width()
+        #     width_suffix = text_mode_3_suffix.get_width()
+        #     surface_mode = pygame.Surface((width_prefix+width_name+width_suffix, games.height_panel))
+        #     surface_mode.blit(text_mode_3_prefix, (0,surface_mode.get_height()-text_mode_3_prefix.get_height()))
+        # elif games.game_mode == 4:
+        #     width_prefix = text_mode_4_prefix.get_width()
+        #     width_suffix = text_mode_4_suffix.get_width()
+        #     surface_mode = pygame.Surface((width_prefix+width_name+width_suffix, games.height_panel))
+        #     surface_mode.blit(text_mode_4_prefix, (0,surface_mode.get_height()-text_mode_4_prefix.get_height()))
+        # # Insert the logo or text.
+        # if games.flag_classic:
+        #     surface_mode.blit(text_classic, (width_prefix,surface_mode.get_height()-text_classic.get_height()))
+        # else:
+        #     surface_mode.blit(logo, (width_prefix,0))
+        # # Insert the suffix.
+        # if games.game_mode == 1:
+        #     surface_mode.blit(text_mode_1_suffix, (surface_mode.get_width()-text_mode_1_suffix.get_width(),surface_mode.get_height()-text_mode_1_suffix.get_height()))
+        # elif games.game_mode == 2:
+        #     surface_mode.blit(text_mode_2_suffix, (surface_mode.get_width()-text_mode_2_suffix.get_width(),surface_mode.get_height()-text_mode_2_suffix.get_height()))
+        # elif games.game_mode == 3:
+        #     surface_mode.blit(text_mode_3_suffix, (surface_mode.get_width()-text_mode_3_suffix.get_width(),surface_mode.get_height()-text_mode_3_suffix.get_height()))
+        # elif games.game_mode == 4:
+        #     surface_mode.blit(text_mode_4_suffix, (surface_mode.get_width()-text_mode_4_suffix.get_width(),surface_mode.get_height()-text_mode_4_suffix.get_height()))
         # Insert the game mode surface in the screen.
         rect_mode = surface_mode.get_rect()
-        rect_mode.bottom = height_panel + 0
-        rect_mode.centerx = size_window[0]//2
+        rect_mode.bottom = games.height_panel + 0
+        rect_mode.centerx = games.size_window[0]//2
         screen.blit(surface_mode, rect_mode)
     # Display score text.
     text_score = font_normal.render('{}'.format(games.score), True, colors[1001])
     rect_text_score = text_score.get_rect()
     rect_text_score.left = (
-        size_window[0] - sum([game.size_total[0] for game in games.all]) - ((len(games.all)-1)*spacing_large)
-        )//2 + games.all[0].width_hold + games.all[0].spacing_small
-    rect_text_score.bottom = height_panel + 0
+        games.size_window[0] - sum([game.size_total[0] for game in games.all]) - ((len(games.all)-1)*games.spacing_large)
+        )//2 + games.width_hold + games.spacing_small
+    rect_text_score.bottom = games.height_panel + 0
     screen.blit(text_score, rect_text_score)
     # Display elapsed time text.
     text_time_elapsed = font_normal.render('{:02d}:{:02d}'.format(games.time_elapsed//60000, int((games.time_elapsed/1000)%60)), True, colors[1001])
     rect_text_time_elapsed = text_time_elapsed.get_rect()
-    rect_text_time_elapsed.right = size_window[0] - (
-        size_window[0] - sum([game.size_total[0] for game in games.all]) - ((len(games.all)-1)*spacing_large)
-        )//2 - games.all[-1].width_next - games.all[-1].spacing_small
-    rect_text_time_elapsed.bottom = height_panel + 0
+    rect_text_time_elapsed.right = games.size_window[0] - (
+        games.size_window[0] - sum([game.size_total[0] for game in games.all]) - ((len(games.all)-1)*games.spacing_large)
+        )//2 - games.width_next - games.spacing_small
+    rect_text_time_elapsed.bottom = games.height_panel + 0
     screen.blit(text_time_elapsed, rect_text_time_elapsed)
 
-    START = time.time()  # Debug
     # Draw each game.
     for index, game in enumerate(games.all):
         # Stop the disoriented effect if it has lasted longer than the maximum duration.
@@ -2160,27 +2235,39 @@ while not done:
             if games.time_current - game.time_start_blind > duration_blind:
                 game.flag_blind = False
                 game.draw_matrix()
-        
-        game.draw_garbage()
-        game.draw_information()
 
         # Draw the elements of each game in order from back to front.
-        game.surface_main.blit(game.surface_garbage, game.rect_garbage)
-        game.surface_main.blit(game.surface_information, game.rect_information)
+        if len(game.queue_garbage) > 0:
+            game.draw_garbage()
+            screen.blit(game.surface_garbage, game.rect_garbage)
         if len(game.queue_hold) > 0:
-            game.surface_main.blit(game.surface_hold, game.rect_hold)
-            game.surface_main.blit(game.text_hold, game.rect_text_hold)
+            screen.blit(game.surface_hold, game.rect_hold)
+            screen.blit(game.text_hold, game.rect_text_hold)
         if len(game.queue_next) > 0:
-            game.surface_main.blit(game.surface_next, game.rect_next)
-            game.surface_main.blit(game.text_next, game.rect_text_next)
-        game.surface_main.blit(game.surface_matrix, game.rect_matrix)
-        # Display the game in the window.
-        screen.blit(game.surface_main, 
-        ((size_window[0] - sum([i.size_total[0] for i in (games.all)]) - (len(games.all)-1)*spacing_large)//2 + sum([i.size_total[0] for i in (games.all)[:index]]) + index*spacing_large, height_panel)
-        )
+            screen.blit(game.surface_next, game.rect_next)
+            screen.blit(game.text_next, game.rect_text_next)
+        # game.draw_information()
+        # screen.blit(game.surface_information, game.rect_information)
+        screen.blit(game.surface_matrix, game.rect_matrix)
+
+        # # Draw the elements of each game in order from back to front.
+        # game.surface_main.blit(game.surface_garbage, game.rect_garbage)
+        # game.surface_main.blit(game.surface_information, game.rect_information)
+        # if len(game.queue_hold) > 0:
+        #     game.surface_main.blit(game.surface_hold, game.rect_hold)
+        #     game.surface_main.blit(game.text_hold, game.rect_text_hold)
+        # if len(game.queue_next) > 0:
+        #     game.surface_main.blit(game.surface_next, game.rect_next)
+        #     game.surface_main.blit(game.text_next, game.rect_text_next)
+        # game.surface_main.blit(game.surface_matrix, game.rect_matrix)
+        # # Display the game in the window.
+        # screen.blit(game.surface_main, 
+        # ((games.size_window[0] - sum([i.size_total[0] for i in games.all]) - (len(games.all)-1)*games.spacing_large)//2 + sum([i.size_total[0] for i in (games.all)[:index]]) + index*games.spacing_large, games.height_panel)
+        # )
+    
     END = time.time()  # Debug
     ms.append((END-START)*1000)  # Debug
-    
+
     # Update the screen.
     pygame.display.flip()
     # Limit the game to the desired frames per second by delaying every iteration of this loop.
@@ -2192,9 +2279,9 @@ pygame.quit()
 # import matplotlib.pyplot as plot
 # plot.plot(ms)
 # plot.show()
-print('Average: {:.2f},   Median: {:.2f},   Max: {:.2f},   Percent over: {:.2f}%'.format(
-    np.mean(ms),
+print('Median: {:.2f},   Average: {:.2f},   Max: {:.2f},   Percent over: {:.2f}%'.format(
     np.median(ms),
+    np.mean(ms),
     np.max(ms),
     100 * len([i for i in ms if i > 1000/games.fps])/len(ms)
     ))
