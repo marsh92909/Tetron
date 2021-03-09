@@ -95,6 +95,7 @@ sound_special_ghost = pygame.mixer.Sound(os.path.join(folder_sounds, 'special_gh
 sound_special_heavy = pygame.mixer.Sound(os.path.join(folder_sounds, 'special_heavy.wav'))
 sound_special_disoriented = pygame.mixer.Sound(os.path.join(folder_sounds, 'special_disoriented.wav'))
 sound_special_blind = pygame.mixer.Sound(os.path.join(folder_sounds, 'special_blind.wav'))
+sound_special_wind = pygame.mixer.Sound(os.path.join(folder_sounds, 'special_wind.wav'))
 sound_special_zombie = pygame.mixer.Sound(os.path.join(folder_sounds, 'special_zombie.wav'))
 sound_special_fake = pygame.mixer.Sound(os.path.join(folder_sounds, 'special_fake.wav'))
 # Set volume for sound effects.
@@ -117,6 +118,7 @@ sound_special_ghost.set_volume(0.25)
 sound_special_heavy.set_volume(0.25)
 sound_special_disoriented.set_volume(0.25)
 sound_special_blind.set_volume(0.5)
+sound_special_wind.set_volume(0.25)
 sound_special_zombie.set_volume(0.5)
 sound_special_fake.set_volume(0.25)
 
@@ -628,8 +630,8 @@ class Tetron:
                 self.time_start_wind = self.games.time_current + 0
                 self.wind_direction = random.choice([1, -1])
                 self.wind_position = self.games.width_block // 2
-                # if self.is_player:
-                #     sound_special_wind.play()
+                if self.is_player:
+                    sound_special_wind.play()
             elif effect_special == id_special[5]:
                 # Apply the effect only if there are placed blocks to use and if not taking a block out of hold.
                 if np.any(self.array_stack > 0) and hold_data is None:
