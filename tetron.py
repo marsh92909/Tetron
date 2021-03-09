@@ -222,27 +222,15 @@ colors = {
 # =============================================================================
 # Classes.
 # =============================================================================
-# The main class containing all gameplay actions (such as moving and rotating blocks).
+# The main class that controls an instance of a game and contains gameplay actions such as moving and rotating blocks.
 class Tetron:
     # Initialize the attributes of the instance of of this class when it is first created.
-    def __init__(self, is_player, instance_self, games):         #, width_block, height_block, spacing_block, row_count, column_count):
+    def __init__(self, is_player, instance_self, games):
         self.is_player = is_player
         self.instance_self = instance_self
         self.games = games
 
-        # # Define the width, height, and spacing of the blocks in pixels.
-        # self.width_block = width_block
-        # self.height_block = height_block
-        # self.spacing_block = spacing_block
-        # # Define widths of multiple sizes of spacing between elements.
-        # self.spacing_large = 1 * self.width_block
-        # self.spacing_small = int(0.5 * self.width_block)
-
-        # # Define the number of rows and columns of the matrix.
-        # self.row_count = row_count
-        # self.column_count = column_count
-
-        # Initialize all other attributes.
+        # Initialize attributes.
         self.initialize()
 
         # Create and set the sizes of the surfaces used to display each element of the game.
@@ -315,22 +303,7 @@ class Tetron:
         self.update_difficulty()
 
     # Resize and reposition the surfaces used to display each element of the game.
-    def resize_display(self): #, width_block=None, height_block=None, spacing_block=None, row_count=None, column_count=None):
-        # # Resize the basic elements used to determine the sizes of other elements.
-        # if width_block is not None:
-        #     self.width_block = width_block
-        # if height_block is not None:
-        #     self.height_block = height_block
-        # if spacing_block is not None:
-        #     self.spacing_block = spacing_block
-        # if row_count is not None:
-        #     self.row_count = row_count
-        # if column_count is not None:
-        #     self.column_count = column_count
-        # # Define the widths of the hold and next columns.
-        # self.width_hold = 2 * self.width_block
-        # self.width_next = 2 * self.width_block
-        
+    def resize_display(self):
         # Define the sizes (width, height) of the elements.
         self.size_matrix = (
             self.games.column_count*self.games.width_block + (self.games.column_count+1)*self.games.spacing_block,
@@ -660,7 +633,6 @@ class Tetron:
                 # Apply the effect only if there are placed blocks to use and if not taking a block out of hold.
                 if np.any(self.array_stack > 0) and hold_data is None:
                     self.flag_zombie = True
-                    self.flag_fast_fall = True
                     if self.is_player:
                         sound_special_zombie.play()
             elif effect_special == id_special[6]:
@@ -1692,23 +1664,10 @@ class Games:
 # =============================================================================
 # Main Program Loop.
 # =============================================================================
-# # Define the numbers of rows and columns.
-# row_count = 20
-# column_count = 10
-# # Define the size of the space between blocks in pixels.
-# spacing_block = 1
-# # Define the height and width of the blocks in pixels.
-# height_block = round(((0.8 * pygame.display.Info().current_h) - ((row_count+1) * spacing_block)) / (row_count+1))
-# width_block = height_block + 0
-# # Define the height of the panel above the matrix in pixels.
-# height_panel = height_block + 0
-# # Define the width of spacing between elements.
-# spacing_large = width_block + 0
-
 # Create an object to contain lists of player/AI games and general game information.
 games = Games()
 # Create a player instance of the game.
-games.add_game(Tetron(True, len(games.player), games))      #, width_block, height_block, spacing_block, row_count, column_count))
+games.add_game(Tetron(True, len(games.player), games))
 # Reposition the game.
 games.reposition_games()
 
@@ -1734,15 +1693,6 @@ game_mode_names = [
 # Initialize the game mode text.
 text_prefix = font_normal.render(game_mode_names[0][0], True, colors[1001])
 text_suffix = font_normal.render(game_mode_names[0][1], True, colors[1001])
-# Create text for other game modes.
-# text_mode_1_prefix = font_normal.render('', True, colors[1001])
-# text_mode_1_suffix = font_normal.render('', True, colors[1001])
-# text_mode_2_prefix = font_normal.render('Twin ', True, colors[1001])
-# text_mode_2_suffix = font_normal.render('', True, colors[1001])
-# text_mode_3_prefix = font_normal.render('', True, colors[1001])
-# text_mode_3_suffix = font_normal.render(' 1v1', True, colors[1001])
-# text_mode_4_prefix = font_normal.render('', True, colors[1001])
-# text_mode_4_suffix = font_normal.render(' 99', True, colors[1001])
 # Initialize the game mode surface.
 surface_mode = pygame.Surface((0,0))
 
@@ -1770,22 +1720,10 @@ while not done:
             done = True
         # Window is resized.
         elif event.type == pygame.VIDEORESIZE:
-            # # Get the new size of the window.
-            # size_window = pygame.display.get_window_size()
-            
-            # # Redefine the sizes of elements.
-            # width_block = int(np.floor((size_window[1] - ((row_count+1)*spacing_block)) / (row_count+1)))
-            # height_block = width_block + 0
-            # height_panel = height_block + 0
-            # spacing_large = width_block + 0
-
             # Resize the elements of each game.
             games.resize_display()
             # Reposition the elements of each game.
             games.reposition_games()
-            # for game in games.all:
-            #     game.resize_display(size_window, width_block=width_block, height_block=height_block)
-
             # Resize the logo.
             logo = pygame.transform.smoothscale(logo_full, [int(games.height_panel*(logo_full.get_width()/logo_full.get_height())), games.height_panel])
         # Key presses.
@@ -1887,12 +1825,12 @@ while not done:
                     elif event.key == key_mode_2 and games.game_mode != 2:
                         games.game_mode = 2
                         games.remove_games_player()
-                        games.add_game(Tetron(True, len(games.player), games))       #, width_block, height_block, spacing_block, row_count, column_count))
+                        games.add_game(Tetron(True, len(games.player), games))
                         games.remove_games_ai()
                     elif event.key == key_mode_3 and games.game_mode != 3:
                         games.game_mode = 3
                         games.remove_games_player()
-                        games.add_game(Tetron(False, len(games.all), games))         #, width_block, height_block, spacing_block, row_count, column_count))
+                        games.add_game(Tetron(False, len(games.all), games))
                     elif False: #event.key == key_mode_4 and games.game_mode != 4:
                         games.game_mode = 4
                     # Toggle classic Tetris.
@@ -2167,40 +2105,6 @@ while not done:
         # Insert the suffix.
         surface_mode.blit(text_suffix, (surface_mode.get_width()-width_suffix,surface_mode.get_height()-text_suffix.get_height()))
 
-        # if games.game_mode == 1:
-        #     width_prefix = text_mode_1_prefix.get_width()
-        #     width_suffix = text_mode_1_suffix.get_width()
-        #     surface_mode = pygame.Surface((width_prefix+width_name+width_suffix, games.height_panel))
-        #     surface_mode.blit(text_mode_1_prefix, (0,surface_mode.get_height()-text_mode_1_prefix.get_height()))
-        # elif games.game_mode == 2:
-        #     width_prefix = text_mode_2_prefix.get_width()
-        #     width_suffix = text_mode_2_suffix.get_width()
-        #     surface_mode = pygame.Surface((width_prefix+width_name+width_suffix, games.height_panel))
-        #     surface_mode.blit(text_mode_2_prefix, (0,surface_mode.get_height()-text_mode_2_prefix.get_height()))
-        # elif games.game_mode == 3:
-        #     width_prefix = text_mode_3_prefix.get_width()
-        #     width_suffix = text_mode_3_suffix.get_width()
-        #     surface_mode = pygame.Surface((width_prefix+width_name+width_suffix, games.height_panel))
-        #     surface_mode.blit(text_mode_3_prefix, (0,surface_mode.get_height()-text_mode_3_prefix.get_height()))
-        # elif games.game_mode == 4:
-        #     width_prefix = text_mode_4_prefix.get_width()
-        #     width_suffix = text_mode_4_suffix.get_width()
-        #     surface_mode = pygame.Surface((width_prefix+width_name+width_suffix, games.height_panel))
-        #     surface_mode.blit(text_mode_4_prefix, (0,surface_mode.get_height()-text_mode_4_prefix.get_height()))
-        # # Insert the logo or text.
-        # if games.flag_classic:
-        #     surface_mode.blit(text_classic, (width_prefix,surface_mode.get_height()-text_classic.get_height()))
-        # else:
-        #     surface_mode.blit(logo, (width_prefix,0))
-        # # Insert the suffix.
-        # if games.game_mode == 1:
-        #     surface_mode.blit(text_mode_1_suffix, (surface_mode.get_width()-text_mode_1_suffix.get_width(),surface_mode.get_height()-text_mode_1_suffix.get_height()))
-        # elif games.game_mode == 2:
-        #     surface_mode.blit(text_mode_2_suffix, (surface_mode.get_width()-text_mode_2_suffix.get_width(),surface_mode.get_height()-text_mode_2_suffix.get_height()))
-        # elif games.game_mode == 3:
-        #     surface_mode.blit(text_mode_3_suffix, (surface_mode.get_width()-text_mode_3_suffix.get_width(),surface_mode.get_height()-text_mode_3_suffix.get_height()))
-        # elif games.game_mode == 4:
-        #     surface_mode.blit(text_mode_4_suffix, (surface_mode.get_width()-text_mode_4_suffix.get_width(),surface_mode.get_height()-text_mode_4_suffix.get_height()))
         # Insert the game mode surface in the screen.
         rect_mode = surface_mode.get_rect()
         rect_mode.bottom = games.height_panel + 0
@@ -2249,21 +2153,6 @@ while not done:
         # game.draw_information()
         # screen.blit(game.surface_information, game.rect_information)
         screen.blit(game.surface_matrix, game.rect_matrix)
-
-        # # Draw the elements of each game in order from back to front.
-        # game.surface_main.blit(game.surface_garbage, game.rect_garbage)
-        # game.surface_main.blit(game.surface_information, game.rect_information)
-        # if len(game.queue_hold) > 0:
-        #     game.surface_main.blit(game.surface_hold, game.rect_hold)
-        #     game.surface_main.blit(game.text_hold, game.rect_text_hold)
-        # if len(game.queue_next) > 0:
-        #     game.surface_main.blit(game.surface_next, game.rect_next)
-        #     game.surface_main.blit(game.text_next, game.rect_text_next)
-        # game.surface_main.blit(game.surface_matrix, game.rect_matrix)
-        # # Display the game in the window.
-        # screen.blit(game.surface_main, 
-        # ((games.size_window[0] - sum([i.size_total[0] for i in games.all]) - (len(games.all)-1)*games.spacing_large)//2 + sum([i.size_total[0] for i in (games.all)[:index]]) + index*games.spacing_large, games.height_panel)
-        # )
     
     END = time.time()  # Debug
     ms.append((END-START)*1000)  # Debug
