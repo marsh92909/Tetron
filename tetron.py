@@ -29,8 +29,8 @@ score_thresholds = [400, 800, 1000]
 # Define the numbers of remaining players needed to move to the next stage. The last value is the number needed to win the game.
 remaining_thresholds = [50, 10, 1]
 # Define the range of block fall speeds (ms) from the start to end of the game.
-speeds_fall = [1000, 1000/6] #[1000, 200]
-speeds_fall_classic = [1000, 1000/60] #[1000, 50]
+speeds_fall = [1000, 1000/6]
+speeds_fall_classic = [1000, 1000/60]
 # Define the block fall speed multiplier for some special effects (values below 1 result in faster speeds).
 speed_fall_multiplier = 1/2
 # Define the block move speed (ms) and initial delay for key repeats (ms).
@@ -566,16 +566,16 @@ class Tetron:
                 # Index of lowest row that can fit this tetrimino.
                 index_lowest = max(np.argmax(self.array_stack, axis=0))
                 # Get the top rows of the dropped blocks.
-                array_stack_top = np.copy(self.array_stack[index_highest:index_lowest+1, :]) > 0
+                tetrimino = np.copy(self.array_stack[index_highest:index_lowest+1, :]) > 0
                 # Get the row indices of the highest blocks in each column of the dropped blocks array, with values of -1 for empty columns.
-                rows_highest = np.argmax(array_stack_top, axis=0)
-                rows_highest[np.all(array_stack_top == 0, axis=0)] = -1
+                rows_highest = np.argmax(tetrimino, axis=0)
+                rows_highest[np.all(tetrimino == 0, axis=0)] = -1
                 # Fill the blocks below the highest blocks in each column.
                 for column, row in enumerate(rows_highest):
                     if row >= 0:
-                        array_stack_top[row:, column] = 1
+                        tetrimino[row:, column] = 1
                 # Create the tetrimino by inverting the dropped blocks.
-                tetrimino = number * (1 - array_stack_top)
+                tetrimino = number * (1 - tetrimino)
                 # Replace all values of 0 with -1.
                 tetrimino[tetrimino == 0] = -1
         return tetrimino
@@ -1498,14 +1498,14 @@ class Tetron:
             else:
                 # Create a copy of the array.
                 array = np.copy(self.array_stack)
+
                 # Calculate the number of holes.
                 rows_highest = np.where(np.any(array > 0, axis=0), np.argmax(array > 0, axis=0), self.games.row_count * np.ones(self.games.column_count, dtype=int))
                 array_holes = np.copy(array)
                 for column, row in enumerate(rows_highest):
                     array_holes[:row, column] = 1
                 holes_before = np.sum(array_holes == 0)
-                
-                # Hard drop the current tetrimino and calculate the number of cleared lines.
+                # Calculate the number of cleared lines if the current tetrimino is hard dropped.
                 array[self.array_highlight < 0] = -self.array_highlight[self.array_highlight < 0]
                 line_count = len(np.argwhere(np.all(array > 0, axis=1)))
                 # Calculate the number of holes.
@@ -1518,9 +1518,10 @@ class Tetron:
                 # Initialize the effectiveness value.
                 effectiveness = 0
                 # Add points for cleared lines.
-                effectiveness += self.calculate_score(line_count)
-                # Subtract points for height of placed tetrimino.
+                effectiveness += line_count  #self.calculate_score(line_count)
+                # Subtract points for height of placed tetrimino, based on its top square and its lowest square.
                 effectiveness -= 1 * abs(self.games.row_count - np.argmax(np.any(self.array_highlight < 0, axis=1)))
+                effectiveness -= 1 * np.argmax(np.any(np.flipud(self.array_highlight) < 0, axis=1))
                 # Subtract points for occupying the top row.
                 if any(array[0, :] > 0):
                     effectiveness -= 100
