@@ -682,6 +682,7 @@ class Tetron:
         # Select a delay for this tetrimino.
         self.ai_delay = random.gauss(ai_delay_mean, ai_delay_std)
 
+    # *** DEPRECATE ***
     # Advance one line.
     def advance(self):
         # Determine if at the bottom of the matrix.
@@ -699,6 +700,118 @@ class Tetron:
             self.harddrop()
         # Update the displayed array.
         self.update()
+    
+    # Shift down one line. Return a Boolean indicating whether it was successful.
+    def fall(self):
+        success = False
+        # Determine if at the bottom of the matrix.
+        is_at_bottom = np.any(self.array_current[-1*(not self.flag_zombie) + 0*self.flag_zombie,:] > 0)
+        # Shift the tetrimino down one line and return a copy.
+        array_current = np.roll(self.array_current, shift=1*((-1) ** self.flag_zombie), axis=0)
+        # Determine if the shifted copy intersects the stack.
+        is_intersecting = np.any(self.array_stack[array_current > 0] > 0)
+        # Apply the shift.
+        if (self.flag_ghost and not is_at_bottom) or (not self.flag_ghost and (not is_at_bottom and not is_intersecting)):
+            self.array_current = np.copy(array_current)
+            # Reset the fall timer if the tetrimino has landed.
+            self.check_landed()
+            # Update the displayed array.
+            self.update()
+            # Update Boolean.
+            success = True
+        return success
+    
+    # Lock in place.
+    def lock(self):
+        if not self.flag_fake:
+            self.array_stack[self.array_current > 0] = self.array_current[self.array_current > 0]
+        # Set flag to hard drop other game instances.
+        self.flag_harddrop = True
+        # Play sound effect.
+        if self.instance_self == 0:
+            if self.is_player:
+                if not self.flag_fake:
+                    sound_game_harddrop.play()
+                else:
+                    sound_special_fake.play()
+        self.update()
+
+        # Increment the placed blocks counter.
+        self.count += 1
+
+        # Reset certain flags.
+        self.reset_special(reset_all=False)
+        self.flag_fast_fall = False
+        self.flag_landed = False
+        self.flag_hold = False
+        # Update the values of previously placed special blocks.
+        self.array_stack[self.array_stack == 901] = 900
+        self.array_stack[self.array_stack == 902] = 900
+        self.array_stack[self.array_stack == 906] = 900
+
+        # Check for cleared lines and empty them.
+        rows_cleared = np.argwhere(np.all(self.array_stack > 0, axis=1))
+        line_count = len(rows_cleared)
+        if line_count > 0:
+            self.array_stack = np.concatenate((
+                np.zeros([line_count,self.games.column_count]),
+                np.delete(self.array_stack, obj=rows_cleared, axis=0)
+                ), axis=0)
+        # Increment the combo counter if a line was cleared.
+        if line_count > 0:
+            self.combos += 1
+            # Check for a perfect clear.
+            self.flag_perfect = not np.any(self.array_stack)
+        else:
+            self.combos = 0
+
+        # Calculate number of garbage lines.
+        garbage_count = self.calculate_garbage(line_count)
+        # Clear garbage lines if the queue contains any.
+        if len(self.queue_garbage) > 0:
+            self.subtract_garbage(garbage_count)
+        # Send garbage lines if the queue is empty.
+        else:
+            self.send_garbage(garbage_count)
+        # Put garbage in the matrix.
+        if self.flag_put_garbage and garbage_count == 0:
+            self.put_garbage()
+
+        # Put the score increment in the queue.
+        self.score_increment.append(self.calculate_score(line_count))
+        
+        # Reset the previous advance time.
+        self.reset_time_advance()
+        # Reset the T-spin and perfect clear flags. Must be after calculating score.
+        self.flag_tspin = False
+        self.flag_tspin_mini = False
+        self.flag_perfect = False
+        # Reset attributes for AI.
+        self.ai_evaluations = []
+        self.ai_decision = None
+        self.ai_time_evaluate = 0
+        self.ai_flag_positioning = True
+        self.ai_flag_positioning_left = True
+        self.ai_flag_calculating = True
+        
+        # Stop the game or create a new tetrimino.
+        if self.flag_playing:
+            self.check_lose()
+            if not self.flag_lose:
+                self.set_tetrimino()
+
+    # Hard drop.
+    def harddrop(self):
+        # If a heavy tetrimino, delete placed blocks below the current tetrimino and shift tetrimino to bottom row.
+        if self.flag_heavy:
+            self.array_stack[self.array_highlight < 0] = 0
+            self.array_current = np.roll(self.array_current, np.argmax(np.any(np.flipud(self.array_current) > 0, axis=1)), axis=0)
+        # Shift the tetrimino down.
+        else:
+            if not self.flag_ghost: # and not (self.flag_zombie and np.any(self.array_current[0,:] > 0)):
+                self.array_current = -1 * self.array_highlight
+        # Lock the tetrimino.
+        self.lock()
 
     # Move left. Return a Boolean indicating whether it was successful.
     def move_left(self):
@@ -911,8 +1024,9 @@ class Tetron:
                 break
         return success
 
+    # *** DEPRECATE ***
     # Hard drop.
-    def harddrop(self):
+    def harddrop1(self):
         # If a heavy tetrimino, delete placed blocks below the current tetrimino and shift tetrimino to bottom row.
         if self.flag_heavy:
             self.array_stack[self.array_highlight < 0] = 0
@@ -921,7 +1035,7 @@ class Tetron:
         else:
             if not self.flag_ghost and not (self.flag_zombie and np.any(self.array_current[0,:] > 0)):
                 self.array_current = -1 * self.array_highlight
-        # Drop the tetrimino.
+        # Lock the tetrimino.
         if not self.flag_fake:
             self.array_stack[self.array_current > 0] = self.array_current[self.array_current > 0]
         # Set flag to hard drop other game instances.
@@ -1274,7 +1388,7 @@ class Tetron:
         else:
             self.array_current[:] = 0
         # Add the highlighted blocks, dropped blocks, and current tetrimino to the displayed array.
-        if not self.flag_ghost and not self.flag_blind and not (self.flag_zombie and np.any(self.array_current[0,:]>0)) and self.is_player:
+        if not self.flag_ghost and not self.flag_blind and self.is_player:
             self.array_display[self.array_highlight < 0] = self.array_highlight[self.array_highlight < 0]
         self.array_display[self.array_stack > 0] = self.array_stack[self.array_stack > 0]
         self.array_display[self.array_current > 0] = self.array_current[self.array_current > 0]
@@ -2129,7 +2243,8 @@ while not done:
                     # If tetrimino is landed, check if the maximum time has elapsed.
                     (game.flag_landed and (games.time_current - game.time_landed >= duration_max_landed))
                     ):
-                        game.advance()
+                        if not game.fall():   # game.advance()
+                            game.lock()
                         game.reset_time_advance()
             else:
                 game.reset_time_advance()
