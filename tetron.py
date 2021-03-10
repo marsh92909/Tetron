@@ -71,6 +71,7 @@ speed_wind = 500
 # Create font objects used to create text.
 font_normal = pygame.font.SysFont('Segoe UI Semibold', 24)
 font_small = pygame.font.SysFont('Segoe UI Semibold', 18)
+font_large = pygame.font.SysFont('Segoe UI Black', 30)
 
 # =============================================================================
 # Sounds.
@@ -1614,6 +1615,18 @@ class Games:
             self.height_panel + self.row_count*self.height_block + (self.row_count+1)*self.spacing_block
             )
 
+        # # Define the names of the game modes.
+        # self.name_default = name_program + ''
+        # self.name_classic = 'Tetris'
+        # self.names_game_modes = [
+        #     ['', ''],
+        #     ['Twin ', ''],
+        #     ['', ' 1v1'],
+        #     ['', ' 99'],
+        #     ]
+        # # Create the menu.
+        # self.draw_menu()
+
         # Initialize game-related attributes.
         self.reset_game()
     
@@ -1636,6 +1649,41 @@ class Games:
         for game in self.all:
             game.resize_display()
 
+    # Create the surface used to display the game modes.
+    def draw_menu(self):
+        height_button = self.height_block * 2
+        height_spacing = self.height_block // 2
+        images = []
+        texts = []
+        if self.flag_classic:
+            name = self.name_classic
+        else:
+            name = self.name_default
+        # Load images and create text.
+        for index in range(len(self.names_game_modes)):
+            image = pygame.image.load(os.path.join(folder_program, 'icon.png'))
+            images.append(
+                pygame.transform.smoothscale(image, [int(height_button*(image.get_width()/image.get_height())), height_button])
+                )
+            string = self.names_game_modes[index][0] + name + self.names_game_modes[index][1]
+            texts.append(
+                font_large.render(string.upper(), True, colors[1001])
+                )
+        # Create the buttons.
+        self.surface_menu = pygame.Surface((
+            max([image.get_width() for image in images]) + max([text.get_width() for text in texts]),
+            sum([image.get_height() for image in images]) + (len(self.names_game_modes)-1) * height_spacing
+            ))
+        for index in range(len(self.names_game_modes)):
+            self.surface_menu.blit(
+                images[index],
+                (0, sum([image.get_height() for image in images[:index]]) + index * height_spacing)
+                )
+            self.surface_menu.blit(
+                texts[index],
+                (images[index].get_width(), sum([image.get_height() for image in images[:index]]) + index * height_spacing)
+                )
+
     # Reset parameters when starting a new game.
     def reset_game(self):
         self.score = 0
@@ -1644,6 +1692,27 @@ class Games:
         self.remaining_previous = 0
         self.stage = 0
 
+    # Switch game modes.
+    def set_mode(self, mode):
+        if mode != self.game_mode:
+            self.game_mode = mode
+            if mode == 1:
+                games.remove_games_player()
+                games.remove_games_ai()
+            elif mode == 2:
+                games.remove_games_player()
+                games.remove_games_ai()
+                games.add_game(Tetron(True, len(games.player), games))
+            elif mode == 3:
+                games.remove_games_player()
+                games.add_game(Tetron(False, len(games.all), games))
+            elif mode == 4:
+                pass
+    
+    # Invert the classic flag.
+    def toggle_classic(self):
+        self.flag_classic = not self.flag_classic
+    
     # Add a game to the corresponding list.
     def add_game(self, game):
         if game.is_player:
@@ -1833,24 +1902,28 @@ while not done:
             else:
                 if not flag_paused:
                     # Switch game modes.
-                    if event.key == key_mode_1 and games.game_mode != 1:
-                        games.game_mode = 1
-                        games.remove_games_player()
-                        games.remove_games_ai()
-                    elif event.key == key_mode_2 and games.game_mode != 2:
-                        games.game_mode = 2
-                        games.remove_games_player()
-                        games.add_game(Tetron(True, len(games.player), games))
-                        games.remove_games_ai()
-                    elif event.key == key_mode_3 and games.game_mode != 3:
-                        games.game_mode = 3
-                        games.remove_games_player()
-                        games.add_game(Tetron(False, len(games.all), games))
-                    elif False: #event.key == key_mode_4 and games.game_mode != 4:
-                        games.game_mode = 4
+                    if event.key == key_mode_1:  # and games.game_mode != 1:
+                        games.set_mode(1)
+                        # games.game_mode = 1
+                        # games.remove_games_player()
+                        # games.remove_games_ai()
+                    elif event.key == key_mode_2:  # and games.game_mode != 2:
+                        games.set_mode(2)
+                        # games.game_mode = 2
+                        # games.remove_games_player()
+                        # games.add_game(Tetron(True, len(games.player), games))
+                        # games.remove_games_ai()
+                    elif event.key == key_mode_3:  # and games.game_mode != 3:
+                        games.set_mode(3)
+                        # games.game_mode = 3
+                        # games.remove_games_player()
+                        # games.add_game(Tetron(False, len(games.all), games))
+                    elif False: #event.key == key_mode_4:  # and games.game_mode != 4:
+                        games.set_mode(4)
+                        # games.game_mode = 4
                     # Toggle classic Tetris.
                     elif event.key == key_toggle_classic:
-                        games.flag_classic = not games.flag_classic
+                        games.toggle_classic()  # games.flag_classic = not games.flag_classic
                     # Reposition all games.
                     games.reposition_games()
                     # Update game mode text.
