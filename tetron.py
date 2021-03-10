@@ -29,8 +29,8 @@ score_thresholds = [400, 800, 1000]
 # Define the numbers of remaining players needed to move to the next stage. The last value is the number needed to win the game.
 remaining_thresholds = [50, 10, 1]
 # Define the range of block fall speeds (ms) from the start to end of the game.
-speeds_fall = [1000, 200]
-speeds_fall_classic = [1000, 50]
+speeds_fall = [1000, 1000/6] #[1000, 200]
+speeds_fall_classic = [1000, 1000/60] #[1000, 50]
 # Define the block fall speed multiplier for some special effects (values below 1 result in faster speeds).
 speed_fall_multiplier = 1/2
 # Define the block move speed (ms) and initial delay for key repeats (ms).
@@ -1902,28 +1902,17 @@ while not done:
             else:
                 if not flag_paused:
                     # Switch game modes.
-                    if event.key == key_mode_1:  # and games.game_mode != 1:
+                    if event.key == key_mode_1:
                         games.set_mode(1)
-                        # games.game_mode = 1
-                        # games.remove_games_player()
-                        # games.remove_games_ai()
-                    elif event.key == key_mode_2:  # and games.game_mode != 2:
+                    elif event.key == key_mode_2:
                         games.set_mode(2)
-                        # games.game_mode = 2
-                        # games.remove_games_player()
-                        # games.add_game(Tetron(True, len(games.player), games))
-                        # games.remove_games_ai()
-                    elif event.key == key_mode_3:  # and games.game_mode != 3:
+                    elif event.key == key_mode_3:
                         games.set_mode(3)
-                        # games.game_mode = 3
-                        # games.remove_games_player()
-                        # games.add_game(Tetron(False, len(games.all), games))
-                    elif False: #event.key == key_mode_4:  # and games.game_mode != 4:
+                    elif False: #event.key == key_mode_4:
                         games.set_mode(4)
-                        # games.game_mode = 4
                     # Toggle classic Tetris.
                     elif event.key == key_toggle_classic:
-                        games.toggle_classic()  # games.flag_classic = not games.flag_classic
+                        games.toggle_classic()
                     # Reposition all games.
                     games.reposition_games()
                     # Update game mode text.
