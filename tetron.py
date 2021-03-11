@@ -65,7 +65,7 @@ weights_special = [0, 1/20]
 score_update_chance_special = score_thresholds[0]
 # Define settings for special effects (ms).
 duration_disoriented = 10000
-duration_blind = 15000
+duration_blind = 10000
 speed_wind = 500
 
 # Create font objects used to create text.
@@ -2099,19 +2099,8 @@ while not done:
         game.score = games.score + 0
         game.update_difficulty()
     
-    # Stop the game if the player has lost.
-    if any([game.flag_lose for game in games.player]):
-        # Play music.
-        pygame.mixer.music.stop()
-        pygame.mixer.music.unload()
-        pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_lose.ogg'))
-        pygame.mixer.music.play(loops=0)
-        # Stop player games.
-        for game in games.player:
-            game.flag_lose = False
-            game.stop_game()
     # Win the game.
-    elif games.game_mode in [1, 2] and games.score_previous < score_thresholds[-1] <= games.score or \
+    if games.game_mode in [1, 2] and games.score_previous < score_thresholds[-1] <= games.score or \
         games.game_mode in [3, 4] and games.remaining <= remaining_thresholds[-1] < games.remaining_previous:
         # Play music and sound effect only if the player won.
         if all([game.flag_lose for game in games.ai]):
@@ -2123,6 +2112,17 @@ while not done:
             sound_game_win.play()
         # Stop all games.
         for game in games.all:
+            game.stop_game()
+    # Stop the game if the player has lost.
+    elif any([game.flag_lose for game in games.player]):
+        # Play music.
+        pygame.mixer.music.stop()
+        pygame.mixer.music.unload()
+        pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_lose.ogg'))
+        pygame.mixer.music.play(loops=0)
+        # Stop player games.
+        for game in games.player:
+            game.flag_lose = False
             game.stop_game()
     # Advance to the next stage of the game.
     elif games.game_mode in [1, 2, 3] and games.score_previous < score_thresholds[games.stage] <= games.score and games.stage < 2 or \
