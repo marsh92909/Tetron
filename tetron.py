@@ -150,13 +150,15 @@ key_hold = pygame.K_c
 key_left_move_left = pygame.K_a
 key_left_move_right = pygame.K_d
 key_left_rotate_clockwise = pygame.K_w
+key_left_rotate_counterclockwise = pygame.K_e
 key_left_softdrop = pygame.K_s
-key_left_hold = pygame.K_e
+key_left_hold = pygame.K_q
 key_right_move_left = pygame.K_j
 key_right_move_right = pygame.K_l
 key_right_rotate_clockwise = pygame.K_i
+key_right_rotate_counterclockwise = pygame.K_u
 key_right_softdrop = pygame.K_k
-key_right_hold = pygame.K_u
+key_right_hold = pygame.K_o
 
 
 # =============================================================================
@@ -1975,19 +1977,20 @@ while not done:
                         # Initialize the time at which the previous repeat occurred.
                         games.player[index].time_previous_move_right = 0
                 # Rotate counterclockwise or clockwise.
-                elif event.key in key_rotate_clockwise+[key_left_rotate_clockwise,key_right_rotate_clockwise] or event.key in key_rotate_counterclockwise:
+                elif event.key in key_rotate_clockwise+[key_left_rotate_clockwise,key_right_rotate_clockwise] or \
+                event.key in key_rotate_counterclockwise+[key_left_rotate_counterclockwise,key_right_rotate_counterclockwise]:
                     indices = []
                     if len(games.player) == 1:
                         if event.key in key_rotate_clockwise + key_rotate_counterclockwise:
                             indices.append(0)
                     elif len(games.player) >= 2:
-                        if event.key == key_left_rotate_clockwise:
+                        if event.key in [key_left_rotate_clockwise,key_left_rotate_counterclockwise]:
                             indices.append(0)
-                        if event.key == key_right_rotate_clockwise:
+                        if event.key in [key_right_rotate_clockwise,key_right_rotate_counterclockwise]:
                             indices.append(1)
                     if event.key in key_rotate_clockwise+[key_left_rotate_clockwise,key_right_rotate_clockwise]:
                         direction = -1
-                    elif event.key in key_rotate_counterclockwise:
+                    elif event.key in key_rotate_counterclockwise+[key_left_rotate_counterclockwise,key_right_rotate_counterclockwise]:
                         direction = 1
                     for index in indices:
                         games.player[index].rotate(direction)
