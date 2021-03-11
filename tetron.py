@@ -14,7 +14,7 @@ import pygame
 # Program information.
 name_program = 'Tetron'
 version_program = '1.3.0'
-# Get the path to the folder containing the program.
+# Get the path to the temporary folder containing the program.
 folder_program = getattr(sys, '_MEIPASS', os.path.abspath(os.path.dirname(__file__)))
 folder_sounds = os.path.abspath(os.path.join(folder_program, 'Sounds'))
 folder_images = os.path.abspath(os.path.join(folder_program, 'Images'))
@@ -83,6 +83,7 @@ sound_game_harddrop = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_hardd
 sound_game_softdrop = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_softdrop.wav'))
 sound_game_hold = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_hold.wav'))
 sound_game_landing = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_landing.wav'))
+sound_game_lock = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_lock.wav'))
 sound_game_single = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_single.wav'))
 sound_game_double = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_double.wav'))
 sound_game_triple = pygame.mixer.Sound(os.path.join(folder_sounds, 'game_triple.wav'))
@@ -106,6 +107,7 @@ sound_game_harddrop.set_volume(0.1)
 sound_game_softdrop.set_volume(0.1)
 sound_game_hold.set_volume(0.1)
 sound_game_landing.set_volume(0.1)
+sound_game_lock.set_volume(0.1)
 sound_game_single.set_volume(0.1)
 sound_game_double.set_volume(0.1)
 sound_game_triple.set_volume(0.1)
@@ -720,8 +722,13 @@ class Tetron:
             success = True
         return success
     
-    # Lock in place.
-    def lock(self):
+    # Lock in place. Input True to play the hard drop sound instead of the lock sound.
+    def lock(self, is_harddrop=False):
+        # If a heavy tetrimino, delete placed blocks below the current tetrimino and shift tetrimino to bottom row.
+        if self.flag_heavy:
+            self.array_stack[self.array_highlight < 0] = 0
+            self.array_current = np.roll(self.array_current, np.argmax(np.any(np.flipud(self.array_current) > 0, axis=1)), axis=0)
+        # Lock tetrimino.
         if not self.flag_fake:
             self.array_stack[self.array_current > 0] = self.array_current[self.array_current > 0]
         # Set flag to hard drop other game instances.
@@ -730,7 +737,10 @@ class Tetron:
         if self.instance_self == 0:
             if self.is_player:
                 if not self.flag_fake:
-                    sound_game_harddrop.play()
+                    if is_harddrop:
+                        sound_game_harddrop.play()
+                    else:
+                        sound_game_lock.play()
                 else:
                     sound_special_fake.play()
         self.update()
@@ -801,16 +811,18 @@ class Tetron:
 
     # Hard drop.
     def harddrop(self):
-        # If a heavy tetrimino, delete placed blocks below the current tetrimino and shift tetrimino to bottom row.
-        if self.flag_heavy:
-            self.array_stack[self.array_highlight < 0] = 0
-            self.array_current = np.roll(self.array_current, np.argmax(np.any(np.flipud(self.array_current) > 0, axis=1)), axis=0)
-        # Shift the tetrimino down.
-        else:
-            if not self.flag_ghost:
-                self.array_current = -1 * self.array_highlight
+        # # If a heavy tetrimino, delete placed blocks below the current tetrimino and shift tetrimino to bottom row.
+        # if self.flag_heavy:
+        #     self.array_stack[self.array_highlight < 0] = 0
+        #     self.array_current = np.roll(self.array_current, np.argmax(np.any(np.flipud(self.array_current) > 0, axis=1)), axis=0)
+        # # Shift the tetrimino down.
+        # else:
+        #     if not self.flag_ghost:
+        #         self.array_current = -1 * self.array_highlight
+        if not self.flag_ghost and not self.flag_heavy:
+            self.array_current = -1 * self.array_highlight
         # Lock the tetrimino.
-        self.lock()
+        self.lock(is_harddrop=True)
 
     # Move left. Return a Boolean indicating whether it was successful.
     def move_left(self):
