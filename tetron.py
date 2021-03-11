@@ -808,7 +808,7 @@ class Tetron:
             self.array_current = np.roll(self.array_current, np.argmax(np.any(np.flipud(self.array_current) > 0, axis=1)), axis=0)
         # Shift the tetrimino down.
         else:
-            if not self.flag_ghost: # and not (self.flag_zombie and np.any(self.array_current[0,:] > 0)):
+            if not self.flag_ghost:
                 self.array_current = -1 * self.array_highlight
         # Lock the tetrimino.
         self.lock()
@@ -1115,19 +1115,31 @@ class Tetron:
 
     # Start soft dropping.
     def softdrop_start(self):
-        self.advance()
-        # Set flags.
-        self.flag_softdropping = True
-        self.flag_advancing = False
-        # Reset the previous advance time.
-        self.reset_time_advance()
-        # Record the current time used later to calculate how long this key is held.
-        self.time_start_softdrop = self.games.time_current + 0
-        # Initialize the time at which the previous repeat occured.
-        self.time_previous_softdrop = 0
-        # Play sound effect.
-        if self.is_player:
-            sound_game_softdrop.play()
+        # Shift down one line and check if that caused the block to land.
+        if self.fall() and not self.flag_landed and (speed_softdrop <= self.speed_fall):
+            # Set flags.
+            self.flag_softdropping = True
+            self.flag_advancing = False
+            # Reset the previous advance time.
+            self.reset_time_advance()
+            # Play sound effect.
+            if self.is_player:
+                sound_game_softdrop.play()
+    # # Start soft dropping.
+    # def softdrop_start(self):
+    #     self.advance()
+    #     # Set flags.
+    #     self.flag_softdropping = True
+    #     self.flag_advancing = False
+    #     # Reset the previous advance time.
+    #     self.reset_time_advance()
+    #     # Record the current time used later to calculate how long this key is held.
+    #     self.time_start_softdrop = self.games.time_current + 0
+    #     # Initialize the time at which the previous repeat occurred.
+    #     self.time_previous_softdrop = 0
+    #     # Play sound effect.
+    #     if self.is_player:
+    #         sound_game_softdrop.play()
 
     # Stop soft dropping.
     def softdrop_stop(self):
@@ -1943,7 +1955,7 @@ while not done:
                         games.player[index].move_left()
                         # Record the current time used later to calculate how long this key is held.
                         games.player[index].time_start_move_left = games.time_current + 0
-                        # Initialize the time at which the previous repeat occured.
+                        # Initialize the time at which the previous repeat occurred.
                         games.player[index].time_previous_move_left = 0
                 # Move right.
                 elif event.key in [key_move_right, key_left_move_right, key_right_move_right]:
@@ -1960,7 +1972,7 @@ while not done:
                         games.player[index].move_right()
                         # Record the current time used later to calculate how long this key is held.
                         games.player[index].time_start_move_right = games.time_current + 0
-                        # Initialize the time at which the previous repeat occured.
+                        # Initialize the time at which the previous repeat occurred.
                         games.player[index].time_previous_move_right = 0
                 # Rotate counterclockwise or clockwise.
                 elif event.key in key_rotate_clockwise+[key_left_rotate_clockwise,key_right_rotate_clockwise] or event.key in key_rotate_counterclockwise:
@@ -1996,6 +2008,10 @@ while not done:
                             indices.append(1)
                     for index in indices:
                         games.player[index].softdrop_start()
+                        # Record the current time used later to calculate how long this key is held.
+                        games.player[index].time_start_softdrop = games.time_current + 0
+                        # Initialize the time at which the previous repeat occurred.
+                        games.player[index].time_previous_softdrop = 0
                 # Hold / Swap.
                 elif event.key in [key_hold, key_left_hold, key_right_hold]:
                     indices = []
@@ -2083,7 +2099,9 @@ while not done:
                         elif event.key == key_right_softdrop:
                             indices.append(1)
                     for index in indices:
-                        games.player[index].softdrop_stop()
+                        # Only stop if currently soft dropping.
+                        if games.player[index].flag_softdropping:
+                            games.player[index].softdrop_stop()
         # Transition music ends.
         elif event.type == pygame.USEREVENT+1:
             if flag_playing:
@@ -2119,7 +2137,7 @@ while not done:
                     # Check if the key has been held longer than the key repeat interval.
                     if (games.time_current - games.player[index].time_previous_softdrop) > speed_softdrop:
                         if games.player[index].flag_softdropping:  # Check whether soft dropping to prevent advancing line immediately after landing
-                            games.player[index].advance()
+                            games.player[index].fall()  #games.player[index].advance()
                             # Play sound effect.
                             sound_game_softdrop.play()
                         games.player[index].time_previous_softdrop = games.time_current + 0
@@ -2243,7 +2261,7 @@ while not done:
                     # If tetrimino is landed, check if the maximum time has elapsed.
                     (game.flag_landed and (games.time_current - game.time_landed >= duration_max_landed))
                     ):
-                        if not game.fall():   # game.advance()
+                        if not game.fall():
                             game.lock()
                         game.reset_time_advance()
             else:
