@@ -309,23 +309,14 @@ class Tetron:
 
     # Resize and reposition the surfaces used to display each element of the game.
     def resize_display(self):
-        # Define the sizes (width, height) of the elements.
-        self.size_matrix = (
-            self.games.column_count*self.games.width_block + (self.games.column_count+1)*self.games.spacing_block,
-            self.games.row_count*self.games.height_block + (self.games.row_count+1)*self.games.spacing_block
-            )
-        self.size_total = (
-            self.games.width_hold + self.games.spacing_small + self.size_matrix[0] + self.games.spacing_small + self.games.width_next,
-            self.size_matrix[1]
-            )
         # Define the location (left, top) of the bounding box of the game. Must be after defining the total size.
         position_main = (
-            (self.games.size_window[0] - sum([game.size_total[0] for game in self.games.all]) - (len(self.games.all)-1)*self.games.spacing_large)//2 + sum([game.size_total[0] for game in (self.games.all)[:self.instance_self]]) + self.instance_self*self.games.spacing_large,
+            (self.games.size_window[0] - self.games.size_game[0]*len(self.games.all) - (len(self.games.all)-1)*self.games.spacing_large)//2 + self.games.size_game[0]*self.instance_self + self.games.spacing_large*self.instance_self,
             games.height_panel
             )
 
         # Create the surface and rect object used to display the matrix.
-        self.surface_matrix = pygame.Surface(self.size_matrix)
+        self.surface_matrix = pygame.Surface(self.games.size_matrix)
         self.rect_matrix = self.surface_matrix.get_rect()
         self.rect_matrix.left = position_main[0] + self.games.width_hold + self.games.spacing_small
         self.rect_matrix.top = position_main[1] + 0
@@ -342,23 +333,23 @@ class Tetron:
         # Create the text and rect object for the next queue.
         self.text_next = font_small.render('NEXT', True, colors[1005])
         self.rect_text_next = self.text_next.get_rect()
-        self.rect_text_next.centerx = position_main[0] + self.size_total[0] - self.games.width_next // 2
+        self.rect_text_next.centerx = position_main[0] + self.games.size_game[0] - self.games.width_next // 2
         self.rect_text_next.top = position_main[1] + 0
         # Create the surface and rect object used to display the next queue.
-        self.surface_next = pygame.Surface((self.games.width_next, self.size_total[1]))
+        self.surface_next = pygame.Surface((self.games.width_next, self.games.size_game[1]))
         self.rect_next = self.surface_next.get_rect()
-        self.rect_next.right = position_main[0] + self.size_total[0]
+        self.rect_next.right = position_main[0] + self.games.size_game[0]
         self.rect_next.top = position_main[1] + self.rect_text_next.height
         # Create the surface and rect object used to display the garbage queue.
-        self.surface_garbage = pygame.Surface((self.games.width_block, self.size_total[1]))
+        self.surface_garbage = pygame.Surface((self.games.width_block, self.games.size_game[1]))
         self.rect_garbage = self.surface_garbage.get_rect()
         self.rect_garbage.right = position_main[0] + self.games.width_hold
-        self.rect_garbage.bottom = position_main[1] + self.size_total[1]
+        self.rect_garbage.bottom = position_main[1] + self.games.size_game[1]
         # Create the surface and rect object used to display multiplayer information.
-        self.surface_information = pygame.Surface((self.games.width_next, self.size_total[1]))
+        self.surface_information = pygame.Surface((self.games.width_next, self.games.size_game[1]))
         self.rect_information = self.surface_information.get_rect()
-        self.rect_information.right = position_main[0] + self.size_total[0]
-        self.rect_information.bottom = position_main[1] + self.size_total[1]
+        self.rect_information.right = position_main[0] + self.games.size_game[0]
+        self.rect_information.bottom = position_main[1] + self.games.size_game[1]
 
         # Draw the game.
         self.draw_matrix()
@@ -371,7 +362,7 @@ class Tetron:
     def start_game(self):
         # Reset attributes.
         self.initialize()
-        self.reset_time_advance()
+        self.reset_time_fall()
         # Set flags.
         self.flag_playing = True
         # Select a target.
@@ -393,9 +384,15 @@ class Tetron:
     
     # Stop the game.
     def stop_game(self):
+        # Set flags.
         self.flag_playing = False
         self.flag_paused = False
         self.reset_special(reset_all=True)
+        # Empty queues.
+        self.queue_hold = []
+        self.queue_next = []
+        self.queue_garbage = []
+        # Update display.
         self.update()
 
     # Randomly generate the next tetriminos and add them to the next queue.
@@ -676,7 +673,7 @@ class Tetron:
             self.array_current[0:tetrimino.shape[0], column_left:column_left+tetrimino.shape[1]] = self.tetrimino
         # Check for landing.
         self.check_landed()
-        # Update the displayed array.
+        # Update display.
         self.update()
 
         # Record the time for AI.
@@ -685,23 +682,23 @@ class Tetron:
         self.ai_delay = random.gauss(ai_delay_mean, ai_delay_std)
 
     # *** DEPRECATE ***
-    # Advance one line.
-    def advance(self):
-        # Determine if at the bottom of the matrix.
-        is_at_bottom = np.any(self.array_current[-1*(not self.flag_zombie) + 0*self.flag_zombie,:] > 0)
-        # Advance the current tetrimino array one line and return a copy.
-        array_current = np.roll(self.array_current, shift=1*((-1) ** self.flag_zombie), axis=0)
-        # Determine if the advanced copy intersects already placed blocks.
-        is_intersecting = np.any(self.array_stack[array_current > 0] > 0)
-        # Apply the advancement if not intersecting and not at the bottom.
-        if (self.flag_ghost and not is_at_bottom) or (not self.flag_ghost and (not is_at_bottom and not is_intersecting)):
-            self.array_current = np.copy(array_current)
-            # Reset the advance timer if the tetrimino has landed.
-            self.check_landed()
-        else:
-            self.harddrop()
-        # Update the displayed array.
-        self.update()
+    # # Advance one line.
+    # def advance(self):
+    #     # Determine if at the bottom of the matrix.
+    #     is_at_bottom = np.any(self.array_current[-1*(not self.flag_zombie) + 0*self.flag_zombie,:] > 0)
+    #     # Advance the current tetrimino array one line and return a copy.
+    #     array_current = np.roll(self.array_current, shift=1*((-1) ** self.flag_zombie), axis=0)
+    #     # Determine if the advanced copy intersects already placed blocks.
+    #     is_intersecting = np.any(self.array_stack[array_current > 0] > 0)
+    #     # Apply the advancement if not intersecting and not at the bottom.
+    #     if (self.flag_ghost and not is_at_bottom) or (not self.flag_ghost and (not is_at_bottom and not is_intersecting)):
+    #         self.array_current = np.copy(array_current)
+    #         # Reset the block fall time if the tetrimino has landed.
+    #         self.check_landed()
+    #     else:
+    #         self.harddrop()
+    #     # Update the displayed array.
+    #     self.update()
     
     # Shift down one line. Return a Boolean indicating whether it was successful.
     def fall(self):
@@ -717,7 +714,7 @@ class Tetron:
             self.array_current = np.copy(array_current)
             # Reset the fall timer if the tetrimino has landed.
             self.check_landed()
-            # Update the displayed array.
+            # Update display.
             self.update()
             # Update Boolean.
             success = True
@@ -782,8 +779,8 @@ class Tetron:
         # Put the score increment in the queue.
         self.score_increment.append(self.calculate_score(line_count))
         
-        # Reset the previous advance time.
-        self.reset_time_advance()
+        # Reset the previous block fall time.
+        self.reset_time_fall()
         # Reset the T-spin and perfect clear flags. Must be after calculating score.
         self.flag_tspin = False
         self.flag_tspin_mini = False
@@ -824,9 +821,9 @@ class Tetron:
             indices_rows, indices_columns = np.nonzero(self.array_current > 0)
             if self.flag_ghost or not np.any(self.array_stack[indices_rows, indices_columns-1] > 0):
                 self.array_current = np.roll(self.array_current, shift=-1, axis=1)
-                # Reset the advance timer if the tetrimino has landed.
+                # Reset the block fall time if the tetrimino has landed.
                 self.check_landed()
-                # Update the displayed array.
+                # Update display.
                 self.update()
                 # Play sound effect.
                 if self.is_player:
@@ -844,9 +841,9 @@ class Tetron:
             indices_rows, indices_columns = np.nonzero(self.array_current > 0)
             if self.flag_ghost or not np.any(self.array_stack[indices_rows, indices_columns+1] > 0):
                 self.array_current = np.roll(self.array_current, shift=1, axis=1)
-                # Reset the advance timer if the tetrimino has landed.
+                # Reset the block fall time if the tetrimino has landed.
                 self.check_landed()
-                # Update the displayed array.
+                # Update display.
                 self.update()
                 # Play sound effect.
                 if self.is_player:
@@ -1000,12 +997,12 @@ class Tetron:
                     self.rotation_current -= 90
                 if self.rotation_current < 0 or self.rotation_current >= 360:
                     self.rotation_current = abs(self.rotation_current % 360)
-                # Update the displayed array.
+                # Update display.
                 self.update()
                 # Play sound effect.
                 if self.is_player:
                     sound_game_rotate.play()
-                # Reset the advance timer if the tetrimino has landed.
+                # Reset the block fall time if the tetrimino has landed.
                 self.check_landed()
                 # Reset the T-spin flags.
                 self.flag_tspin = False
@@ -1027,93 +1024,93 @@ class Tetron:
         return success
 
     # *** DEPRECATE ***
-    # Hard drop.
-    def harddrop1(self):
-        # If a heavy tetrimino, delete placed blocks below the current tetrimino and shift tetrimino to bottom row.
-        if self.flag_heavy:
-            self.array_stack[self.array_highlight < 0] = 0
-            self.array_current = np.roll(self.array_current, np.argmax(np.any(np.flipud(self.array_current) > 0, axis=1)), axis=0)
-        # Shift the tetrimino down.
-        else:
-            if not self.flag_ghost and not (self.flag_zombie and np.any(self.array_current[0,:] > 0)):
-                self.array_current = -1 * self.array_highlight
-        # Lock the tetrimino.
-        if not self.flag_fake:
-            self.array_stack[self.array_current > 0] = self.array_current[self.array_current > 0]
-        # Set flag to hard drop other game instances.
-        self.flag_harddrop = True
-        # Play sound effect.
-        if self.instance_self == 0:
-            if self.is_player:
-                if not self.flag_fake:
-                    sound_game_harddrop.play()
-                else:
-                    sound_special_fake.play()
-        self.update()
+    # # Hard drop.
+    # def harddrop1(self):
+    #     # If a heavy tetrimino, delete placed blocks below the current tetrimino and shift tetrimino to bottom row.
+    #     if self.flag_heavy:
+    #         self.array_stack[self.array_highlight < 0] = 0
+    #         self.array_current = np.roll(self.array_current, np.argmax(np.any(np.flipud(self.array_current) > 0, axis=1)), axis=0)
+    #     # Shift the tetrimino down.
+    #     else:
+    #         if not self.flag_ghost and not (self.flag_zombie and np.any(self.array_current[0,:] > 0)):
+    #             self.array_current = -1 * self.array_highlight
+    #     # Lock the tetrimino.
+    #     if not self.flag_fake:
+    #         self.array_stack[self.array_current > 0] = self.array_current[self.array_current > 0]
+    #     # Set flag to hard drop other game instances.
+    #     self.flag_harddrop = True
+    #     # Play sound effect.
+    #     if self.instance_self == 0:
+    #         if self.is_player:
+    #             if not self.flag_fake:
+    #                 sound_game_harddrop.play()
+    #             else:
+    #                 sound_special_fake.play()
+    #     self.update()
 
-        # Increment the placed blocks counter.
-        self.count += 1
+    #     # Increment the placed blocks counter.
+    #     self.count += 1
 
-        # Reset certain flags.
-        self.reset_special(reset_all=False)
-        self.flag_fast_fall = False
-        self.flag_landed = False
-        self.flag_hold = False
-        # Update the values of previously placed special blocks.
-        self.array_stack[self.array_stack == 901] = 900
-        self.array_stack[self.array_stack == 902] = 900
-        self.array_stack[self.array_stack == 906] = 900
+    #     # Reset certain flags.
+    #     self.reset_special(reset_all=False)
+    #     self.flag_fast_fall = False
+    #     self.flag_landed = False
+    #     self.flag_hold = False
+    #     # Update the values of previously placed special blocks.
+    #     self.array_stack[self.array_stack == 901] = 900
+    #     self.array_stack[self.array_stack == 902] = 900
+    #     self.array_stack[self.array_stack == 906] = 900
 
-        # Check for cleared lines and empty them.
-        rows_cleared = np.argwhere(np.all(self.array_stack > 0, axis=1))
-        line_count = len(rows_cleared)
-        if line_count > 0:
-            self.array_stack = np.concatenate((
-                np.zeros([line_count,self.games.column_count]),
-                np.delete(self.array_stack, obj=rows_cleared, axis=0)
-                ), axis=0)
-        # Increment the combo counter if a line was cleared.
-        if line_count > 0:
-            self.combos += 1
-            # Check for a perfect clear.
-            self.flag_perfect = not np.any(self.array_stack)
-        else:
-            self.combos = 0
+    #     # Check for cleared lines and empty them.
+    #     rows_cleared = np.argwhere(np.all(self.array_stack > 0, axis=1))
+    #     line_count = len(rows_cleared)
+    #     if line_count > 0:
+    #         self.array_stack = np.concatenate((
+    #             np.zeros([line_count,self.games.column_count]),
+    #             np.delete(self.array_stack, obj=rows_cleared, axis=0)
+    #             ), axis=0)
+    #     # Increment the combo counter if a line was cleared.
+    #     if line_count > 0:
+    #         self.combos += 1
+    #         # Check for a perfect clear.
+    #         self.flag_perfect = not np.any(self.array_stack)
+    #     else:
+    #         self.combos = 0
 
-        # Calculate number of garbage lines.
-        garbage_count = self.calculate_garbage(line_count)
-        # Clear garbage lines if the queue contains any.
-        if len(self.queue_garbage) > 0:
-            self.subtract_garbage(garbage_count)
-        # Send garbage lines if the queue is empty.
-        else:
-            self.send_garbage(garbage_count)
-        # Put garbage in the matrix.
-        if self.flag_put_garbage and garbage_count == 0:
-            self.put_garbage()
+    #     # Calculate number of garbage lines.
+    #     garbage_count = self.calculate_garbage(line_count)
+    #     # Clear garbage lines if the queue contains any.
+    #     if len(self.queue_garbage) > 0:
+    #         self.subtract_garbage(garbage_count)
+    #     # Send garbage lines if the queue is empty.
+    #     else:
+    #         self.send_garbage(garbage_count)
+    #     # Put garbage in the matrix.
+    #     if self.flag_put_garbage and garbage_count == 0:
+    #         self.put_garbage()
 
-        # Put the score increment in the queue.
-        self.score_increment.append(self.calculate_score(line_count))
+    #     # Put the score increment in the queue.
+    #     self.score_increment.append(self.calculate_score(line_count))
         
-        # Reset the previous advance time.
-        self.reset_time_advance()
-        # Reset the T-spin and perfect clear flags. Must be after calculating score.
-        self.flag_tspin = False
-        self.flag_tspin_mini = False
-        self.flag_perfect = False
-        # Reset attributes for AI.
-        self.ai_evaluations = []
-        self.ai_decision = None
-        self.ai_time_evaluate = 0
-        self.ai_flag_positioning = True
-        self.ai_flag_positioning_left = True
-        self.ai_flag_calculating = True
+    #     # Reset the previous block fall time.
+    #     self.reset_time_fall()
+    #     # Reset the T-spin and perfect clear flags. Must be after calculating score.
+    #     self.flag_tspin = False
+    #     self.flag_tspin_mini = False
+    #     self.flag_perfect = False
+    #     # Reset attributes for AI.
+    #     self.ai_evaluations = []
+    #     self.ai_decision = None
+    #     self.ai_time_evaluate = 0
+    #     self.ai_flag_positioning = True
+    #     self.ai_flag_positioning_left = True
+    #     self.ai_flag_calculating = True
         
-        # Stop the game or create a new tetrimino.
-        if self.flag_playing:
-            self.check_lose()
-            if not self.flag_lose:
-                self.set_tetrimino()
+    #     # Stop the game or create a new tetrimino.
+    #     if self.flag_playing:
+    #         self.check_lose()
+    #         if not self.flag_lose:
+    #             self.set_tetrimino()
 
     # Start soft dropping.
     def softdrop_start(self):
@@ -1122,8 +1119,8 @@ class Tetron:
             # Set flags.
             self.flag_softdropping = True
             self.flag_advancing = False
-            # Reset the previous advance time.
-            self.reset_time_advance()
+            # Reset the previous block fall time.
+            self.reset_time_fall()
             # Play sound effect.
             if self.is_player:
                 sound_game_softdrop.play()
@@ -1133,8 +1130,8 @@ class Tetron:
     #     # Set flags.
     #     self.flag_softdropping = True
     #     self.flag_advancing = False
-    #     # Reset the previous advance time.
-    #     self.reset_time_advance()
+    #     # Reset the previous block fall time.
+    #     self.reset_time_fall()
     #     # Record the current time used later to calculate how long this key is held.
     #     self.time_start_softdrop = self.games.time_current + 0
     #     # Initialize the time at which the previous repeat occurred.
@@ -1148,8 +1145,8 @@ class Tetron:
         # Set flags.
         self.flag_softdropping = False
         self.flag_advancing = True
-        # Reset the previous advance time.
-        self.reset_time_advance()
+        # Reset the previous block fall time.
+        self.reset_time_fall()
 
     # Hold.
     def hold(self):
@@ -1181,19 +1178,19 @@ class Tetron:
         # Swap the current tetrimino with one from another game.
         self.set_tetrimino(game.queue_hold.pop(0))
 
-    # Reset the advance timer if the tetrimino is directly above an already placed block or is on the bottom of the matrix.
+    # Reset the block fall time if the tetrimino has landed on the stack or on the bottom of the matrix.
     def check_landed(self):
         is_landed_stack = np.any(self.array_stack[np.roll(self.array_current, shift=1*((-1) ** self.flag_zombie), axis=0) > 0] > 0)
         is_landed_bottom = np.any(self.array_current[-1*(not self.flag_zombie) + 0*self.flag_zombie,:] > 0)
         if (self.flag_ghost and is_landed_bottom) or (not self.flag_ghost and (is_landed_stack or is_landed_bottom)):
             self.flag_landed = True
             self.time_landed = self.games.time_current + 0
-            # If landed while soft dropping, reset advance timer in addition to resetting specific flags.
+            # If landed while soft dropping, reset block fall time in addition to resetting specific flags.
             if self.flag_softdropping:
                 self.softdrop_stop()
-            # If landed normally, reset advance timer only.
+            # If landed normally, reset block fall time only.
             else:
-                self.reset_time_advance()
+                self.reset_time_fall()
             # Play sound effect.
             if not self.flag_ghost:
                 if self.is_player:
@@ -1427,9 +1424,9 @@ class Tetron:
         else:
             self.weight_special = np.interp(self.score, [score_update_chance_special, score_thresholds[-2]], weights_special)
 
-    # Reset the value of the previous advance time to the current time.
-    def reset_time_advance(self):
-        self.time_start_advance = self.games.time_current + 0
+    # Record the current time to determine when the next block fall occurs.
+    def reset_time_fall(self):
+        self.time_fall = self.games.time_current + 0
     
     # Reset some or all special effects.
     def reset_special(self, reset_all=False):
@@ -1743,6 +1740,16 @@ class Games:
             self.column_count*self.width_block + (self.column_count+1)*self.spacing_block + (self.width_hold+self.spacing_small) + (self.width_next+self.spacing_small),
             self.height_panel + self.row_count*self.height_block + (self.row_count+1)*self.spacing_block
             )
+        # Size of matrix.
+        self.size_matrix = (
+            self.column_count*self.width_block + (self.column_count+1)*self.spacing_block,
+            self.row_count*self.height_block + (self.row_count+1)*self.spacing_block
+            )
+        # Size of the combined elements of one game.
+        self.size_game = (
+            self.width_hold + self.spacing_small + self.size_matrix[0] + self.spacing_small + self.width_next,
+            self.size_matrix[1]
+            )
 
         # # Define the names of the game modes.
         # self.name_default = name_program + ''
@@ -1760,18 +1767,31 @@ class Games:
         self.reset_game()
     
     # Redefine the sizes of elements.
-    def resize_display(self):
+    def resize(self):
         # Get the new size of the window.
         self.size_window = pygame.display.get_window_size()
         
-        # Redefine the sizes of elements.
+        # Size of one square in the matrix.
         self.width_block = int(np.floor((self.size_window[1] - ((self.row_count+1)*self.spacing_block)) / (self.row_count+1)))
         self.height_block = self.width_block + 0
+        # Height of the space above the matrix.
         self.height_panel = self.height_block + 0
+        # Widths of the hold and next queues.
         self.width_hold = 2 * self.width_block
         self.width_next = 2 * self.width_block
+        # Widths of spacing between games and between elements within a game.
         self.spacing_large = self.width_block + 0
         self.spacing_small = self.width_block // 2
+        # Size of matrix.
+        self.size_matrix = (
+            self.column_count*self.width_block + (self.column_count+1)*self.spacing_block,
+            self.row_count*self.height_block + (self.row_count+1)*self.spacing_block
+            )
+        # Size of the combined elements of one game.
+        self.size_game = (
+            self.width_hold + self.spacing_small + self.size_matrix[0] + self.spacing_small + self.width_next,
+            self.size_matrix[1]
+            )
 
     # Reposition all games.
     def reposition_games(self):
@@ -1934,7 +1954,7 @@ while not done:
         # Window is resized.
         elif event.type == pygame.VIDEORESIZE:
             # Resize the elements of each game.
-            games.resize_display()
+            games.resize()
             # Reposition the elements of each game.
             games.reposition_games()
             # Resize the logo.
@@ -2140,7 +2160,7 @@ while not done:
                     # Check if the key has been held longer than the key repeat interval.
                     if (games.time_current - games.player[index].time_previous_softdrop) > speed_softdrop:
                         if games.player[index].flag_softdropping:  # Check whether soft dropping to prevent advancing line immediately after landing
-                            games.player[index].fall()  #games.player[index].advance()
+                            games.player[index].fall()
                             # Play sound effect.
                             sound_game_softdrop.play()
                         games.player[index].time_previous_softdrop = games.time_current + 0
@@ -2256,19 +2276,19 @@ while not done:
     
     for game in games.all:
         if game.flag_playing:
-            # Advance lines.
+            # Let block fall.
             if game.flag_advancing:
                 if (
                     # Check if the required time for automatic advancing has elapsed.
-                    (not game.flag_landed and (games.time_current - game.time_start_advance) >= (game.speed_fall * (speed_fall_multiplier ** game.flag_fast_fall))) or
+                    (not game.flag_landed and (games.time_current - game.time_fall) >= (game.speed_fall * (speed_fall_multiplier ** game.flag_fast_fall))) or
                     # If tetrimino is landed, check if the maximum time has elapsed.
                     (game.flag_landed and (games.time_current - game.time_landed >= duration_max_landed))
                     ):
                         if not game.fall():
                             game.lock()
-                        game.reset_time_advance()
+                        game.reset_time_fall()
             else:
-                game.reset_time_advance()
+                game.reset_time_fall()
             
             # Apply wind special effect.
             if game.flag_wind:
@@ -2328,7 +2348,7 @@ while not done:
     text_score = font_normal.render('{}'.format(games.score), True, colors[1001])
     rect_text_score = text_score.get_rect()
     rect_text_score.left = (
-        games.size_window[0] - sum([game.size_total[0] for game in games.all]) - ((len(games.all)-1)*games.spacing_large)
+        games.size_window[0] - games.size_game[0]*len(games.all) - games.spacing_large*(len(games.all)-1)
         )//2 + games.width_hold + games.spacing_small
     rect_text_score.bottom = games.height_panel + 0
     screen.blit(text_score, rect_text_score)
@@ -2336,7 +2356,7 @@ while not done:
     text_time_elapsed = font_normal.render('{:02d}:{:02d}'.format(games.time_elapsed//60000, int((games.time_elapsed/1000)%60)), True, colors[1001])
     rect_text_time_elapsed = text_time_elapsed.get_rect()
     rect_text_time_elapsed.right = games.size_window[0] - (
-        games.size_window[0] - sum([game.size_total[0] for game in games.all]) - ((len(games.all)-1)*games.spacing_large)
+        games.size_window[0] - games.size_game[0]*len(games.all) - games.spacing_large*(len(games.all)-1)
         )//2 - games.width_next - games.spacing_small
     rect_text_time_elapsed.bottom = games.height_panel + 0
     screen.blit(text_time_elapsed, rect_text_time_elapsed)
