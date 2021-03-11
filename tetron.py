@@ -1814,7 +1814,7 @@ ms = []  # Debug
 # Loop until the window is closed.
 done = False
 while not done:
-    START = time.time()  # Debug
+    # START = time.time()  # Debug
 
     flag_playing = any([game.flag_playing for game in games.all])
     flag_paused = all([game.flag_paused for game in games.all])
@@ -2099,8 +2099,19 @@ while not done:
         game.score = games.score + 0
         game.update_difficulty()
     
+    # Stop the game if the player has lost.
+    if any([game.flag_lose for game in games.player]):
+        # Play music.
+        pygame.mixer.music.stop()
+        pygame.mixer.music.unload()
+        pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_lose.ogg'))
+        pygame.mixer.music.play(loops=0)
+        # Stop player games.
+        for game in games.player:
+            game.flag_lose = False
+            game.stop_game()
     # Win the game.
-    if games.game_mode in [1, 2] and games.score_previous < score_thresholds[-1] <= games.score or \
+    elif games.game_mode in [1, 2] and games.score_previous < score_thresholds[-1] <= games.score or \
         games.game_mode in [3, 4] and games.remaining <= remaining_thresholds[-1] < games.remaining_previous:
         # Play music and sound effect only if the player won.
         if all([game.flag_lose for game in games.ai]):
@@ -2131,18 +2142,6 @@ while not done:
         pygame.mixer.music.set_endevent(pygame.USEREVENT+1)
         # Play the music once.
         pygame.mixer.music.play(loops=0)
-    
-    # Stop the game if the player has lost.
-    if any([game.flag_lose for game in games.player]):
-        # Play music.
-        pygame.mixer.music.stop()
-        pygame.mixer.music.unload()
-        pygame.mixer.music.load(os.path.join(folder_sounds, 'tetron_lose.ogg'))
-        pygame.mixer.music.play(loops=0)
-        # Stop player games.
-        for game in games.player:
-            game.flag_lose = False
-            game.stop_game()
 
     # =============================================================================
     # Game Actions.
@@ -2268,8 +2267,8 @@ while not done:
         # screen.blit(game.surface_information, game.rect_information)
         screen.blit(game.surface_matrix, game.rect_matrix)
     
-    END = time.time()  # Debug
-    ms.append((END-START)*1000)  # Debug
+    # END = time.time()  # Debug
+    # ms.append((END-START)*1000)  # Debug
 
     # Update the screen.
     pygame.display.flip()
@@ -2282,9 +2281,9 @@ pygame.quit()
 # import matplotlib.pyplot as plot
 # plot.plot(ms)
 # plot.show()
-print('Median: {:.2f},   Average: {:.2f},   Max: {:.2f},   Percent over: {:.2f}%'.format(
-    np.median(ms),
-    np.mean(ms),
-    np.max(ms),
-    100 * len([i for i in ms if i > 1000/games.fps])/len(ms)
-    ))
+# print('Median: {:.2f},   Average: {:.2f},   Max: {:.2f},   Percent over: {:.2f}%'.format(
+#     np.median(ms),
+#     np.mean(ms),
+#     np.max(ms),
+#     100 * len([i for i in ms if i > 1000/games.fps])/len(ms)
+#     ))
