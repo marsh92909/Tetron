@@ -1218,9 +1218,6 @@ class Tetron:
             if self.id_current != 899:
                 multipliers.append(lines)
                 print('perfect clear multiplier: ', multipliers[-1])
-        if self.games.game_mode == 2:
-            # Twin multiplier.
-            multipliers.append(1.6)
         
         # Play a sound corresponding to the number of lines cleared.
         if self.is_player:
@@ -2087,8 +2084,16 @@ while not done:
     # =============================================================================
     # Calculate score.
     games.score_previous = games.score + 0
-    if games.game_mode in [1, 2]:
+    if games.game_mode in [1]:
         games.score += sum([game.score_increment.pop(0) for game in games.player if len(game.score_increment) > 0])
+    elif games.game_mode in [2]:
+        scores = [game.score_increment.pop(0) for game in games.player if len(game.score_increment) > 0]
+        # Apply a point multiplier if both games earned points.
+        if len([score for score in scores if score > 0]) > 1:
+            scores = sum(scores) * 3
+        else:
+            scores = sum(scores)
+        games.score += scores
     elif games.game_mode in [3]:
         games.score += max([0] + [game.score_increment.pop(0) for game in games.all if len(game.score_increment) > 0])
     # Calculate number of players left.
